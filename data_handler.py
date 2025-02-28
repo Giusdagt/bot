@@ -1,165 +1,195 @@
-# data_handler normalizzazione dati
+"""
+data_handler.py
+Modulo per la gestione dei dati di mercato, inclusa la normalizzazione e il salvataggio.
+"""
+
 import os
+import shutil
 import json
 import logging
 import asyncio
 import websockets
-import shutil
 import pandas as pd
 from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
 import data_api_module
 from indicators import TradingIndicators
 
-# 📌 Configurazioni di salvataggio e backup
-SAVE_DIR = "/mnt/usb_trading_data/processed" if os.path.exists(
-    "/mnt/usb_trading_data") else "D:/trading_data/processed"
-HIST_FILE = os.path.join(SAVE_DIR, "historical_data.parquet")
-SCALP_FILE = os.path.join(SAVE_DIR, "scalping_data.parquet")
-RAW_FILE = "market_data.json"
-CLOUD_BACKUP = "/mnt/google_drive/trading_backup/"
-MAX_AGE = 30 * 24 * 60 * 60  # 30 giorni in secondi
-
-# WebSocket URL per dati in tempo reale per scalping (BTC/EUR come esempio)
-WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btceur@trade"
-
-# 📌 Configurazione logging avanzato
+# 📌 Configurazione logging avanzata
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
+# 📌 Percorsi per backup e dati
+SAVE_DIRECTORY = "/mnt/usb_trading_data/processed_data" if os.path.exists(
+    "/mnt/usb_trading_data") else "D:/trading_data/processed_data"
+HISTORICAL_DATA_FILE = os.path.join(SAVE_DIRECTORY, "historical_data.parquet")
+SCALPING_DATA_FILE = os.path.join(SAVE_DIRECTORY, "scalping_data.parquet")
+RAW_DATA_FILE = "market_data.json"
+CLOUD_BACKUP = "/mnt/google_drive/trading_backup"
+
+# 📌 WebSocket per dati in tempo reale (Scalping)
+WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+
+# 📌 Creazione dello scaler per normalizzazione
 scaler = MinMaxScaler()
 
 
-async def fetch_market_data():
-    """Scarica i dati se non sono disponibili."""
-    if not os.path.exists(RAW_FILE):
-        logging.warning("⚠️ File dati mercato assente, avvio recupero dati.")
-        await data_api_module.main_fetch_all_data("eur")
-
-
-async def consume_websocket():
-    """Consuma i dati WebSocket per il trading in tempo reale (scalping)."""
-    async with websockets.connect(WEBSOCKET_URL) as websocket:
-        logging.info("✅ Connessione WebSocket stabilita per dati real-time.")
-        try:
-            async for message in websocket:
-                await process_websocket_message(message)
-        except websockets.ConnectionClosed:
-            logging.warning(
-                "⚠️ Connessione WebSocket chiusa. Riconnessione in corso..."
-            )
-            await asyncio.sleep(5)
-            await consume_websocket()
-        except Exception as e:
-            logging.error(f"❌ Errore durante la ricezione WebSocket: {e}")
-            await asyncio.sleep(5)
-            await consume_websocket()
-
-
 async def process_websocket_message(message):
-    """Elabora i messaggi ricevuti dal WebSocket."""
+    """Elabora il messaggio ricevuto dal WebSocket per dati real-time di scalping."""
     try:
         data = json.loads(message)
-        price = float(data["p"])  # Prezzo dell'ultima operazione
+        price = float(data["p"])
         timestamp = datetime.fromtimestamp(data["T"] / 1000.0)
 
         df = pd.DataFrame([[timestamp, price]], columns=["timestamp", "price"])
         df.set_index("timestamp", inplace=True)
 
-        # Calcolo indicatori tecnici per scalping
+        # 📊 Calcolo indicatori tecnici
         df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = (
-            TradingIndicators.moving_average_convergence_divergence(df))
+        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(df)
         df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = (
-            TradingIndicators.bollinger_bands(df))
+        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(df)
 
-        # Normalizzazione dei dati
+        # 📌 Normalizzazione e salvataggio dati
         df = normalize_data(df)
+        save_processed_data(df, SCALPING_DATA_FILE)
+        logging.info("✅ Dati scalping aggiornati: %s", df.tail(1))
 
-        # Salvataggio dati scalping
-        save_data(df, SCALP_FILE)
-        logging.info(f"✅ Dati scalping aggiornati: {df.tail(1)}")
-
-    except Exception as e:
-        logging.error(
-            f"❌ Errore nell'elaborazione del messaggio WebSocket: {e}"
-        )
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
 
-def normalize_data(df):
-    """Normalizza i dati per l'AI."""
+async def consume_websocket():
+    """Consuma dati dal WebSocket per operazioni di scalping."""
+    async with websockets.connect(WEBSOCKET_URL) as websocket:
+        logging.info("✅ Connessione WebSocket stabilita.")
+        try:
+            async for message in websocket:
+                await process_websocket_message(message)
+        except websockets.ConnectionClosed:
+            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione...")
+            await asyncio.sleep(5)
+            await consume_websocket()
+        except Exception as e:
+            logging.error("❌ Errore WebSocket: %s", e)
+            await asyncio.sleep(5)
+            await consume_websocket()
+
+
+async def fetch_and_prepare_historical_data():
+    """Scarica, elabora e normalizza i dati storici."""
     try:
-        cols = ["close", "open", "high", "low", "volume", "rsi",
-                "macd", "macd_signal", "ema", "bollinger_upper",
-                "bollinger_lower"]
-        df[cols] = scaler.fit_transform(df[cols])
-        return df
-    except Exception as e:
-        logging.error(f"❌ Errore normalizzazione dati: {e}")
-        return df
+        if not should_update_data(HISTORICAL_DATA_FILE):
+            logging.info("✅ Dati storici già aggiornati.")
+            return load_processed_data(HISTORICAL_DATA_FILE)
 
+        logging.info("📥 Scaricamento ed elaborazione dati storici...")
+        ensure_directory_exists(SAVE_DIRECTORY)
 
-def process_historical_data():
-    """Processa e normalizza i dati storici."""
-    try:
-        with open(RAW_FILE, "r") as file:
-            raw_data = json.load(file)
+        if not os.path.exists(RAW_DATA_FILE):
+            logging.warning("⚠️ File dati di mercato non trovato. Avvio recupero...")
+            await data_api_module.main_fetch_all_data("eur")
 
-        hist_list = []
-        for crypto in raw_data:
-            for entry in crypto.get("historical_prices", []):
-                try:
-                    hist_list.append({
-                        "timestamp": entry["timestamp"],
-                        "coin_id": crypto.get("id", "unknown"),
-                        "close": entry["close"],
-                        "open": entry["open"],
-                        "high": entry["high"],
-                        "low": entry["low"],
-                        "volume": entry["volume"],
-                    })
-                except Exception as e:
-                    logging.error(f"⚠️ Errore parsing dati: {e}")
-
-        df = pd.DataFrame(hist_list)
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-        df.set_index("timestamp", inplace=True)
-
-        df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = (
-            TradingIndicators.moving_average_convergence_divergence(df))
-        df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = (
-            TradingIndicators.bollinger_bands(df))
-
-        df = normalize_data(df)
-
-        save_data(df, HIST_FILE)
-        logging.info(f"✅ Dati storici salvati: {HIST_FILE}")
-        return df
+        return process_historical_data()
 
     except Exception as e:
-        logging.error(f"❌ Errore elaborazione storici: {e}")
+        logging.error("❌ Errore elaborazione dati storici: %s", e)
         return pd.DataFrame()
 
 
-def save_data(df, filename):
-    """Salva i dati in formato parquet e gestisce il backup."""
+def process_historical_data():
+    """Elabora e normalizza i dati storici."""
+    try:
+        with open(RAW_DATA_FILE, "r", encoding="utf-8") as file:
+            raw_data = json.load(file)
+
+        historical_data_list = []
+        for crypto in raw_data:
+            prices = crypto.get("historical_prices", [])
+            for entry in prices:
+                try:
+                    timestamp = entry.get("timestamp")
+                    close_price = entry.get("close")
+                    if timestamp and close_price:
+                        historical_data_list.append({
+                            "timestamp": timestamp,
+                            "coin_id": crypto.get("id", "unknown"),
+                            "close": close_price
+                        })
+                except KeyError as e:
+                    logging.error("⚠️ Errore parsing dati storici %s: %s",
+                                  crypto.get('id', 'unknown'), e)
+
+        df = pd.DataFrame(historical_data_list)
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df.set_index("timestamp", inplace=True)
+
+        # 📊 Calcolo indicatori tecnici
+        df["rsi"] = TradingIndicators.relative_strength_index(df)
+        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(df)
+        df["ema"] = TradingIndicators.exponential_moving_average(df)
+        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(df)
+
+        df = normalize_data(df)
+
+        save_processed_data(df, HISTORICAL_DATA_FILE)
+        logging.info("✅ Dati storici normalizzati e salvati.")
+        return df
+
+    except Exception as e:
+        logging.error("❌ Errore elaborazione dati storici: %s", e)
+        return pd.DataFrame()
+
+
+def normalize_data(df):
+    """Normalizza i dati per il trading AI."""
+    try:
+        cols_to_normalize = [
+            "close", "rsi", "macd", "macd_signal", "ema",
+            "bollinger_upper", "bollinger_lower"
+        ]
+        df[cols_to_normalize] = scaler.fit_transform(df[cols_to_normalize])
+        return df
+    except Exception as e:
+        logging.error("❌ Errore normalizzazione dati: %s", e)
+        return df
+
+
+def save_processed_data(df, filename):
+    """Salva i dati elaborati."""
     df.to_parquet(filename)
-    backup_file(filename)
+
+
+def ensure_directory_exists(directory):
+    """Crea la directory se non esiste."""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+def should_update_data(filename):
+    """Verifica se i dati devono essere aggiornati."""
+    if not os.path.exists(filename):
+        return True
+    file_age = time.time() - os.path.getmtime(filename)
+    return file_age > 30 * 24 * 60 * 60  # 30 giorni
+
+
+def load_processed_data(filename):
+    """Carica i dati elaborati se disponibili."""
+    if os.path.exists(filename):
+        return pd.read_parquet(filename)
+    return pd.DataFrame()
 
 
 def backup_file(file_path):
-    """Gestisce il backup locale e su Google Drive."""
+    """Effettua il backup del file su Google Drive e USB."""
     try:
         shutil.copy(file_path, CLOUD_BACKUP)
-        logging.info(f"☁️ Backup su Google Drive: {file_path}")
+        shutil.copy(file_path, SAVE_DIRECTORY)
+        logging.info("✅ Backup completato per %s", file_path)
     except Exception as e:
-        logging.error(f"❌ Errore backup cloud: {e}")
+        logging.error("❌ Errore backup: %s", e)
 
 
 if __name__ == "__main__":
-    asyncio.run(fetch_market_data())
-    asyncio.run(consume_websocket())  # ✅ Avvia il WebSocket per scalping
-    process_historical_data()
+    asyncio.run(consume_websocket())
