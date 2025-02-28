@@ -1,161 +1,109 @@
-# data_handler.py
 import os
-import pandas as pd
-import asyncio
 import json
 import logging
-import websockets
-import time
-import shutil  # Aggiunto per la gestione dei backup
+import asyncio
+import shutil
+import pandas as pd
 from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
 import data_api_module
 from indicators import TradingIndicators
 
 # 📌 Configurazioni di salvataggio e backup
-SAVE_DIRECTORY = (
-    "/mnt/usb_trading_data/processed_data" if os.path.exists("/mnt/usb_trading_data")
-    else "D:/trading_data/processed_data"
-)
-BACKUP_DIRECTORY = (
-    "/mnt/usb_trading_data/backup_data" if os.path.exists("/mnt/usb_trading_data")
-    else "D:/trading_data/backup_data"
-)
-CLOUD_BACKUP_DIRECTORY = "/mnt/google_drive/trading_backup"
-
-HISTORICAL_DATA_FILE = os.path.join(SAVE_DIRECTORY, "historical_data.parquet")
-SCALPING_DATA_FILE = os.path.join(SAVE_DIRECTORY, "scalping_data.parquet")
-RAW_DATA_FILE = "market_data.json"
+SAVE_DIR = "/mnt/usb_trading_data/processed" if os.path.exists(
+    "/mnt/usb_trading_data") else "D:/trading_data/processed"
+HIST_FILE = os.path.join(SAVE_DIR, "historical_data.parquet")
+SCALP_FILE = os.path.join(SAVE_DIR, "scalping_data.parquet")
+RAW_FILE = "market_data.json"
+CLOUD_BACKUP = "/mnt/google_drive/trading_backup/"
 MAX_AGE = 30 * 24 * 60 * 60  # 30 giorni in secondi
 
-# 📌 WebSocket URL per dati in tempo reale per scalping
-WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
-
 # 📌 Configurazione logging avanzato
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
-# 📌 Creazione dello scaler per la normalizzazione dei dati
 scaler = MinMaxScaler()
 
 
-def load_data():
-    """Carica i dati storici normalizzati dal file parquet."""
-    if os.path.exists(HISTORICAL_DATA_FILE):
-        return pd.read_parquet(HISTORICAL_DATA_FILE)
-    return pd.DataFrame()
-
-
-async def process_websocket_message(message):
-    """Elabora il messaggio ricevuto dal WebSocket per dati real-time per scalping."""
-    try:
-        data = json.loads(message)
-        price = float(data["p"])
-        timestamp = datetime.fromtimestamp(data["T"] / 1000.0)
-
-        df = pd.DataFrame([[timestamp, price]], columns=["timestamp", "price"])
-        df.set_index("timestamp", inplace=True)
-
-        # 📌 Calcolo indicatori tecnici in tempo reale per scalping
-        df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = (
-            TradingIndicators.moving_average_convergence_divergence(df)
-        )
-        df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = (
-            TradingIndicators.bollinger_bands(df)
-        )
-
-        # 📌 Normalizzazione dei dati per scalping
-        df = normalize_data(df)
-
-        # 📌 Salvataggio dati per scalping
-        save_processed_data(df, SCALPING_DATA_FILE)
-        logging.info(f"✅ Dati scalping aggiornati e salvati: {df.tail(1)}")
-
-    except Exception as e:
-        logging.error(f"❌ Errore nell'elaborazione del messaggio WebSocket: {e}")
-
-
-async def consume_websocket():
-    """Consuma dati dal WebSocket per operazioni di scalping."""
-    async with websockets.connect(WEBSOCKET_URL) as websocket:
-        logging.info("✅ Connessione WebSocket stabilita per dati real-time.")
-        try:
-            async for message in websocket:
-                await process_websocket_message(message)
-        except websockets.ConnectionClosed:
-            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione in corso...")
-            await asyncio.sleep(5)
-            await consume_websocket()
-        except Exception as e:
-            logging.error(f"❌ Errore durante la ricezione dei dati WebSocket: {e}")
-            await asyncio.sleep(5)
-            await consume_websocket()
+async def fetch_market_data():
+    """Scarica i dati se non sono disponibili."""
+    if not os.path.exists(RAW_FILE):
+        logging.warning("⚠️ File dati mercato assente, avvio recupero dati.")
+        await data_api_module.main_fetch_all_data("eur")
 
 
 def normalize_data(df):
-    """Normalizza i dati per il trading AI."""
+    """Normalizza i dati per l'AI."""
     try:
-        cols_to_normalize = [
-            "close", "open", "high", "low", "volume", "rsi", "macd",
-            "macd_signal", "ema", "bollinger_upper", "bollinger_lower"
-        ]
-        df[cols_to_normalize] = scaler.fit_transform(df[cols_to_normalize])
+        cols = ["close", "open", "high", "low", "volume", "rsi",
+                "macd", "macd_signal", "ema", "bollinger_upper",
+                "bollinger_lower"]
+        df[cols] = scaler.fit_transform(df[cols])
         return df
     except Exception as e:
-        logging.error(f"❌ Errore durante la normalizzazione dei dati: {e}")
+        logging.error(f"❌ Errore normalizzazione dati: {e}")
         return df
 
 
-def save_processed_data(df, filename):
-    """Salva i dati elaborati e gestisce il backup delle versioni precedenti."""
+def process_historical_data():
+    """Processa e normalizza i dati storici."""
     try:
-        if os.path.exists(filename):
-            backup_file = os.path.join(
-                BACKUP_DIRECTORY, f"backup_{int(time.time())}.parquet"
-            )
-            shutil.move(filename, backup_file)
-            logging.info(f"🛠 Backup creato: {backup_file}")
+        with open(RAW_FILE, "r") as file:
+            raw_data = json.load(file)
 
-        df.to_parquet(filename)
-        logging.info(f"📂 Dati salvati in {filename}")
+        hist_list = []
+        for crypto in raw_data:
+            for entry in crypto.get("historical_prices", []):
+                try:
+                    hist_list.append({
+                        "timestamp": entry["timestamp"],
+                        "coin_id": crypto.get("id", "unknown"),
+                        "close": entry["close"],
+                        "open": entry["open"],
+                        "high": entry["high"],
+                        "low": entry["low"],
+                        "volume": entry["volume"],
+                    })
+                except Exception as e:
+                    logging.error(f"⚠️ Errore parsing dati: {e}")
 
-        # 📌 Sincronizza il backup con Google Drive
-        sync_to_cloud(backup_file)
+        df = pd.DataFrame(hist_list)
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df.set_index("timestamp", inplace=True)
 
-        # 📌 Pulizia backup vecchi
-        clean_old_backups(BACKUP_DIRECTORY)
+        df["rsi"] = TradingIndicators.relative_strength_index(df)
+        df["macd"], df["macd_signal"] = (
+            TradingIndicators.moving_average_convergence_divergence(df))
+        df["ema"] = TradingIndicators.exponential_moving_average(df)
+        df["bollinger_upper"], df["bollinger_lower"] = (
+            TradingIndicators.bollinger_bands(df))
+
+        df = normalize_data(df)
+
+        save_data(df, HIST_FILE)
+        logging.info(f"✅ Dati storici salvati: {HIST_FILE}")
+        return df
 
     except Exception as e:
-        logging.error(f"❌ Errore nel salvataggio dei dati: {e}")
+        logging.error(f"❌ Errore elaborazione storici: {e}")
+        return pd.DataFrame()
 
 
-def sync_to_cloud(backup_file):
-    """Sincronizza i dati di backup con Google Drive."""
+def save_data(df, filename):
+    """Salva i dati in formato parquet."""
+    df.to_parquet(filename)
+    backup_file(filename)
+
+
+def backup_file(file_path):
+    """Gestisce il backup locale e su Google Drive."""
     try:
-        if not os.path.exists(CLOUD_BACKUP_DIRECTORY):
-            os.makedirs(CLOUD_BACKUP_DIRECTORY, exist_ok=True)
-
-        cloud_backup_file = os.path.join(CLOUD_BACKUP_DIRECTORY, os.path.basename(backup_file))
-        shutil.copy(backup_file, cloud_backup_file)
-        logging.info(f"☁️ Backup sincronizzato su Google Drive: {cloud_backup_file}")
-
+        shutil.copy(file_path, CLOUD_BACKUP)
+        logging.info(f"☁️ Backup su Google Drive: {file_path}")
     except Exception as e:
-        logging.error(f"❌ Errore nella sincronizzazione con Google Drive: {e}")
+        logging.error(f"❌ Errore backup cloud: {e}")
 
 
-def clean_old_backups(directory, max_files=5):
-    """Elimina le versioni più vecchie dei backup mantenendo solo le ultime."""
-    try:
-        backups = sorted(
-            [os.path.join(directory, f) for f in os.listdir(directory)],
-            key=os.path.getmtime,
-        )
-        while len(backups) > max_files:
-            os.remove(backups.pop(0))
-            logging.info("🗑 Backup vecchio eliminato.")
-
-    except Exception as e:
-        logging.error(f"❌ Errore nella gestione dei backup: {e}")
+if __name__ == "__main__":
+    asyncio.run(fetch_market_data())
+    process_historical_data()
