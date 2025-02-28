@@ -1,6 +1,7 @@
 """
 data_handler.py
-Modulo per la gestione dei dati di mercato, inclusa la normalizzazione e il salvataggio.
+Modulo per la gestione dei dati di mercato, inclusa la normalizzazione e 
+il salvataggio su vari dispositivi (locale, USB, Google Drive).
 """
 
 import os
@@ -10,18 +11,23 @@ import logging
 import asyncio
 import websockets
 import pandas as pd
+import time
 from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
 import data_api_module
 from indicators import TradingIndicators
+from pydrive2.auth import GoogleAuth
+from pydrive2.drive import GoogleDrive
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
 
 # 📌 Percorsi per backup e dati
-SAVE_DIRECTORY = "/mnt/usb_trading_data/processed_data" if os.path.exists(
-    "/mnt/usb_trading_data") else "D:/trading_data/processed_data"
+SAVE_DIRECTORY = (
+    "/mnt/usb_trading_data/processed_data"
+    if os.path.exists("/mnt/usb_trading_data") else "D:/trading_data"
+)
 HISTORICAL_DATA_FILE = os.path.join(SAVE_DIRECTORY, "historical_data.parquet")
 SCALPING_DATA_FILE = os.path.join(SAVE_DIRECTORY, "scalping_data.parquet")
 RAW_DATA_FILE = "market_data.json"
@@ -33,22 +39,62 @@ WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 # 📌 Creazione dello scaler per normalizzazione
 scaler = MinMaxScaler()
 
+# 📌 Autenticazione Google Drive
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+
+def upload_to_drive(filepath):
+    """Carica un file su Google Drive."""
+    file_drive = drive.CreateFile({'title': os.path.basename(filepath)})
+    file_drive.SetContentFile(filepath)
+    file_drive.Upload()
+    logging.info("✅ File caricato su Google Drive: %s", filepath)
+
+
+def download_from_drive(filename, save_path):
+    """Scarica un file da Google Drive."""
+    file_list = drive.ListFile({'q': f"title = '{filename}'"}).GetList()
+    if file_list:
+        file_drive = file_list[0]
+        file_drive.GetContentFile(save_path)
+        logging.info("✅ File scaricato da Google Drive: %s", save_path)
+
+
+def sync_with_drive(local_path, drive_filename):
+    """Sincronizza i file tra il sistema locale e Google Drive."""
+    if os.path.exists(local_path):
+        upload_to_drive(local_path)
+    else:
+        download_from_drive(drive_filename, local_path)
+
+
+# Esempio di utilizzo della sincronizzazione
+sync_with_drive(HISTORICAL_DATA_FILE, "historical_data.parquet")
+sync_with_drive(SCALPING_DATA_FILE, "scalping_data.parquet")
+
 
 async def process_websocket_message(message):
-    """Elabora il messaggio ricevuto dal WebSocket per dati real-time di scalping."""
+    """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
     try:
         data = json.loads(message)
         price = float(data["p"])
         timestamp = datetime.fromtimestamp(data["T"] / 1000.0)
 
-        df = pd.DataFrame([[timestamp, price]], columns=["timestamp", "price"])
+        df = pd.DataFrame([[timestamp, price]],
+                          columns=["timestamp", "price"])
         df.set_index("timestamp", inplace=True)
 
         # 📊 Calcolo indicatori tecnici
         df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(df)
+        df["macd"], df["macd_signal"] = (
+            TradingIndicators.moving_average_convergence_divergence(df)
+        )
         df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(df)
+        df["bollinger_upper"], df["bollinger_lower"] = (
+            TradingIndicators.bollinger_bands(df)
+        )
 
         # 📌 Normalizzazione e salvataggio dati
         df = normalize_data(df)
@@ -87,7 +133,7 @@ async def fetch_and_prepare_historical_data():
         ensure_directory_exists(SAVE_DIRECTORY)
 
         if not os.path.exists(RAW_DATA_FILE):
-            logging.warning("⚠️ File dati di mercato non trovato. Avvio recupero...")
+            logging.warning("⚠️ File dati di mercato non trovato.")
             await data_api_module.main_fetch_all_data("eur")
 
         return process_historical_data()
@@ -126,12 +172,15 @@ def process_historical_data():
 
         # 📊 Calcolo indicatori tecnici
         df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(df)
+        df["macd"], df["macd_signal"] = (
+            TradingIndicators.moving_average_convergence_divergence(df)
+        )
         df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(df)
+        df["bollinger_upper"], df["bollinger_lower"] = (
+            TradingIndicators.bollinger_bands(df)
+        )
 
         df = normalize_data(df)
-
         save_processed_data(df, HISTORICAL_DATA_FILE)
         logging.info("✅ Dati storici normalizzati e salvati.")
         return df
@@ -172,23 +221,6 @@ def should_update_data(filename):
         return True
     file_age = time.time() - os.path.getmtime(filename)
     return file_age > 30 * 24 * 60 * 60  # 30 giorni
-
-
-def load_processed_data(filename):
-    """Carica i dati elaborati se disponibili."""
-    if os.path.exists(filename):
-        return pd.read_parquet(filename)
-    return pd.DataFrame()
-
-
-def backup_file(file_path):
-    """Effettua il backup del file su Google Drive e USB."""
-    try:
-        shutil.copy(file_path, CLOUD_BACKUP)
-        shutil.copy(file_path, SAVE_DIRECTORY)
-        logging.info("✅ Backup completato per %s", file_path)
-    except Exception as e:
-        logging.error("❌ Errore backup: %s", e)
 
 
 if __name__ == "__main__":
