@@ -44,7 +44,9 @@ async def consume_websocket():
             async for message in websocket:
                 await process_websocket_message(message)
         except websockets.ConnectionClosed:
-            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione in corso...")
+              logging.warning(
+                  "⚠️ Connessione WebSocket chiusa. Riconnessione in corso..."
+             )
             await asyncio.sleep(5)
             await consume_websocket()
         except Exception as e:
@@ -65,9 +67,13 @@ async def process_websocket_message(message):
 
         # Calcolo indicatori tecnici per scalping
         df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(df)
+        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(
+              df
+         )
         df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(df)
+        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(
+            df
+        )
 
         # Normalizzazione dei dati
         df = normalize_data(df)
@@ -77,7 +83,9 @@ async def process_websocket_message(message):
         logging.info(f"✅ Dati scalping aggiornati: {df.tail(1)}")
 
     except Exception as e:
-        logging.error(f"❌ Errore nell'elaborazione del messaggio WebSocket: {e}")
+        logging.error(
+            f"❌ Errore nell'elaborazione del messaggio WebSocket: {e}"
+        )
 
 
 def normalize_data(df):
