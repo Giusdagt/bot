@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import asyncio
+import websockets  # ✅ Correzione import
 import shutil
 import pandas as pd
 from datetime import datetime
@@ -18,6 +19,9 @@ RAW_FILE = "market_data.json"
 CLOUD_BACKUP = "/mnt/google_drive/trading_backup/"
 MAX_AGE = 30 * 24 * 60 * 60  # 30 giorni in secondi
 
+# WebSocket URL per dati in tempo reale per scalping (BTC/EUR come esempio)
+WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btceur@trade"
+
 # 📌 Configurazione logging avanzato
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(levelname)s - %(message)s")
@@ -30,6 +34,50 @@ async def fetch_market_data():
     if not os.path.exists(RAW_FILE):
         logging.warning("⚠️ File dati mercato assente, avvio recupero dati.")
         await data_api_module.main_fetch_all_data("eur")
+
+
+async def consume_websocket():
+    """Consuma i dati WebSocket per il trading in tempo reale (scalping)."""
+    async with websockets.connect(WEBSOCKET_URL) as websocket:
+        logging.info("✅ Connessione WebSocket stabilita per dati real-time.")
+        try:
+            async for message in websocket:
+                await process_websocket_message(message)
+        except websockets.ConnectionClosed:
+            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione in corso...")
+            await asyncio.sleep(5)
+            await consume_websocket()
+        except Exception as e:
+            logging.error(f"❌ Errore durante la ricezione WebSocket: {e}")
+            await asyncio.sleep(5)
+            await consume_websocket()
+
+
+async def process_websocket_message(message):
+    """Elabora i messaggi ricevuti dal WebSocket."""
+    try:
+        data = json.loads(message)
+        price = float(data["p"])  # Prezzo dell'ultima operazione
+        timestamp = datetime.fromtimestamp(data["T"] / 1000.0)
+
+        df = pd.DataFrame([[timestamp, price]], columns=["timestamp", "price"])
+        df.set_index("timestamp", inplace=True)
+
+        # Calcolo indicatori tecnici per scalping
+        df["rsi"] = TradingIndicators.relative_strength_index(df)
+        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(df)
+        df["ema"] = TradingIndicators.exponential_moving_average(df)
+        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(df)
+
+        # Normalizzazione dei dati
+        df = normalize_data(df)
+
+        # Salvataggio dati scalping
+        save_data(df, SCALP_FILE)
+        logging.info(f"✅ Dati scalping aggiornati: {df.tail(1)}")
+
+    except Exception as e:
+        logging.error(f"❌ Errore nell'elaborazione del messaggio WebSocket: {e}")
 
 
 def normalize_data(df):
@@ -106,4 +154,5 @@ def backup_file(file_path):
 
 if __name__ == "__main__":
     asyncio.run(fetch_market_data())
+    asyncio.run(consume_websocket())  # ✅ Avvia il WebSocket per scalping
     process_historical_data()
