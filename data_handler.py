@@ -1,9 +1,9 @@
-# data_handler normalizzazione dati 
+# data_handler normalizzazione dati
 import os
 import json
 import logging
 import asyncio
-import websockets  
+import websockets
 import shutil
 import pandas as pd
 from datetime import datetime
