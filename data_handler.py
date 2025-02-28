@@ -21,6 +21,7 @@ BACKUP_DIRECTORY = (
     "/mnt/usb_trading_data/backup_data" if os.path.exists("/mnt/usb_trading_data")
     else "D:/trading_data/backup_data"
 )
+CLOUD_BACKUP_DIRECTORY = "/mnt/google_drive/trading_backup"
 
 HISTORICAL_DATA_FILE = os.path.join(SAVE_DIRECTORY, "historical_data.parquet")
 SCALPING_DATA_FILE = os.path.join(SAVE_DIRECTORY, "scalping_data.parquet")
@@ -50,7 +51,7 @@ async def process_websocket_message(message):
     """Elabora il messaggio ricevuto dal WebSocket per dati real-time per scalping."""
     try:
         data = json.loads(message)
-        price = float(data["p"])  # Prezzo dell'ultima operazione
+        price = float(data["p"])
         timestamp = datetime.fromtimestamp(data["T"] / 1000.0)
 
         df = pd.DataFrame([[timestamp, price]], columns=["timestamp", "price"])
@@ -85,9 +86,7 @@ async def consume_websocket():
             async for message in websocket:
                 await process_websocket_message(message)
         except websockets.ConnectionClosed:
-            logging.warning(
-                "⚠️ Connessione WebSocket chiusa. Riconnessione in corso..."
-            )
+            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione in corso...")
             await asyncio.sleep(5)
             await consume_websocket()
         except Exception as e:
@@ -123,11 +122,28 @@ def save_processed_data(df, filename):
         df.to_parquet(filename)
         logging.info(f"📂 Dati salvati in {filename}")
 
+        # 📌 Sincronizza il backup con Google Drive
+        sync_to_cloud(backup_file)
+
         # 📌 Pulizia backup vecchi
         clean_old_backups(BACKUP_DIRECTORY)
 
     except Exception as e:
         logging.error(f"❌ Errore nel salvataggio dei dati: {e}")
+
+
+def sync_to_cloud(backup_file):
+    """Sincronizza i dati di backup con Google Drive."""
+    try:
+        if not os.path.exists(CLOUD_BACKUP_DIRECTORY):
+            os.makedirs(CLOUD_BACKUP_DIRECTORY, exist_ok=True)
+
+        cloud_backup_file = os.path.join(CLOUD_BACKUP_DIRECTORY, os.path.basename(backup_file))
+        shutil.copy(backup_file, cloud_backup_file)
+        logging.info(f"☁️ Backup sincronizzato su Google Drive: {cloud_backup_file}")
+
+    except Exception as e:
+        logging.error(f"❌ Errore nella sincronizzazione con Google Drive: {e}")
 
 
 def clean_old_backups(directory, max_files=5):
@@ -139,7 +155,7 @@ def clean_old_backups(directory, max_files=5):
         )
         while len(backups) > max_files:
             os.remove(backups.pop(0))
-            logging.info(f"🗑 Backup vecchio eliminato.")
+            logging.info("🗑 Backup vecchio eliminato.")
 
     except Exception as e:
         logging.error(f"❌ Errore nella gestione dei backup: {e}")
