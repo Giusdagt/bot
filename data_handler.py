@@ -1,8 +1,9 @@
+# data_handler normalizzazione dati 
 import os
 import json
 import logging
 import asyncio
-import websockets  # ✅ Correzione import
+import websockets  
 import shutil
 import pandas as pd
 from datetime import datetime
@@ -44,11 +45,11 @@ async def consume_websocket():
             async for message in websocket:
                 await process_websocket_message(message)
         except websockets.ConnectionClosed:
-             logging.warning(
-                 "⚠️ Connessione WebSocket chiusa. Riconnessione in corso..."
-             )
-             await asyncio.sleep(5)
-             await consume_websocket()
+            logging.warning(
+                "⚠️ Connessione WebSocket chiusa. Riconnessione in corso..."
+            )
+            await asyncio.sleep(5)
+            await consume_websocket()
         except Exception as e:
             logging.error(f"❌ Errore durante la ricezione WebSocket: {e}")
             await asyncio.sleep(5)
@@ -67,13 +68,11 @@ async def process_websocket_message(message):
 
         # Calcolo indicatori tecnici per scalping
         df["rsi"] = TradingIndicators.relative_strength_index(df)
-        df["macd"], df["macd_signal"] = TradingIndicators.moving_average_convergence_divergence(
-              df
-         )
+        df["macd"], df["macd_signal"] = (
+            TradingIndicators.moving_average_convergence_divergence(df))
         df["ema"] = TradingIndicators.exponential_moving_average(df)
-        df["bollinger_upper"], df["bollinger_lower"] = TradingIndicators.bollinger_bands(
-            df
-        )
+        df["bollinger_upper"], df["bollinger_lower"] = (
+            TradingIndicators.bollinger_bands(df))
 
         # Normalizzazione dei dati
         df = normalize_data(df)
@@ -146,7 +145,7 @@ def process_historical_data():
 
 
 def save_data(df, filename):
-    """Salva i dati in formato parquet."""
+    """Salva i dati in formato parquet e gestisce il backup."""
     df.to_parquet(filename)
     backup_file(filename)
 
