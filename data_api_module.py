@@ -38,6 +38,7 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 # 🔹 GESTIONE API MULTI-EXCHANGE
 # ===========================
 
+
 async def fetch_data_from_exchanges(session, currency):
     """Scarica dati dai vari exchange con gestione dinamica dei limiti API."""
     tasks = []
@@ -55,6 +56,7 @@ async def fetch_data_from_exchanges(session, currency):
     
     results = await asyncio.gather(*tasks, return_exceptions=True)
     return [data for data in results if data is not None]
+
 
 async def fetch_market_data(
     session, url, exchange_name, requests_per_minute, retries=3
@@ -84,6 +86,7 @@ async def fetch_market_data(
             await asyncio.sleep(delay)
     return None
 
+
 async def fetch_historical_data(
     session, coin_id, currency, days=DAYS_HISTORY, retries=3
 ):
@@ -109,6 +112,7 @@ async def fetch_historical_data(
                 await asyncio.sleep(2 ** attempt)
     
     return None
+
 
 async def main_fetch_all_data(currency):
     """Scarica i dati di mercato con rispetto automatico dei limiti API."""
@@ -138,12 +142,14 @@ async def main_fetch_all_data(currency):
 # 🔹 GESTIONE SINCRONIZZAZIONE
 # ===========================
 
+
 def save_and_sync(data, filename):
     """Salva e sincronizza i dati solo se necessario."""
     with open(filename, "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
+
 
 def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
@@ -154,6 +160,7 @@ def sync_to_cloud():
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except Exception as e:
             logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", e)
+
 
 if __name__ == "__main__":
     asyncio.run(main_fetch_all_data("eur"))
