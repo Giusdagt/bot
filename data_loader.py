@@ -1,4 +1,8 @@
-# data_loader.py
+"""
+data_loader.py
+Modulo per la gestione del caricamento dei dati di configurazione e di mercato.
+"""
+
 import json
 import os
 import logging
@@ -22,7 +26,7 @@ def load_config(json_file=CONFIG_FILE):
     """Carica il file di configurazione."""
     if not os.path.exists(json_file):
         raise FileNotFoundError(f"❌ Il file {json_file} non esiste.")
-    with open(json_file, 'r') as f:
+    with open(json_file, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
@@ -30,7 +34,7 @@ def load_market_data_apis(json_file=MARKET_API_FILE):
     """Carica la configurazione delle API di mercato."""
     if not os.path.exists(json_file):
         raise FileNotFoundError(f"❌ Il file {json_file} non esiste.")
-    with open(json_file, 'r') as f:
+    with open(json_file, 'r', encoding='utf-8') as f:
         return json.load(f).get('exchanges', [])
 
 
@@ -60,7 +64,7 @@ if __name__ == "__main__":
 
         # Recupera le coppie EUR
         eur_pairs = get_eur_trading_pairs(market_data_apis)
-        logging.info(f"✅ Coppie di trading EUR trovate: {eur_pairs}")
+        logging.info("✅ Coppie di trading EUR trovate: %s", eur_pairs)
 
     except FileNotFoundError as e:
-        logging.error(f"❌ Errore: {e}")
+        logging.error("❌ Errore: %s", e)
