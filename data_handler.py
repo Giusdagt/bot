@@ -43,6 +43,7 @@ WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
+scaler = MinMaxScaler()
 
 
 def upload_to_drive(filepath):
@@ -68,19 +69,27 @@ def download_from_drive(filename, save_path):
         logging.error("❌ Errore download Google Drive: %s", e)
 
 
-def ensure_directory_exists(directory):
-    """Crea la directory se non esiste."""
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+def load_processed_data(filename=HISTORICAL_DATA_FILE):
+    """Carica i dati elaborati da un file parquet."""
+    try:
+        if os.path.exists(filename):
+            return pd.read_parquet(filename)
+        logging.warning("⚠️ Nessun file trovato: %s", filename)
+        return pd.DataFrame()
+    except Exception as e:
+        logging.error("❌ Errore caricamento dati: %s", e)
+        return pd.DataFrame()
 
 
-def should_update_data(filename=HISTORICAL_DATA_FILE, max_age_days=1):
-    """Controlla se i dati devono essere aggiornati."""
-    file_path = os.path.join(SAVE_DIRECTORY, filename)
-    if not os.path.exists(file_path):
-        return True
-    file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
-    return datetime.now() - file_time > timedelta(days=max_age_days)
+def normalize_data(df):
+    """Normalizza i dati per il trading AI."""
+    try:
+        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
+        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+        return df
+    except Exception as e:
+        logging.error("❌ Errore normalizzazione dati: %s", e)
+        return df
 
 
 def fetch_and_prepare_data():
@@ -109,9 +118,6 @@ def process_raw_data():
         with open(RAW_DATA_FILE, "r") as json_file:
             raw_data = json.load(json_file)
 
-        if not raw_data or not isinstance(raw_data, list):
-            raise ValueError("Errore: Dati di mercato non disponibili o non validi.")
-
         df_historical = pd.DataFrame(
             [{"timestamp": datetime.utcfromtimestamp(entry["timestamp"] / 1000),
               "coin_id": crypto.get("id", "unknown"),
@@ -120,6 +126,7 @@ def process_raw_data():
         )
         df_historical.set_index("timestamp", inplace=True)
         df_historical.sort_index(inplace=True)
+        df_historical = normalize_data(df_historical)
 
         save_processed_data(df_historical)
         return df_historical
@@ -132,23 +139,12 @@ def save_processed_data(df, filename=HISTORICAL_DATA_FILE):
     """Salva i dati elaborati in formato parquet."""
     try:
         ensure_directory_exists(SAVE_DIRECTORY)
-        file_path = os.path.join(SAVE_DIRECTORY, filename)
-        df.to_parquet(file_path, index=True)
-        logging.info("✅ Dati salvati in: %s", file_path)
+        df.to_parquet(filename, index=True)
+        logging.info("✅ Dati salvati in: %s", filename)
     except Exception as e:
         logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
 
 
-def delete_old_data():
-    """Elimina i file più vecchi di MAX_AGE."""
-    now = time.time()
-    for filename in os.listdir(SAVE_DIRECTORY):
-        file_path = os.path.join(SAVE_DIRECTORY, filename)
-        if os.path.isfile(file_path) and (now - os.path.getmtime(file_path) > MAX_AGE):
-            os.remove(file_path)
-            logging.info("🗑 File eliminato: %s", file_path)
-
 if __name__ == "__main__":
     logging.info("🔄 Avvio della sincronizzazione dei dati...")
     fetch_and_prepare_data()
-    delete_old_data()
