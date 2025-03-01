@@ -17,7 +17,7 @@ if sys.platform == "win32":
 # Configurazione del logging avanzato
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levellevel)s - %(message)s"
 )
 
 # Numero di giorni di dati storici da scaricare
@@ -48,9 +48,7 @@ async def fetch_data_from_exchanges(session, currency):
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         exchange_limits[exchange["name"]] = req_per_min
         tasks.append(
-            fetch_market_data(
-                session, api_url, exchange["name"], req_per_min
-            )
+            fetch_market_data(session, api_url, exchange["name"], req_per_min)
         )
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -71,7 +69,7 @@ async def fetch_market_data(
                 if response.status == 200:
                     logging.info("✅ Dati ottenuti da %s", exchange_name)
                     return await response.json()
-                if response.status in {400, 429}:
+                if response.status in {400, 429}:  # 400 = Bad Request, 429 = Troppe richieste
                     wait_time = random.randint(10, 30)
                     logging.warning(
                         "⚠️ Errore %d su %s. Attesa %d sec prima di riprovare...",
@@ -114,7 +112,7 @@ async def fetch_historical_data(
 
 
 async def main_fetch_all_data(currency):
-    """Scarica i dati di mercato con rispetto automatico dei limiti API."""
+    """Scarica i dati di mercato con rispetto automatico dei limiti API e sincronizzazione."""
     async with aiohttp.ClientSession() as session:
         market_data = await fetch_data_from_exchanges(session, currency)
 
