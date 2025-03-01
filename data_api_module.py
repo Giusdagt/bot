@@ -74,7 +74,7 @@ async def fetch_market_data(
                 if response.status in {400, 429}:  # Troppe richieste
                     wait_time = random.randint(10, 30)
                     logging.warning(
-                        "⚠️ Errore %d su %s. Attesa %d sec prima di riprovare...",
+                        "⚠️ Errore %d su %s. Attesa %d sec per riprovare...",
                         response.status, exchange_name, wait_time
                     )
                     await asyncio.sleep(wait_time)
