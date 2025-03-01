@@ -62,9 +62,9 @@ if __name__ == "__main__":
         market_data_apis = load_market_data_apis()
         logging.info("🔹 Configurazioni API di mercato caricate con successo.")
 
-        # Recupera le coppie EUR
+        # Recupera le coppie USDT
         usdt_pairs = get_usdt_trading_pairs(market_data_apis)
-        logging.info("✅ Coppie di trading USDT trovate: %s", USDT_pairs)
+        logging.info("✅ Coppie di trading USDT trovate: %s", usdt_pairs)
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
