@@ -55,9 +55,10 @@ async def fetch_data_from_exchanges(session, currency="eur"):
             )
         )
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    # Filtro per le coppie EUR
-    return [data for data in results if data is not None and "eur" in data["symbol"].lower()]
+results = await asyncio.gather(*tasks, return_exceptions=True)
+# Filtro per le coppie EUR
+eur_results = [data for data in results if data is not None and "eur" in data["symbol"].lower()]
+return eur_results
 
 
 async def fetch_market_data(
