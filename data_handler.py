@@ -135,12 +135,12 @@ def process_raw_data():
             raw_data = json.load(json_file)
 
         df_historical = pd.DataFrame(
-            [{"timestamp": datetime.utcfromtimestamp(entry["timestamp"] / 1000),
-              "coin_id": crypto.get("id", "unknown"),
-              "close": entry["close"]}
-             for crypto in raw_data
-             for entry in crypto.get("historical_prices", [])]
-        )
+    [{"timestamp": datetime.utcfromtimestamp(entry["timestamp"] / 1000),
+      "coin_id": crypto.get("id", "unknown"),
+      "close": entry["close"]}
+     for crypto in raw_data
+     for entry in crypto.get("historical_prices", [])]
+)
         df_historical.set_index("timestamp", inplace=True)
         df_historical.sort_index(inplace=True)
         df_historical = normalize_data(df_historical)
