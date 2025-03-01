@@ -40,7 +40,7 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 # ===========================
 
 
-async def fetch_data_from_exchanges(session, currency):
+async def fetch_data_from_exchanges(session, currency="eur"):
     """Scarica dati dai vari exchange con gestione dinamica dei limiti API."""
     tasks = []
     exchange_limits = {}
@@ -56,7 +56,8 @@ async def fetch_data_from_exchanges(session, currency):
         )
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    return [data for data in results if data is not None]
+    # Filtro per le coppie EUR
+    return [data for data in results if data is not None and "eur" in data["symbol"].lower()]
 
 
 async def fetch_market_data(
