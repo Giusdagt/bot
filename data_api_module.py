@@ -33,7 +33,6 @@ STORAGE_PATH = (
 )
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 
-
 # ===========================
 # 🔹 GESTIONE API MULTI-EXCHANGE
 # ===========================
@@ -43,7 +42,7 @@ async def fetch_data_from_exchanges(session, currency):
     """Scarica dati dai vari exchange con gestione dinamica dei limiti API."""
     tasks = []
     exchange_limits = {}
-    
+
     for exchange in services["exchanges"]:
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
@@ -53,7 +52,7 @@ async def fetch_data_from_exchanges(session, currency):
                 session, api_url, exchange["name"], req_per_min
             )
         )
-    
+
     results = await asyncio.gather(*tasks, return_exceptions=True)
     return [data for data in results if data is not None]
 
@@ -110,7 +109,7 @@ async def fetch_historical_data(
                     coin_id, exchange['name'], e
                 )
                 await asyncio.sleep(2 ** attempt)
-    
+
     return None
 
 
@@ -118,22 +117,22 @@ async def main_fetch_all_data(currency):
     """Scarica i dati di mercato con rispetto automatico dei limiti API."""
     async with aiohttp.ClientSession() as session:
         market_data = await fetch_data_from_exchanges(session, currency)
-        
+
         if not market_data:
             logging.error("❌ Nessun dato di mercato disponibile.")
             return None
-        
+
         tasks = [
             fetch_historical_data(session, crypto.get("id"), currency)
             for crypto in market_data[:300] if crypto.get("id")
         ]
         historical_data_list = await asyncio.gather(*tasks)
-        
+
         final_data = []
         for crypto, historical_data in zip(market_data[:300], historical_data_list):
             crypto["historical_prices"] = historical_data
             final_data.append(crypto)
-        
+
         save_and_sync(final_data, STORAGE_PATH)
         return final_data
 
