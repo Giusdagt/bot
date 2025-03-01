@@ -137,7 +137,9 @@ def process_raw_data():
         df_historical = pd.DataFrame(
             [
                 {
-                    "timestamp": datetime.utcfromtimestamp(entry["timestamp"] / 1000),
+                    "timestamp": datetime.utcfromtimestamp(
+                        entry["timestamp"] / 1000
+                    ),
                     "coin_id": crypto.get("id", "unknown"),
                     "close": entry["close"]
                 }
