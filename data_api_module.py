@@ -36,19 +36,21 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 # 🔹 GESTIONE API MULTI-EXCHANGE
 # ===========================
 
+
 async def fetch_data_from_exchanges(session, currency):
     """Scarica dati dai vari exchange con gestione dinamica dei limiti API."""
     tasks = []
     exchange_limits = {}
-    
+
     for exchange in services["exchanges"]:
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         exchange_limits[exchange["name"]] = req_per_min
         tasks.append(fetch_market_data(session, api_url, exchange["name"], req_per_min))
-    
+
     results = await asyncio.gather(*tasks, return_exceptions=True)
     return [data for data in results if data is not None]
+
 
 async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
     """Scarica i dati di mercato con gestione avanzata degli errori e rispetto dei limiti API."""
@@ -72,6 +74,7 @@ async def fetch_market_data(session, url, exchange_name, requests_per_minute, re
             await asyncio.sleep(delay)
     return None
 
+
 async def fetch_historical_data(session, coin_id, currency, days=DAYS_HISTORY, retries=3):
     """Scarica i dati storici con gestione avanzata degli errori."""
     for exchange in services["exchanges"]:
@@ -92,27 +95,28 @@ async def fetch_historical_data(session, coin_id, currency, days=DAYS_HISTORY, r
                     coin_id, exchange['name'], e
                 )
                 await asyncio.sleep(2 ** attempt)
-    
+
     return None
+
 
 async def main_fetch_all_data(currency):
     """Scarica i dati di mercato con rispetto automatico dei limiti API e sincronizzazione."""
     async with aiohttp.ClientSession() as session:
         market_data = await fetch_data_from_exchanges(session, currency)
-        
+
         if not market_data:
             logging.error("❌ Nessun dato di mercato disponibile.")
             return None
-        
+
         tasks = [fetch_historical_data(session, crypto.get("id"), currency)
                  for crypto in market_data[:300] if crypto.get("id")]
         historical_data_list = await asyncio.gather(*tasks)
-        
+
         final_data = []
         for crypto, historical_data in zip(market_data[:300], historical_data_list):
             crypto["historical_prices"] = historical_data
             final_data.append(crypto)
-        
+
         save_and_sync(final_data, STORAGE_PATH)
         return final_data
 
@@ -120,12 +124,14 @@ async def main_fetch_all_data(currency):
 # 🔹 GESTIONE SINCRONIZZAZIONE
 # ===========================
 
+
 def save_and_sync(data, filename):
     """Salva e sincronizza i dati solo se necessario."""
     with open(filename, "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
+
 
 def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
@@ -136,6 +142,7 @@ def sync_to_cloud():
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except Exception as e:
             logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", e)
+
 
 if __name__ == "__main__":
     asyncio.run(main_fetch_all_data("eur"))
