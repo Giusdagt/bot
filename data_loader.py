@@ -1,11 +1,11 @@
-# data_loader.py 
+# data_loader.py
 import json
 import os
 import logging
 
 # Configurazione logging avanzato
 logging.basicConfig(
-    level=logging.INFO, 
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
@@ -16,6 +16,7 @@ MARKET_API_FILE = "market_data_apis.json"
 # ===========================
 # 🔹 FUNZIONI DI UTILITÀ
 # ===========================
+
 
 def load_config(json_file=CONFIG_FILE):
     """Carica il file di configurazione."""
@@ -36,14 +37,16 @@ def load_market_data_apis(json_file=MARKET_API_FILE):
 def get_eur_trading_pairs(market_data):
     """Recupera tutte le coppie di trading in EUR dalle API di mercato."""
     return [
-        market["symbol"] 
-        for market in market_data 
+        market["symbol"]
+        for market in market_data
         if "/EUR" in market.get("symbol", "")
     ]
+
 
 # ===========================
 # 🔹 ESEMPIO DI UTILIZZO
 # ===========================
+
 
 if __name__ == "__main__":
     try:
