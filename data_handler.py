@@ -159,6 +159,54 @@ def save_processed_data(df, filename=HISTORICAL_DATA_FILE):
         logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
 
 
+async def process_websocket_message(message):
+    """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
+    try:
+        data = json.loads(message)
+        price = float(data["p"])
+        timestamp = datetime.fromtimestamp(data["T"] / 1000.0)
+
+        df = pd.DataFrame([[timestamp, price]],
+                          columns=["timestamp", "price"])
+        df.set_index("timestamp", inplace=True)
+
+        # 📊 Calcolo indicatori tecnici
+        df["rsi"] = TradingIndicators.relative_strength_index(df)
+        df["macd"], df["macd_signal"] = (
+            TradingIndicators.moving_average_convergence_divergence(df)
+        )
+        df["ema"] = TradingIndicators.exponential_moving_average(df)
+        df["bollinger_upper"], df["bollinger_lower"] = (
+            TradingIndicators.bollinger_bands(df)
+        )
+
+        # 📌 Normalizzazione e salvataggio dati
+        df = normalize_data(df)
+        save_processed_data(df, SCALPING_DATA_FILE)
+        logging.info("✅ Dati scalping aggiornati: %s", df.tail(1))
+
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        logging.error("❌ Errore elaborazione WebSocket: %s", e)
+
+
+async def consume_websocket():
+    """Consuma dati dal WebSocket per operazioni di scalping."""
+    async with websockets.connect(WEBSOCKET_URL) as websocket:
+        logging.info("✅ Connessione WebSocket stabilita.")
+        try:
+            async for message in websocket:
+                await process_websocket_message(message)
+        except websockets.ConnectionClosed:
+            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione...")
+            await asyncio.sleep(5)
+            await consume_websocket()
+        except Exception as e:
+            logging.error("❌ Errore WebSocket: %s", e)
+            await asyncio.sleep(5)
+            await consume_websocket()
+
+
 if __name__ == "__main__":
     logging.info("🔄 Avvio della sincronizzazione dei dati...")
     fetch_and_prepare_data()
+    asyncio.run(consume_websocket())
