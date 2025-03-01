@@ -81,7 +81,7 @@ def normalized_data():
             return df
 
         non_numeric_columns = [
-            'coin_id', 'symbol', 'name', 'image', 'last_updated', 
+            'coin_id', 'symbol', 'name', 'image', 'last_updated',
             'historical_prices', 'timestamp'
         ]
         df = df.drop(columns=non_numeric_columns, errors='ignore')
@@ -124,6 +124,7 @@ def normalize_data(df):
     except ValueError as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
+
 
 def should_update_data(filename=HISTORICAL_DATA_FILE):
     """Verifica se i dati devono essere aggiornati."""
