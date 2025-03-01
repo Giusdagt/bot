@@ -73,20 +73,24 @@ def download_from_drive(filename, save_path):
 def normalized_data():
     """Normalizza i dati elaborati."""
     try:
-        df = processed_data()
+        df = load_processed_data()
         if df.empty:
-            logging.warning("⚠️ Nessun dato disponibile per la normalizzazione.")
+            logging.warning(
+                "⚠️ Nessun dato disponibile per la normalizzazione."
+            )
             return df
 
         non_numeric_columns = [
-            'coin_id', 'symbol', 'name', 'image', 
-            'last_updated', 'historical_prices', 'timestamp'
+            'coin_id', 'symbol', 'name', 'image', 'last_updated', 
+            'historical_prices', 'timestamp'
         ]
         df = df.drop(columns=non_numeric_columns, errors='ignore')
         df = df.select_dtypes(include=['float64', 'int64']).copy()
 
         if df.empty:
-            logging.warning("⚠️ Nessuna colonna numerica trovata per la normalizzazione.")
+            logging.warning(
+                "⚠️ Nessuna colonna numerica trovata per la normalizzazione."
+            )
             return df
 
         scaler = MinMaxScaler(feature_range=(0, 1))
@@ -110,6 +114,16 @@ def load_processed_data(filename=HISTORICAL_DATA_FILE):
         logging.error("❌ Errore caricamento dati: %s", e)
         return pd.DataFrame()
 
+
+def normalize_data(df):
+    """Normalizza i dati di mercato."""
+    try:
+        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
+        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+        return df
+    except ValueError as e:
+        logging.error("❌ Errore normalizzazione dati: %s", e)
+        return df
 
 def should_update_data(filename=HISTORICAL_DATA_FILE):
     """Verifica se i dati devono essere aggiornati."""
