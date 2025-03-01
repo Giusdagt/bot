@@ -81,7 +81,7 @@ def normalized_data():
             return df
 
         non_numeric_columns = [
-            'coin_id', 'symbol', 'name', 'image', 'last_updated', 
+            'coin_id', 'symbol', 'name', 'image', 'last_updated',
             'historical_prices', 'timestamp'
         ]
         df = df.drop(columns=non_numeric_columns, errors='ignore')
