@@ -69,27 +69,19 @@ def download_from_drive(filename, save_path):
         logging.error("❌ Errore download Google Drive: %s", e)
 
 
-def load_processed_data(filename=HISTORICAL_DATA_FILE):
-    """Carica i dati elaborati da un file parquet."""
-    try:
-        if os.path.exists(filename):
-            return pd.read_parquet(filename)
-        logging.warning("⚠️ Nessun file trovato: %s", filename)
-        return pd.DataFrame()
-    except Exception as e:
-        logging.error("❌ Errore caricamento dati: %s", e)
-        return pd.DataFrame()
+def ensure_directory_exists(directory):
+    """Crea la directory se non esiste."""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 
-def normalize_data(df):
-    """Normalizza i dati per il trading AI."""
-    try:
-        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
-        return df
-    except Exception as e:
-        logging.error("❌ Errore normalizzazione dati: %s", e)
-        return df
+def should_update_data(filename=HISTORICAL_DATA_FILE, max_age_days=1):
+    """Controlla se i dati devono essere aggiornati."""
+    file_path = os.path.join(SAVE_DIRECTORY, filename)
+    if not os.path.exists(file_path):
+        return True
+    file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+    return datetime.now() - file_time > timedelta(days=max_age_days)
 
 
 def fetch_and_prepare_data():
