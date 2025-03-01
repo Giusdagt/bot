@@ -117,7 +117,9 @@ def fetch_and_prepare_data():
         ensure_directory_exists(SAVE_DIRECTORY)
 
         if not os.path.exists(RAW_DATA_FILE):
-            logging.warning("⚠️ File dati di mercato non trovato. Scaricamento in corso...")
+            logging.warning(
+                "⚠️ File dati di mercato non trovato. Scaricamento in corso..."
+            )
             asyncio.run(data_api_module.main_fetch_all_data("eur"))
 
         return process_raw_data()
@@ -204,6 +206,19 @@ async def consume_websocket():
             logging.error("❌ Errore WebSocket: %s", e)
             await asyncio.sleep(5)
             await consume_websocket()
+
+
+def backup_file(file_path):
+    """Effettua il backup del file su Google Drive e USB."""
+    try:
+        # Copia il file su Google Drive
+        upload_to_drive(file_path)
+        # Copia il file su USB
+        usb_path = os.path.join(SAVE_DIRECTORY, os.path.basename(file_path))
+        shutil.copy(file_path, usb_path)
+        logging.info("✅ Backup completato per %s", file_path)
+    except Exception as e:
+        logging.error("❌ Errore backup: %s", e)
 
 
 if __name__ == "__main__":
