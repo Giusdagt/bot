@@ -35,12 +35,13 @@ STORAGE_PATH = (
 )
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 
+
 # ===========================
 # 🔹 GESTIONE API MULTI-EXCHANGE
 # ===========================
 
-async def fetch_data_from_exchanges(session, currency="eur"):
-    """Scarica dati dai vari exchange con gestione dinamica dei limiti API."""
+async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
+    """Scarica solo le coppie USDT con volume alto per ridurre il carico di dati."""
     tasks = []
     exchange_limits = {}
 
@@ -48,18 +49,18 @@ async def fetch_data_from_exchanges(session, currency="eur"):
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         exchange_limits[exchange["name"]] = req_per_min
-        tasks.append(
-            fetch_market_data(
-                session, api_url, exchange["name"], req_per_min
-            )
-        )
+        tasks.append(fetch_market_data(session, api_url, exchange["name"], req_per_min))
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    eur_results = [
+
+    # Filtra solo le coppie con volume maggiore di min_volume
+    filtered_results = [
         data for data in results
-        if data is not None and "eur" in data["symbol"].lower()
+        if data is not None and data.get("total_volume", 0) >= min_volume
     ]
-    return eur_results
+
+    return filtered_results[:300]  # Mantiene massimo 300 coppie USDT
+
 
 async def fetch_market_data(
     session, url, exchange_name, requests_per_minute, retries=3
@@ -90,6 +91,7 @@ async def fetch_market_data(
             await asyncio.sleep(delay)
     return None
 
+
 async def fetch_historical_data(
     session, coin_id, currency, days=DAYS_HISTORY, retries=3
 ):
@@ -116,6 +118,7 @@ async def fetch_historical_data(
 
     return None
 
+
 async def main_fetch_all_data(currency):
     """Scarica i dati di mercato con rispetto automatico dei limiti API."""
     async with aiohttp.ClientSession() as session:
@@ -141,6 +144,7 @@ async def main_fetch_all_data(currency):
         save_and_sync(final_data, STORAGE_PATH)
         return final_data
 
+
 # ===========================
 # 🔹 GESTIONE SINCRONIZZAZIONE
 # ===========================
@@ -151,6 +155,7 @@ def save_and_sync(data, filename):
         json.dump(data, file, indent=4)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
+
 
 def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
@@ -165,5 +170,6 @@ def sync_to_cloud():
                 sync_error
             )
 
+
 if __name__ == "__main__":
-    asyncio.run(main_fetch_all_data("eur"))
+    asyncio.run(main_fetch_all_data("usdt"))
