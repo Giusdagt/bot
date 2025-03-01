@@ -161,7 +161,10 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except Exception as e:
-            logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", e)
+            logging.error(
+                "❌ Errore nella sincronizzazione con Google Drive: %s",
+                e
+            )
 
 
 if __name__ == "__main__":
