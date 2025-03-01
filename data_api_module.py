@@ -130,7 +130,9 @@ async def main_fetch_all_data(currency):
         historical_data_list = await asyncio.gather(*tasks)
 
         final_data = []
-        for crypto, historical_data in zip(market_data[:300], historical_data_list):
+        for crypto, historical_data in zip(
+            market_data[:300], historical_data_list
+        ):
             crypto["historical_prices"] = historical_data
             final_data.append(crypto)
 
