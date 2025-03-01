@@ -80,7 +80,8 @@ async def fetch_market_data(
                     await asyncio.sleep(wait_time)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logging.error(
-                "❌ Errore richiesta API %s su %s: %s", url, exchange_name, e
+                "❌ Errore richiesta API %s su %s: %s",
+                url, exchange_name, e
             )
             await asyncio.sleep(delay)
     return None
