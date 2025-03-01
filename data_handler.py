@@ -54,7 +54,7 @@ def upload_to_drive(filepath):
         file_drive.SetContentFile(filepath)
         file_drive.Upload()
         logging.info("✅ File caricato su Google Drive: %s", filepath)
-    except Exception as e:
+    except IOError as e:
         logging.error("❌ Errore caricamento Google Drive: %s", e)
 
 
@@ -66,7 +66,7 @@ def download_from_drive(filename, save_path):
             file_drive = file_list[0]
             file_drive.GetContentFile(save_path)
             logging.info("✅ File scaricato da Google Drive: %s", save_path)
-    except Exception as e:
+    except IOError as e:
         logging.error("❌ Errore download Google Drive: %s", e)
 
 
