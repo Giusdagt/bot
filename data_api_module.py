@@ -16,7 +16,7 @@ if sys.platform == "win32":
 # Configurazione del logging avanzato
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levellevel)s - %(message)s"
 )
 
 # Numero di giorni di dati storici da scaricare
@@ -46,7 +46,9 @@ async def fetch_data_from_exchanges(session, currency):
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         exchange_limits[exchange["name"]] = req_per_min
-        tasks.append(fetch_market_data(session, api_url, exchange["name"], req_per_min))
+        tasks.append(
+            fetch_market_data(session, api_url, exchange["name"], req_per_min)
+        )
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
     return [data for data in results if data is not None]
