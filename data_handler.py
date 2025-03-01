@@ -200,7 +200,9 @@ async def consume_websocket():
             async for message in websocket:
                 await process_websocket_message(message)
         except websockets.ConnectionClosed:
-            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione...")
+            logging.warning(
+                "⚠️ Connessione WebSocket chiusa. Riconnessione..."
+            )
             await asyncio.sleep(5)
             await consume_websocket()
         except Exception as e:
