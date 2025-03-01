@@ -9,10 +9,11 @@ import shutil
 import json
 import logging
 import asyncio
-import websockets
-import pandas as pd
 import time
 from datetime import datetime, timedelta
+
+import websockets
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import data_api_module
 from indicators import TradingIndicators
@@ -75,7 +76,7 @@ def normalize_data(df):
         numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
         df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
         return df
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
 
@@ -87,7 +88,7 @@ def load_processed_data(filename=HISTORICAL_DATA_FILE):
             return pd.read_parquet(filename)
         logging.warning("⚠️ Nessun file trovato: %s", filename)
         return pd.DataFrame()
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore caricamento dati: %s", e)
         return pd.DataFrame()
 
@@ -123,7 +124,7 @@ def fetch_and_prepare_data():
             asyncio.run(data_api_module.main_fetch_all_data("eur"))
 
         return process_raw_data()
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore durante il processo di dati: %s", e)
         return pd.DataFrame()
 
@@ -131,7 +132,7 @@ def fetch_and_prepare_data():
 def process_raw_data():
     """Elabora i dati dal file JSON grezzo e li salva come parquet."""
     try:
-        with open(RAW_DATA_FILE, "r") as json_file:
+        with open(RAW_DATA_FILE, "r", encoding="utf-8") as json_file:
             raw_data = json.load(json_file)
 
         df_historical = pd.DataFrame(
@@ -153,7 +154,7 @@ def process_raw_data():
 
         save_processed_data(df_historical)
         return df_historical
-    except Exception as e:
+    except (ValueError, KeyError) as e:
         logging.error("❌ Errore elaborazione dati grezzi: %s", e)
         return pd.DataFrame()
 
@@ -164,7 +165,7 @@ def save_processed_data(df, filename=HISTORICAL_DATA_FILE):
         ensure_directory_exists(SAVE_DIRECTORY)
         df.to_parquet(filename, index=True)
         logging.info("✅ Dati salvati in: %s", filename)
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
 
 
@@ -211,7 +212,7 @@ async def consume_websocket():
             )
             await asyncio.sleep(5)
             await consume_websocket()
-        except Exception as e:
+        except ValueError as e:
             logging.error("❌ Errore WebSocket: %s", e)
             await asyncio.sleep(5)
             await consume_websocket()
@@ -226,7 +227,7 @@ def backup_file(file_path):
         usb_path = os.path.join(SAVE_DIRECTORY, os.path.basename(file_path))
         shutil.copy(file_path, usb_path)
         logging.info("✅ Backup completato per %s", file_path)
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore backup: %s", e)
 
 
@@ -237,7 +238,7 @@ def calculate_time_difference(timestamp):
         past = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
         difference = now - past
         return timedelta(seconds=difference.total_seconds())
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore calcolo differenza tempo: %s", e)
         return None
 
