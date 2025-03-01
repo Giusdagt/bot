@@ -1,13 +1,15 @@
-# data_api_module.py
+"""
+Modulo per la gestione delle API di dati di mercato.
+"""
 
-import json
-import os
-import logging
-import sys
-import aiohttp
 import asyncio
+import json
+import logging
+import os
 import random
 import shutil
+import sys
+import aiohttp
 from data_loader import load_market_data_apis
 
 # Impostazione del loop per Windows
