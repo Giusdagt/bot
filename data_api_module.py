@@ -39,7 +39,6 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 # 🔹 GESTIONE API MULTI-EXCHANGE
 # ===========================
 
-
 async def fetch_data_from_exchanges(session, currency="eur"):
     """Scarica dati dai vari exchange con gestione dinamica dei limiti API."""
     tasks = []
@@ -55,11 +54,12 @@ async def fetch_data_from_exchanges(session, currency="eur"):
             )
         )
 
-results = await asyncio.gather(*tasks, return_exceptions=True)
-# Filtro per le coppie EUR
-eur_results = [data for data in results if data is not None and "eur" in data["symbol"].lower()]
-return eur_results
-
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    eur_results = [
+        data for data in results
+        if data is not None and "eur" in data["symbol"].lower()
+    ]
+    return eur_results
 
 async def fetch_market_data(
     session, url, exchange_name, requests_per_minute, retries=3
@@ -82,14 +82,13 @@ async def fetch_market_data(
                         response.status, exchange_name, wait_time
                     )
                     await asyncio.sleep(wait_time)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
             logging.error(
                 "❌ Errore richiesta API %s su %s: %s",
-                url, exchange_name, e
+                url, exchange_name, client_error
             )
             await asyncio.sleep(delay)
     return None
-
 
 async def fetch_historical_data(
     session, coin_id, currency, days=DAYS_HISTORY, retries=3
@@ -108,15 +107,14 @@ async def fetch_historical_data(
                 ) as response:
                     if response.status == 200:
                         return await response.json()
-            except Exception as e:
+            except aiohttp.ClientError as fetch_error:
                 logging.error(
                     "❌ Errore nel recupero dati storici %s da %s: %s",
-                    coin_id, exchange['name'], e
+                    coin_id, exchange['name'], fetch_error
                 )
                 await asyncio.sleep(2 ** attempt)
 
     return None
-
 
 async def main_fetch_all_data(currency):
     """Scarica i dati di mercato con rispetto automatico dei limiti API."""
@@ -143,11 +141,9 @@ async def main_fetch_all_data(currency):
         save_and_sync(final_data, STORAGE_PATH)
         return final_data
 
-
 # ===========================
 # 🔹 GESTIONE SINCRONIZZAZIONE
 # ===========================
-
 
 def save_and_sync(data, filename):
     """Salva e sincronizza i dati solo se necessario."""
@@ -156,7 +152,6 @@ def save_and_sync(data, filename):
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
 
-
 def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
     if os.path.exists(STORAGE_PATH):
@@ -164,12 +159,11 @@ def sync_to_cloud():
             os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
-        except Exception as e:
+        except OSError as sync_error:
             logging.error(
                 "❌ Errore nella sincronizzazione con Google Drive: %s",
-                e
+                sync_error
             )
-
 
 if __name__ == "__main__":
     asyncio.run(main_fetch_all_data("eur"))
