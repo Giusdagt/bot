@@ -16,7 +16,7 @@ if sys.platform == "win32":
 # Configurazione del logging avanzato
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levellevel)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 # Numero di giorni di dati storici da scaricare
@@ -60,7 +60,9 @@ async def fetch_market_data(session, url, exchange_name, requests_per_minute, re
 
     for attempt in range(retries):
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+            async with session.get(
+                url, timeout=aiohttp.ClientTimeout(total=15)
+            ) as response:
                 if response.status == 200:
                     logging.info("✅ Dati ottenuti da %s", exchange_name)
                     return await response.json()
@@ -81,7 +83,8 @@ async def fetch_historical_data(session, coin_id, currency, days=DAYS_HISTORY, r
     """Scarica i dati storici con gestione avanzata degli errori."""
     for exchange in services["exchanges"]:
         historical_url = (
-            exchange["api_url"].replace("{currency}", currency)
+            exchange["api_url"]
+            .replace("{currency}", currency)
             .replace("{symbol}", coin_id)
         )
         for attempt in range(retries):
@@ -110,8 +113,10 @@ async def main_fetch_all_data(currency):
             logging.error("❌ Nessun dato di mercato disponibile.")
             return None
 
-        tasks = [fetch_historical_data(session, crypto.get("id"), currency)
-                 for crypto in market_data[:300] if crypto.get("id")]
+        tasks = [
+            fetch_historical_data(session, crypto.get("id"), currency)
+            for crypto in market_data[:300] if crypto.get("id")
+        ]
         historical_data_list = await asyncio.gather(*tasks)
 
         final_data = []
