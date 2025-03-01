@@ -221,6 +221,18 @@ def backup_file(file_path):
         logging.error("❌ Errore backup: %s", e)
 
 
+def calculate_time_difference(timestamp):
+    """Calcola la differenza di tempo dal timestamp fornito a ora."""
+    try:
+        now = datetime.utcnow()
+        past = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+        difference = now - past
+        return timedelta(seconds=difference.total_seconds())
+    except Exception as e:
+        logging.error("❌ Errore calcolo differenza tempo: %s", e)
+        return None
+
+
 if __name__ == "__main__":
     logging.info("🔄 Avvio della sincronizzazione dei dati...")
     fetch_and_prepare_data()
