@@ -7,7 +7,6 @@ import aiohttp
 import asyncio
 import random
 import shutil
-from datetime import datetime
 from data_loader import load_market_data_apis
 
 # Impostazione del loop per Windows
@@ -15,7 +14,8 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # Configurazione del logging avanzato
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Numero di giorni di dati storici da scaricare
 DAYS_HISTORY = 60  # Default: 60 giorni
@@ -30,7 +30,6 @@ CLOUD_BACKUP = "/mnt/google_drive/trading_backup/market_data.json"
 # ===========================
 # 🔹 GESTIONE API MULTI-EXCHANGE
 # ===========================
-
 
 async def fetch_data_from_exchanges(session, currency):
     """Scarica dati dai vari exchange e passa al successivo se l'API raggiunge il limite."""
@@ -49,7 +48,6 @@ async def fetch_data_from_exchanges(session, currency):
 
     logging.error("❌ Nessun exchange disponibile ha fornito dati validi.")
     return None
-
 
 async def fetch_market_data(session, url, requests_per_minute, retries=3):
     """Scarica i dati di mercato attuali con gestione avanzata degli errori."""
@@ -70,7 +68,6 @@ async def fetch_market_data(session, url, requests_per_minute, retries=3):
 
     return None
 
-
 async def fetch_historical_data(session, coin_id, currency, days=DAYS_HISTORY, retries=3):
     """Scarica i dati storici con gestione avanzata degli errori."""
     for exchange in services["exchanges"]:
@@ -86,7 +83,6 @@ async def fetch_historical_data(session, coin_id, currency, days=DAYS_HISTORY, r
                 await asyncio.sleep(2 ** attempt)
 
     return None
-
 
 async def main_fetch_all_data(currency):
     """Scarica sia i dati di mercato attuali che quelli storici, con failover su più exchange."""
@@ -115,13 +111,11 @@ async def main_fetch_all_data(currency):
 # 🔹 GESTIONE BACKUP
 # ===========================
 
-
 def save_backup(data, filename):
     """Salva un backup locale, su USB e Cloud dei dati API."""
     with open(filename, "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
     logging.info("✅ Backup dati salvato in %s.", filename)
-
 
 def load_backup(filename):
     """Carica i dati salvati in precedenza in caso di errore API."""
@@ -130,7 +124,6 @@ def load_backup(filename):
             return json.load(file)
     logging.warning("⚠️ Backup %s non trovato, impossibile recuperare dati.", filename)
     return []
-
 
 def sync_to_cloud():
     """Sincronizza i dati di mercato con il Cloud se la USB non è disponibile."""
@@ -141,7 +134,6 @@ def sync_to_cloud():
             logging.info("☁️ Dati di mercato sincronizzati su Google Drive.")
         except Exception as e:
             logging.error("❌ Errore nel backup su Google Drive: %s", e)
-
 
 if __name__ == "__main__":
     asyncio.run(main_fetch_all_data("eur"))
