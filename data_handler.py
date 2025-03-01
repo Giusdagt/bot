@@ -1,6 +1,6 @@
 """
 data_handler.py
-Modulo per la gestione dei dati di mercato, inclusa la normalizzazione, 
+Modulo per la gestione dei dati di mercato, inclusa la normalizzazione,
 il backup su cloud, l'elaborazione dei dati grezzi e il supporto al trading.
 """
 
@@ -90,6 +90,20 @@ def load_processed_data(filename=HISTORICAL_DATA_FILE):
     except Exception as e:
         logging.error("❌ Errore caricamento dati: %s", e)
         return pd.DataFrame()
+
+
+def should_update_data(filename=HISTORICAL_DATA_FILE):
+    """Verifica se i dati devono essere aggiornati."""
+    if not os.path.exists(filename):
+        return True
+    file_age = time.time() - os.path.getmtime(filename)
+    return file_age > MAX_AGE
+
+
+def ensure_directory_exists(directory):
+    """Crea la directory se non esiste."""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 
 def fetch_and_prepare_data():
