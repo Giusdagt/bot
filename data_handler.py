@@ -81,7 +81,7 @@ def normalized_data():
             return df
 
         non_numeric_columns = [
-            'coin_id', 'symbol', 'name', 'image', 'last_updated',
+            'coin_id', 'symbol', 'name', 'image', 'last_updated', 
             'historical_prices', 'timestamp'
         ]
         df = df.drop(columns=non_numeric_columns, errors='ignore')
@@ -93,8 +93,8 @@ def normalized_data():
             )
             return df
 
-        scaler = MinMaxScaler(feature_range=(0, 1))
-        df[df.columns] = scaler.fit_transform(df)
+        local_scaler = MinMaxScaler(feature_range=(0, 1))
+        df[df.columns] = local_scaler.fit_transform(df)
         logging.info("✅ Dati normalizzati con successo.")
         return df
 
