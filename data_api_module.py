@@ -16,7 +16,7 @@ if sys.platform == "win32":
 # Configurazione del logging avanzato
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levellevel)s - %(message)s"
 )
 
 # Numero di giorni di dati storici da scaricare
@@ -74,7 +74,9 @@ async def fetch_market_data(session, url, exchange_name, requests_per_minute, re
                     )
                     await asyncio.sleep(wait_time)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            logging.error("❌ Errore richiesta API %s su %s: %s", url, exchange_name, e)
+            logging.error(
+                "❌ Errore richiesta API %s su %s: %s", url, exchange_name, e
+            )
             await asyncio.sleep(delay)
     return None
 
