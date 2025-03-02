@@ -185,6 +185,7 @@ def get_top_usdt_pairs():
                 "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT",
                 "LTCUSDT"]
 
+
 def main():
     """
     Funzione principale per l'aggiornamento dei dati.
