@@ -54,45 +54,15 @@ def upload_to_drive(filepath):
     except IOError as e:
         logging.error("❌ Errore sincronizzazione Google Drive: %s", e)
 
-def load_processed_data(filename=HISTORICAL_DATA_FILE):
-    """Carica i dati elaborati da un file parquet."""
+def process_websocket_message(message):
+    """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
     try:
-        if os.path.exists(filename):
-            return pd.read_parquet(filename)
-        logging.warning("⚠️ Nessun file trovato: %s", filename)
-        return pd.DataFrame()
-    except ValueError as e:
-        logging.error("❌ Errore caricamento dati: %s", e)
-        return pd.DataFrame()
-
-def fetch_and_prepare_data():
-    """Scarica e prepara i dati di mercato se non già disponibili."""
-    try:
-        if not os.path.exists(RAW_DATA_FILE):
-            logging.info("📥 Dati non trovati, avvio il download...")
-            asyncio.run(data_api_module.main())  # Assicura il richiamo corretto
-        logging.info("✅ Dati di mercato aggiornati.")
-    except Exception as e:
-        logging.error("❌ Errore durante il fetch dei dati: %s", e)
-
-def normalize_data(df):
-    """Normalizza i dati di mercato e garantisce tutte le colonne."""
-    try:
-        required_columns = [
-            'coin_id', 'symbol', 'name', 'image', 'last_updated',
-            'historical_prices', 'timestamp', "close", "open", "high",
-            "low", "volume"
-        ]
-        for col in required_columns:
-            if col not in df.columns:
-                df[col] = None  # Assicura che tutte le colonne siano presenti
-        df = calculate_indicators(df)  # Calcola tutti gli indicatori avanzati
-        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-        df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
-        return df
-    except ValueError as e:
-        logging.error("❌ Errore normalizzazione dati: %s", e)
-        return df
+        data = pd.DataFrame([message])
+        data["timestamp"] = datetime.utcnow()
+        data = calculate_indicators(data)  # Calcola indicatori su dati WebSocket
+        logging.info("✅ Dati scalping aggiornati con indicatori: %s", data.tail(1))
+    except (ValueError, KeyError) as e:
+        logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
 async def consume_websocket():
     """Consuma dati dal WebSocket per operazioni di scalping."""
@@ -109,6 +79,36 @@ async def consume_websocket():
             logging.error("❌ Errore WebSocket: %s", e)
             await asyncio.sleep(5)
             await consume_websocket()
+
+def fetch_and_prepare_data():
+    """Scarica e prepara i dati di mercato se non già disponibili."""
+    try:
+        if not os.path.exists(RAW_DATA_FILE):
+            logging.info("📥 Dati non trovati, avvio il download...")
+            asyncio.run(data_api_module.main())
+        logging.info("✅ Dati di mercato aggiornati.")
+    except Exception as e:
+        logging.error("❌ Errore durante il fetch dei dati: %s", e)
+
+def normalize_data(df):
+    """Normalizza i dati di mercato e garantisce tutte le colonne necessarie."""
+    try:
+        required_columns = [
+            'coin_id', 'symbol', 'name', 'image', 'last_updated',
+            'historical_prices', 'timestamp', "close", "open", "high",
+            "low", "volume"
+        ]
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = pd.NA  # Usa pd.NA invece di None per valori mancanti
+        df = calculate_indicators(df)  # Calcola gli indicatori avanzati
+        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
+        if not numeric_cols.empty:
+            df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+        return df
+    except (ValueError, KeyError) as e:
+        logging.error("❌ Errore normalizzazione dati: %s", e)
+        return df
 
 if __name__ == "__main__":
     logging.info("🔄 Avvio sincronizzazione dati...")
