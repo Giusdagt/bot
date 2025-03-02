@@ -71,7 +71,7 @@ def process_websocket_message(message):
         data = pd.DataFrame([message])
         data["timestamp"] = datetime.utcnow()
         data = calculate_indicators(data)  # Calcola indicatori per WebSocket
-        save_processed_data(data, SCALPING_DATA_FILE)  # 🔥 Salva i dati scalping!
+        save_processed_data(data, SCALPING_DATA_FILE)  # 🔥 Salva scalping!
         logging.info("✅ Dati scalping aggiornati con indicatori: %s",
                      data.tail(1))
     except Exception as e:
@@ -110,13 +110,12 @@ def normalize_data(df):
     """Normalizza i dati di mercato e carica le colonne richieste."""
     try:
         if df.empty:
-            logging.warning("⚠️ Il DataFrame è vuoto. Nessuna normalizzazione eseguita.")
+            logging.warning("⚠️ Il DataFrame è vuoto. Nessuna normalizzazione fatta.")
             return df
 
         for col in required_columns:
             if col not in df.columns:
                 df[col] = pd.NA  # Usa pd.NA invece di None per valori mancanti
-        
         df = calculate_indicators(df)  # Calcola gli indicatori avanzati
         numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
         if not numeric_cols.empty:
