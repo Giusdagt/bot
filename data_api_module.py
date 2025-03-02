@@ -27,7 +27,7 @@ def download_no_api_data(symbols=None, interval="1d"):
         symbols = get_top_usdt_pairs()
     sources = services["data_sources"]["no_api"]
     data = {}
-    
+
     def fetch_data(source_name, url, symbol):
         response = requests.get(url)
         if response.status == 200:
@@ -35,7 +35,7 @@ def download_no_api_data(symbols=None, interval="1d"):
                 data[symbol] = {}
             data[symbol][source_name] = url
             logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
-    
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         for symbol in symbols:
             executor.submit(
@@ -50,6 +50,7 @@ def download_no_api_data(symbols=None, interval="1d"):
             )
     return data
 
+
 async def fetch_data_from_exchanges(session, currency="usdt",
                                     min_volume=5000000):
     tasks = []
@@ -57,21 +58,25 @@ async def fetch_data_from_exchanges(session, currency="usdt",
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         tasks.append(
-            fetch_market_data(session, api_url,
-                              exchange["name"], req_per_min)
+            fetch_market_data(session, api_url, exchange["name"], req_per_min)
         )
     results = await asyncio.gather(*tasks, return_exceptions=True)
     return [data for data in results if data is not None and
             data.get("total_volume", 0) >= min_volume][:300]
 
-async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
+
+async def fetch_market_data(session, url, exchange_name,
+                            requests_per_minute, retries=3):
     delay = max(2, 60 / requests_per_minute)
     for attempt in range(retries):
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+            async with session.get(
+                url, timeout=aiohttp.ClientTimeout(total=15)
+            ) as response:
                 if response.status == 200:
                     logging.info(
-                        "✅ Dati ottenuti da %s al tentativo %d", exchange_name, attempt + 1
+                        "✅ Dati ottenuti da %s al tentativo %d",
+                        exchange_name, attempt + 1
                     )
                     return await response.json()
                 if response.status in {400, 429}:
@@ -89,11 +94,13 @@ async def fetch_market_data(session, url, exchange_name, requests_per_minute, re
             await asyncio.sleep(delay)
     return None
 
+
 def save_and_sync(data, filename):
     df = pd.DataFrame(data)
     df.to_parquet(filename, index=False)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
+
 
 def sync_to_cloud():
     if os.path.exists(STORAGE_PATH):
@@ -102,8 +109,11 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error("❌ Errore nella sincronizzazione con Google Drive:" 
-                          " %s", sync_error)
+            logging.error(
+                "❌ Errore nella sincronizzazione con Google Drive: %s",
+                sync_error
+            )
+
 
 def get_top_usdt_pairs():
     try:
@@ -118,6 +128,7 @@ def get_top_usdt_pairs():
         return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
                 "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT",
                 "LTCUSDT"]
+
 
 def main():
     logging.info("🔄 Avvio aggiornamento dati esclusivamente senza API...")
