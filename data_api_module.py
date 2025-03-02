@@ -63,11 +63,13 @@ def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
     return data
 
 
-async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
-    """Scarica solo le coppie USDT con volume alto per ridurre il carico di dati."""
+async def fetch_data_from_exchanges(
+    session, currency="usdt", min_volume=5000000
+):
+    """Scarica solo coppie USDT con volume alto per ridurre i dati."""
     tasks = []
     exchange_limits = {}
-
+    
     for exchange in services["exchanges"]:
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
