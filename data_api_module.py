@@ -7,12 +7,12 @@ import logging
 import os
 import shutil
 import sys
-import random
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
 import requests
 import pandas as pd
 from data_loader import load_market_data_apis
+from column_definitions import required_columns  # Usa direttamente da qui
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -33,11 +33,6 @@ def ensure_all_columns(df):
     Assicura che il DataFrame contenga tutte le colonne richieste.
     Se una colonna manca, viene aggiunta con valore pd.NA.
     """
-    required_columns = [
-        'coin_id', 'symbol', 'name', 'image', 'last_updated',
-        'historical_prices', 'timestamp', "close", "open", "high",
-        "low", "volume"
-    ]
     for col in required_columns:
         if col not in df.columns:
             df[col] = pd.NA
@@ -49,7 +44,7 @@ def get_top_usdt_pairs():
     Ottiene le prime coppie USDT con volume superiore a 5 milioni.
     """
     try:
-        df = pd.read_parquet("market_data.parquet")
+        df = pd.read_parquet(STORAGE_PATH)
         usdt_pairs = df[
             (df["symbol"].str.endswith("USDT")) &
             (df["total_volume"] > 5000000)
@@ -65,7 +60,7 @@ def get_top_usdt_pairs():
 async def fetch_market_data(session, url, exchange_name,
                             requests_per_minute, retries=3):
     """
-    Scarica i dati di mercato con gestione degli errori.
+    Scarica i dati di mercato con gestione avanzata degli errori.
     """
     delay = max(2, 60 / requests_per_minute)
     for attempt in range(retries):
@@ -80,7 +75,7 @@ async def fetch_market_data(session, url, exchange_name,
                     )
                     return await response.json()
                 if response.status in {400, 429}:
-                    wait_time = random.randint(10, 30)
+                    wait_time = 15  # Attendi 15 secondi prima di riprovare
                     logging.warning(
                         "⚠️ Errore %d su %s. Attesa %d sec per riprovare...",
                         response.status, exchange_name, wait_time
@@ -95,22 +90,23 @@ async def fetch_market_data(session, url, exchange_name,
     return None
 
 
-def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
+async def fetch_data_from_exchanges(currency="usdt", min_volume=5000000):
     """
     Scarica dati dalle borse con un volume minimo specificato.
     """
-    tasks = []
-    for exchange in services["exchanges"]:
-        api_url = exchange["api_url"].replace("{currency}", currency)
-        req_per_min = exchange["limitations"].get("requests_per_minute", 60)
-        tasks.append(
-            fetch_market_data(
-                session, api_url, exchange["name"], req_per_min
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for exchange in services["exchanges"]:
+            api_url = exchange["api_url"].replace("{currency}", currency)
+            req_per_min = exchange["limitations"].get("requests_per_minute", 60)
+            tasks.append(
+                fetch_market_data(
+                    session, api_url, exchange["name"], req_per_min
+                )
             )
-        )
-    results = asyncio.run(asyncio.gather(*tasks, return_exceptions=True))
-    return [data for data in results if data is not None and
-            data.get("total_volume", 0) >= min_volume][:300]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return [data for data in results if data is not None and
+                data.get("total_volume", 0) >= min_volume][:300]
 
 
 def download_no_api_data(symbols=None, interval="1d"):
@@ -145,7 +141,7 @@ def download_no_api_data(symbols=None, interval="1d"):
     return data
 
 
-def save_and_sync(data, filename="market_data.parquet"):
+def save_and_sync(data, filename=STORAGE_PATH):
     """
     Salva i dati in formato Parquet e li sincronizza con Google Drive.
     """
@@ -163,9 +159,8 @@ def save_and_sync(data, filename="market_data.parquet"):
             filename
         )
         sync_to_cloud()
-    except (ValueError, KeyError, OSError, IOError) as e:
-        logging.error("❌ Error durante il salvataggio dei dati di mercato: %s",
-                      e)
+    except Exception as e:
+        logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
 
 
 def sync_to_cloud():
@@ -184,7 +179,7 @@ def sync_to_cloud():
             )
 
 
-def main():
+async def main():
     """
     Funzione principale per l'aggiornamento dei dati.
     """
@@ -195,7 +190,7 @@ def main():
         logging.warning(
             "⚠️ Nessun dato trovato senza API. Passaggio alle API..."
         )
-        asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
+        data_no_api = await fetch_data_from_exchanges()
     save_and_sync(data_no_api, STORAGE_PATH)
     logging.info(
         "✅ Processo completato utilizzando principalmente dati senza API."
@@ -203,4 +198,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
