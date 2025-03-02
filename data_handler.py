@@ -169,7 +169,7 @@ def load_raw_data_parquet(file_path="market_data.parquet"):
 
 
 def process_raw_data():
-    """Elabora i dati dal file Parquet e li salva come file parquet elaborati."""
+    """Elabora i dati dal file Parquet e salva come file parquet elaborati."""
     try:
         df_historical = load_raw_data_parquet()
         df_historical.set_index("timestamp", inplace=True)
