@@ -5,7 +5,6 @@ Modulo per la gestione del caricamento dei dati di mercato.
 import asyncio
 import logging
 import os
-import random
 import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -42,6 +41,7 @@ def ensure_all_columns(df):
             df[col] = pd.NA
     return df
 
+
 def download_no_api_data(symbols=None, interval="1d"):
     """
     Scarica dati senza l'uso di API.
@@ -63,13 +63,16 @@ def download_no_api_data(symbols=None, interval="1d"):
         for symbol in symbols:
             executor.submit(
                 fetch_data, "binance_data",
-                f"{sources['binance_data']}/{symbol}/{interval}/{symbol}-{interval}.zip", symbol
+                f"{sources['binance_data']}/{symbol}/{interval}/"
+                f"{symbol}-{interval}.zip", symbol
             )
             executor.submit(
                 fetch_data, "cryptodatadownload",
-                f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv", symbol
+                f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv",
+                symbol
             )
     return data
+
 
 def save_and_sync(data, filename="market_data.parquet"):
     """
@@ -84,8 +87,9 @@ def save_and_sync(data, filename="market_data.parquet"):
         df.to_parquet(filename, index=False)
         logging.info("✅ Dati aggiornati in %s con tutte le colonne richieste.", filename)
         sync_to_cloud()
-    except Exception as e:
+    except (ValueError, KeyError, OSError, IOError) as e:
         logging.error("❌ Errore durante il salvataggio dei dati di mercato: %s", e)
+
 
 def sync_to_cloud():
     """
@@ -99,6 +103,7 @@ def sync_to_cloud():
         except OSError as sync_error:
             logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
 
+
 def main():
     """
     Funzione principale per l'aggiornamento dei dati.
@@ -111,6 +116,7 @@ def main():
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
     save_and_sync(data_no_api, STORAGE_PATH)
     logging.info("✅ Processo completato utilizzando principalmente dati senza API.")
+
 
 if __name__ == "__main__":
     main()
