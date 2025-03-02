@@ -119,6 +119,7 @@ async def fetch_market_data(
             await asyncio.sleep(delay)
     return None
 
+
 def save_and_sync(data, filename):
     """Salva i dati senza modificare la logica originale."""
     with open(filename, "w", encoding='utf-8') as file:
