@@ -12,6 +12,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
 import requests
+import pandas as pd  # Aggiunta l'importazione di pandas
 from data_loader import load_market_data_apis
 
 # Impostazione del loop per Windows
@@ -31,8 +32,8 @@ DAYS_HISTORY = 60
 services = load_market_data_apis()
 
 # 📌 Percorsi per la sincronizzazione dei dati
-STORAGE_PATH = "market_data.json"
-CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
+STORAGE_PATH = "market_data.parquet"
+CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.parquet"
 
 
 # 📌 Scarica dati senza API in parallelo, senza modificare la logica originale
@@ -58,7 +59,9 @@ def download_no_api_data(symbols=None, interval="1d"):
             if symbol not in data:
                 data[symbol] = {}
             data[symbol][source_name] = url
-            logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
+            logging.info(
+                "✅ Dati %s scaricati per %s", source_name, symbol
+            )
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         for symbol in symbols:
@@ -100,7 +103,9 @@ async def fetch_data_from_exchanges(
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         exchange_limits[exchange["name"]] = req_per_min
         tasks.append(
-            fetch_market_data(session, api_url, exchange["name"], req_per_min)
+            fetch_market_data(
+                session, api_url, exchange["name"], req_per_min
+            )
         )
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -166,8 +171,8 @@ def save_and_sync(data, filename):
         data (dict): Dati da salvare.
         filename (str): Nome del file dove salvare i dati.
     """
-    with open(filename, "w", encoding='utf-8') as file:
-        json.dump(data, file, indent=4)
+    df = pd.DataFrame(data)
+    df.to_parquet(filename, index=False)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
 
