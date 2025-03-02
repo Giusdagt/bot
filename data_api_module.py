@@ -179,12 +179,11 @@ def get_top_usdt_pairs():
             (df["total_volume"] > 5000000)
         ].sort_values(by="total_volume", ascending=False).head(300)
         return usdt_pairs["symbol"].tolist()
-    except Exception as e:
+    except (FileNotFoundError, pd.errors.EmptyDataError) as e:
         logging.error("❌ Errore nel filtrare le coppie USDT: %s", e)
         return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
                 "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT",
                 "LTCUSDT"]
-
 
 def main():
     """
