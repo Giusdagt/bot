@@ -12,7 +12,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 import aiohttp
 import requests
-import pandas as pd  # Aggiunta l'importazione di pandas
+import pandas as pd
 from data_loader import load_market_data_apis
 
 # Impostazione del loop per Windows
@@ -193,21 +193,47 @@ def sync_to_cloud():
             )
 
 
+def get_top_usdt_pairs():
+    """
+    Filtra e restituisce le prime 300 coppie USDT con volume >5M.
+    """
+    try:
+        df = pd.read_parquet("market_data.parquet")
+
+        # Filtra solo le coppie USDT con volume superiore a 5M
+        usdt_pairs = df[
+            (df["symbol"].str.endswith("USDT")) &
+            (df["total_volume"] > 5000000)
+        ].sort_values(by="total_volume", ascending=False).head(300)
+
+        return usdt_pairs["symbol"].tolist()
+
+    except Exception as e:
+        logging.error("❌ Errore nel filtrare le coppie USDT: %s", e)
+        return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", 
+        "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT",
+        "LTCUSDT"] #fall back multiplo
+
+
 def main():
     """
     Funzione principale per l'aggiornamento dei dati.
     """
-    logging.info("🔄 Avvio aggiornamento dati...")
-    data_no_api = download_no_api_data()
+    logging.info("🔄 Avvio aggiornamento dati esclusivamente senza API...")
 
+    # Scarica dati senza API per le coppie USDT filtrate
+    top_usdt_pairs = get_top_usdt_pairs()  # Lista delle migliori 300 coppie USDT
+    data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
+
+    # Se i dati senza API sono incompleti o non disponibili, attiva le API
     if not data_no_api:
-        logging.warning(
-            "⚠️ Nessun dato trovato senza API. Passaggio ai dati via API..."
-        )
+        logging.warning("⚠️ Nessun dato trovato senza API. "
+                        "Passaggio alle API solo se necessario...")
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
 
+    # Salva i dati in Parquet per maggiore efficienza
     save_and_sync(data_no_api, STORAGE_PATH)
-    logging.info("✅ Processo completato.")
+    logging.info("✅ Processo completato utilizzando principalmente dati senza API.")
 
 
 if __name__ == "__main__":
