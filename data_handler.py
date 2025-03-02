@@ -98,7 +98,7 @@ def fetch_and_prepare_data():
 
 def normalize_data(df):
     """
-    Normalizza i dati di mercato e garantisce che tutte le colonne richieste siano presenti.
+    Normalizza i dati di mercato e carica le colonne richieste.
     """
     try:
         for col in required_columns:
@@ -114,7 +114,6 @@ def normalize_data(df):
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
-
 
 
 if __name__ == "__main__":
