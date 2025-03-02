@@ -11,11 +11,11 @@ import asyncio
 from datetime import datetime
 import websockets
 import pandas as pd
-from column_definitions import required_columns
 from sklearn.preprocessing import MinMaxScaler
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 from indicators import calculate_indicators
+from column_definitions import required_columns
 import data_api_module
 
 # 📌 Configurazione logging avanzata
