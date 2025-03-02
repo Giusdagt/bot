@@ -110,7 +110,7 @@ def normalize_data(df):
     """Normalizza i dati di mercato e carica le colonne richieste."""
     try:
         if df.empty:
-            logging.warning("⚠️ Il DataFrame è vuoto. Nessuna normalizzazione fatta.")
+            logging.warning("⚠️ DataFrame è vuoto. Nessuna normalizzazione ")
             return df
 
         for col in required_columns:
