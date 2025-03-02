@@ -100,8 +100,8 @@ async def fetch_market_data(
             ) as response:
                 if response.status == 200:
                     logging.info(
-    "✅ Dati ottenuti da %s al tentativo %d", exchange_name, attempt + 1
-)
+                        "✅ Dati ottenuti da %s al tentativo %d", exchange_name, attempt + 1
+                    )
                     return await response.json()
                 if response.status in {400, 429}:  # Troppe richieste
                     wait_time = random.randint(10, 30)
