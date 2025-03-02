@@ -8,14 +8,14 @@ al trading.
 import os
 import logging
 import asyncio
+from datetime import datetime
 import websockets
 import pandas as pd
-from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
-import data_api_module
-from indicators import calculate_indicators
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+import data_api_module
+from indicators import calculate_indicators
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
@@ -92,7 +92,7 @@ def fetch_and_prepare_data():
             logging.info("📥 Dati non trovati, avvio il download...")
             asyncio.run(data_api_module.main())
         logging.info("✅ Dati di mercato aggiornati.")
-    except Exception as e:
+    except (IOError, OSError) as e:
         logging.error("❌ Errore durante il fetch dei dati: %s", e)
 
 
