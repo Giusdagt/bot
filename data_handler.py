@@ -14,8 +14,8 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
-import data_api_module
 from indicators import calculate_indicators
+import data_api_module
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
