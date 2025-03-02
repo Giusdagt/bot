@@ -10,7 +10,7 @@ import logging
 import asyncio
 import websockets
 import pandas as pd
-from datetime import datetime  # Reinserito per la gestione WebSocket
+from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
 import data_api_module
 from indicators import calculate_indicators
@@ -93,6 +93,22 @@ def normalize_data(df):
     except ValueError as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
+
+async def consume_websocket():
+    """Consuma dati dal WebSocket per operazioni di scalping."""
+    async with websockets.connect(WEBSOCKET_URL) as websocket:
+        logging.info("✅ Connessione WebSocket stabilita.")
+        try:
+            async for message in websocket:
+                await process_websocket_message(message)
+        except websockets.ConnectionClosed:
+            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione...")
+            await asyncio.sleep(5)
+            await consume_websocket()
+        except ValueError as e:
+            logging.error("❌ Errore WebSocket: %s", e)
+            await asyncio.sleep(5)
+            await consume_websocket()
 
 if __name__ == "__main__":
     logging.info("🔄 Avvio sincronizzazione dati...")
