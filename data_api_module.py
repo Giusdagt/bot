@@ -100,7 +100,8 @@ async def fetch_market_data(
             ) as response:
                 if response.status == 200:
                     logging.info(
-                        "✅ Dati ottenuti da %s al tentativo %d", exchange_name, attempt + 1
+                        "✅ Dati ottenuti da %s al tentativo %d",
+                        exchange_name, attempt + 1
                     )
                     return await response.json()
                 if response.status in {400, 429}:  # Troppe richieste
@@ -117,7 +118,6 @@ async def fetch_market_data(
             )
             await asyncio.sleep(delay)
     return None
-
 
 def save_and_sync(data, filename):
     """Salva i dati senza modificare la logica originale."""
