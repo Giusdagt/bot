@@ -61,6 +61,38 @@ def get_top_usdt_pairs():
                 "LTCUSDT"]
 
 
+async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
+    """
+    Scarica i dati di mercato con gestione degli errori.
+    """
+    delay = max(2, 60 / requests_per_minute)
+    for attempt in range(retries):
+        try:
+            async with session.get(
+                url, timeout=aiohttp.ClientTimeout(total=15)
+            ) as response:
+                if response.status == 200:
+                    logging.info(
+                        "✅ Dati ottenuti da %s al tentativo %d",
+                        exchange_name, attempt + 1
+                    )
+                    return await response.json()
+                if response.status in {400, 429}:
+                    wait_time = random.randint(10, 30)
+                    logging.warning(
+                        "⚠️ Errore %d su %s. Attesa %d sec per riprovare...",
+                        response.status, exchange_name, wait_time
+                    )
+                    await asyncio.sleep(wait_time)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
+            logging.error(
+                "❌ Errore richiesta API %s su %s al tentativo %d: %s",
+                url, exchange_name, attempt + 1, client_error
+            )
+            await asyncio.sleep(delay)
+    return None
+
+
 def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
     """
     Scarica dati dalle borse con un volume minimo specificato.
@@ -120,7 +152,10 @@ def save_and_sync(data, filename="market_data.parquet"):
         df = pd.DataFrame(data)
         df = ensure_all_columns(df)
         df.to_parquet(filename, index=False)
-        logging.info("✅ Dati aggiornati in %s con tutte le colonne richieste.", filename)
+        logging.info(
+            "✅ Dati aggiornati in %s con tutte le colonne richieste.",
+            filename
+        )
         sync_to_cloud()
     except (ValueError, KeyError, OSError, IOError) as e:
         logging.error("❌ Errore durante il salvataggio dei dati di mercato: %s", e)
@@ -136,7 +171,10 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
+            logging.error(
+                "❌ Errore nella sincronizzazione con Google Drive: %s",
+                sync_error
+            )
 
 
 def main():
@@ -147,10 +185,14 @@ def main():
     top_usdt_pairs = get_top_usdt_pairs()
     data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
     if not data_no_api:
-        logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API solo se necessario...")
+        logging.warning(
+            "⚠️ Nessun dato trovato senza API. Passaggio alle API solo se necessario..."
+        )
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
     save_and_sync(data_no_api, STORAGE_PATH)
-    logging.info("✅ Processo completato utilizzando principalmente dati senza API.")
+    logging.info(
+        "✅ Processo completato utilizzando principalmente dati senza API."
+    )
 
 
 if __name__ == "__main__":
