@@ -42,7 +42,7 @@ def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
             if symbol not in data:
                 data[symbol] = {}
             data[symbol][source_name] = url
-            logging.info(f"✅ Dati {source_name} scaricati per {symbol}")
+            logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         for symbol in symbols:
@@ -99,7 +99,7 @@ async def fetch_market_data(
                 url, timeout=aiohttp.ClientTimeout(total=15)
             ) as response:
                 if response.status == 200:
-                    logging.info("✅ Dati ottenuti da %s", exchange_name)
+                    logging.info("✅ Dati ottenuti da %s al tentativo %d", exchange_name, attempt + 1)
                     return await response.json()
                 if response.status in {400, 429}:  # Troppe richieste
                     wait_time = random.randint(10, 30)
@@ -110,8 +110,8 @@ async def fetch_market_data(
                     await asyncio.sleep(wait_time)
         except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
             logging.error(
-                "❌ Errore richiesta API %s su %s: %s",
-                url, exchange_name, client_error
+                "❌ Errore richiesta API %s su %s al tentativo %d: %s",
+                url, exchange_name, attempt + 1, client_error
             )
             await asyncio.sleep(delay)
     return None
