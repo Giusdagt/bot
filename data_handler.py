@@ -44,6 +44,7 @@ gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 scaler = MinMaxScaler()
 
+
 def upload_to_drive(filepath):
     """Sincronizza un file su Google Drive."""
     try:
@@ -54,15 +55,18 @@ def upload_to_drive(filepath):
     except IOError as e:
         logging.error("❌ Errore sincronizzazione Google Drive: %s", e)
 
+
 def process_websocket_message(message):
     """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
     try:
         data = pd.DataFrame([message])
         data["timestamp"] = datetime.utcnow()
         data = calculate_indicators(data)  # Calcola indicatori su dati WebSocket
-        logging.info("✅ Dati scalping aggiornati con indicatori: %s", data.tail(1))
+        logging.info("✅ Dati scalping aggiornati con indicatori: %s",
+                     data.tail(1))
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
+
 
 async def consume_websocket():
     """Consuma dati dal WebSocket per operazioni di scalping."""
@@ -80,6 +84,7 @@ async def consume_websocket():
             await asyncio.sleep(5)
             await consume_websocket()
 
+
 def fetch_and_prepare_data():
     """Scarica e prepara i dati di mercato se non già disponibili."""
     try:
@@ -89,6 +94,7 @@ def fetch_and_prepare_data():
         logging.info("✅ Dati di mercato aggiornati.")
     except Exception as e:
         logging.error("❌ Errore durante il fetch dei dati: %s", e)
+
 
 def normalize_data(df):
     """Normalizza i dati di mercato e garantisce tutte le colonne necessarie."""
@@ -109,6 +115,7 @@ def normalize_data(df):
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
+
 
 if __name__ == "__main__":
     logging.info("🔄 Avvio sincronizzazione dati...")
