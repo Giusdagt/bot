@@ -51,7 +51,7 @@ def upload_to_drive(filepath):
         file_drive.SetContentFile(filepath)
         file_drive.Upload()
         logging.info("✅ File sincronizzato su Google Drive: %s", filepath)
-    except Exception as e:
+    except IOError as e:
         logging.error("❌ Errore sincronizzazione Google Drive: %s", e)
 
 
@@ -61,7 +61,7 @@ def save_processed_data(df, filename):
         df.to_parquet(filename, index=False)
         logging.info("✅ Dati salvati in %s.", filename)
         upload_to_drive(filename)
-    except Exception as e:
+    except IOError as e:
         logging.error("❌ Errore nel salvataggio dei dati: %s", e)
 
 
@@ -74,7 +74,7 @@ def process_websocket_message(message):
         save_processed_data(data, SCALPING_DATA_FILE)  # 🔥 Salva scalping!
         logging.info("✅ Dati scalping aggiornati con indicatori: %s",
                      data.tail(1))
-    except Exception as e:
+    except ValueError as e:
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
 
@@ -89,7 +89,7 @@ async def consume_websocket():
             logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione..")
             await asyncio.sleep(5)
             await consume_websocket()
-        except Exception as e:
+        except websockets.ConnectionClosed as e:
             logging.error("❌ Errore WebSocket: %s", e)
             await asyncio.sleep(5)
             await consume_websocket()
@@ -102,7 +102,7 @@ def fetch_and_prepare_data():
             logging.info("📥 Dati non trovati, avvio il download...")
             asyncio.run(data_api_module.main())
         logging.info("✅ Dati di mercato aggiornati.")
-    except Exception as e:
+    except (IOError, ValueError) as e:
         logging.error("❌ Errore durante il fetch dei dati: %s", e)
 
 
@@ -122,7 +122,7 @@ def normalize_data(df):
             df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
 
         return df
-    except Exception as e:
+    except (ValueError, KeyError) as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
 
