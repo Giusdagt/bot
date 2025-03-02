@@ -8,11 +8,11 @@ al trading.
 import os
 import logging
 import asyncio
-from datetime import datetime
 import websockets
 import pandas as pd
+from datetime import datetime  # Reinserito per la gestione WebSocket
 from sklearn.preprocessing import MinMaxScaler
-import data_api_module
+import data_api_module  # Per richiamare i dati grezzi
 from indicators import calculate_indicators
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -88,6 +88,7 @@ def process_websocket_message(message):
     """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
     try:
         data = pd.DataFrame([message])
+        data["timestamp"] = datetime.utcnow()
         data = calculate_indicators(data)  # Calcolo indicatori su dati WebSocket
         save_processed_data(data, SCALPING_DATA_FILE)
         logging.info("✅ Dati scalping aggiornati: %s", data.tail(1))
