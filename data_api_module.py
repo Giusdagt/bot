@@ -49,7 +49,8 @@ def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
             executor.submit(
                 fetch_data,
                 "binance_data",
-                f"{sources['binance_data']}/{symbol}/{interval}/{symbol}-{interval}.zip",
+                f"{sources['binance_data']}/{symbol}/{interval}/"
+                f"{symbol}-{interval}.zip",
                 symbol
             )
             executor.submit(
