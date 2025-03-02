@@ -62,7 +62,8 @@ def get_top_usdt_pairs():
                 "LTCUSDT"]
 
 
-async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
+/async def fetch_market_data(session, url, exchange_name,
+                            requests_per_minute, retries=3):
     """
     Scarica i dati di mercato con gestione degli errori.
     """
@@ -192,7 +193,7 @@ def main():
     data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
     if not data_no_api:
         logging.warning(
-            "⚠️ Nessun dato trovato senza API. Passaggio alle API solo se necessario..."
+            logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API..."
         )
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
     save_and_sync(data_no_api, STORAGE_PATH)
