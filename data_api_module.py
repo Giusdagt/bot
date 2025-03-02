@@ -98,7 +98,7 @@ async def fetch_data_from_exchanges(currency="usdt", min_volume=5000000):
         tasks = []
         for exchange in services["exchanges"]:
             api_url = exchange["api_url"].replace("{currency}", currency)
-            req_per_min = exchange["limitations"].get("requests_per_minute", 60)
+            req_per_min = exchange["limitations"].get("requests_per_minute",60)
             tasks.append(
                 fetch_market_data(
                     session, api_url, exchange["name"], req_per_min
