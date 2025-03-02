@@ -193,14 +193,13 @@ def main():
     data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
     if not data_no_api:
         logging.warning(
-            logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API..."
+            "⚠️ Nessun dato trovato senza API. Passaggio alle API..."
         )
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
     save_and_sync(data_no_api, STORAGE_PATH)
     logging.info(
         "✅ Processo completato utilizzando principalmente dati senza API."
     )
-
 
 if __name__ == "__main__":
     main()
