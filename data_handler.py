@@ -12,7 +12,7 @@ import websockets
 import pandas as pd
 from datetime import datetime  # Reinserito per la gestione WebSocket
 from sklearn.preprocessing import MinMaxScaler
-import data_api_module  # Per richiamare i dati grezzi
+import data_api_module
 from indicators import calculate_indicators
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
@@ -65,6 +65,16 @@ def load_processed_data(filename=HISTORICAL_DATA_FILE):
         logging.error("❌ Errore caricamento dati: %s", e)
         return pd.DataFrame()
 
+def fetch_and_prepare_data():
+    """Scarica e prepara i dati di mercato se non già disponibili."""
+    try:
+        if not os.path.exists(RAW_DATA_FILE):
+            logging.info("📥 Dati non trovati, avvio il download...")
+            asyncio.run(data_api_module.main())  # Assicura il richiamo corretto
+        logging.info("✅ Dati di mercato aggiornati.")
+    except Exception as e:
+        logging.error("❌ Errore durante il fetch dei dati: %s", e)
+
 def normalize_data(df):
     """Normalizza i dati di mercato e garantisce tutte le colonne."""
     try:
@@ -83,33 +93,6 @@ def normalize_data(df):
     except ValueError as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
-
-def process_websocket_message(message):
-    """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
-    try:
-        data = pd.DataFrame([message])
-        data["timestamp"] = datetime.utcnow()
-        data = calculate_indicators(data)  # Calcolo indicatori su dati WebSocket
-        save_processed_data(data, SCALPING_DATA_FILE)
-        logging.info("✅ Dati scalping aggiornati: %s", data.tail(1))
-    except (ValueError, KeyError) as e:
-        logging.error("❌ Errore elaborazione WebSocket: %s", e)
-
-async def consume_websocket():
-    """Consuma dati dal WebSocket per operazioni di scalping."""
-    async with websockets.connect(WEBSOCKET_URL) as websocket:
-        logging.info("✅ Connessione WebSocket stabilita.")
-        try:
-            async for message in websocket:
-                await process_websocket_message(message)
-        except websockets.ConnectionClosed:
-            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione...")
-            await asyncio.sleep(5)
-            await consume_websocket()
-        except ValueError as e:
-            logging.error("❌ Errore WebSocket: %s", e)
-            await asyncio.sleep(5)
-            await consume_websocket()
 
 if __name__ == "__main__":
     logging.info("🔄 Avvio sincronizzazione dati...")
