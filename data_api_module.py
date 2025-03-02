@@ -1,3 +1,7 @@
+"""
+Modulo per la gestione del caricamento dei dati di mercato.
+"""
+
 import asyncio
 import logging
 import os
@@ -25,6 +29,16 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.parquet"
 
 
 def download_no_api_data(symbols=None, interval="1d"):
+    """
+    Scarica dati senza l'uso di API.
+
+    Args:
+        symbols (list): Lista dei simboli da scaricare.
+        interval (str): Intervallo di tempo per i dati.
+
+    Returns:
+        dict: Dati scaricati.
+    """
     if symbols is None:
         symbols = get_top_usdt_pairs()
     sources = services["data_sources"]["no_api"]
@@ -55,6 +69,17 @@ def download_no_api_data(symbols=None, interval="1d"):
 
 async def fetch_data_from_exchanges(session, currency="usdt",
                                     min_volume=5000000):
+    """
+    Scarica dati dalle borse con un volume minimo specificato.
+
+    Args:
+        session (aiohttp.ClientSession): Sessione HTTP.
+        currency (str): Valuta di riferimento.
+        min_volume (int): Volume minimo per filtrare i dati.
+
+    Returns:
+        list: Dati filtrati dalle borse.
+    """
     tasks = []
     for exchange in services["exchanges"]:
         api_url = exchange["api_url"].replace("{currency}", currency)
@@ -69,6 +94,19 @@ async def fetch_data_from_exchanges(session, currency="usdt",
 
 async def fetch_market_data(session, url, exchange_name,
                             requests_per_minute, retries=3):
+    """
+    Scarica i dati di mercato con gestione degli errori.
+
+    Args:
+        session (aiohttp.ClientSession): Sessione HTTP.
+        url (str): URL dell'API.
+        exchange_name (str): Nome dell'exchange.
+        requests_per_minute (int): Limite di richieste per minuto.
+        retries (int): Numero di tentativi in caso di errore.
+
+    Returns:
+        dict: Dati di mercato.
+    """
     delay = max(2, 60 / requests_per_minute)
     for attempt in range(retries):
         try:
@@ -98,6 +136,13 @@ async def fetch_market_data(session, url, exchange_name,
 
 
 def save_and_sync(data, filename):
+    """
+    Salva i dati in formato Parquet e sincronizza con Google Drive.
+
+    Args:
+        data (dict): Dati da salvare.
+        filename (str): Nome del file dove salvare i dati.
+    """
     df = pd.DataFrame(data)
     df.to_parquet(filename, index=False)
     logging.info("✅ Dati aggiornati in %s.", filename)
@@ -105,6 +150,9 @@ def save_and_sync(data, filename):
 
 
 def sync_to_cloud():
+    """
+    Sincronizza i dati locali con Google Drive.
+    """
     if os.path.exists(STORAGE_PATH):
         try:
             os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
@@ -118,6 +166,12 @@ def sync_to_cloud():
 
 
 def get_top_usdt_pairs():
+    """
+    Ottiene le prime coppie USDT con volume superiore a 5 milioni.
+
+    Returns:
+        list: Lista delle migliori coppie USDT.
+    """
     try:
         df = pd.read_parquet("market_data.parquet")
         usdt_pairs = df[
@@ -133,10 +187,12 @@ def get_top_usdt_pairs():
 
 
 def main():
+    """
+    Funzione principale per l'aggiornamento dei dati.
+    """
     logging.info("🔄 Avvio aggiornamento dati esclusivamente senza API...")
     top_usdt_pairs = get_top_usdt_pairs()
-    data_no_api = download_no_api_data(symbols=top_usdt_pairs,
-                                       interval="1d")
+    data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
     if not data_no_api:
         logging.warning("⚠️ Nessun dato trovato senza API. Passaggio"
                         " alle API solo se necessario...")
