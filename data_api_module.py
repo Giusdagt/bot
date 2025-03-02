@@ -145,5 +145,6 @@ def main():
     logging.info("✅ Processo completato utilizzando principalmente"
                  " dati senza API.")
 
+
 if __name__ == "__main__":
     main()
