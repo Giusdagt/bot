@@ -1,3 +1,7 @@
+"""
+Modulo per la gestione del caricamento dei dati di mercato.
+"""
+
 import asyncio
 import json
 import logging
@@ -5,9 +9,9 @@ import os
 import random
 import shutil
 import sys
+from concurrent.futures import ThreadPoolExecutor
 import aiohttp
 import requests
-from concurrent.futures import ThreadPoolExecutor
 from data_loader import load_market_data_apis
 
 # Impostazione del loop per Windows
@@ -32,7 +36,19 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 
 
 # 📌 Scarica dati senza API in parallelo, senza modificare la logica originale
-def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
+def download_no_api_data(symbols=None, interval="1d"):
+    """
+    Scarica dati senza l'uso di API.
+
+    Args:
+        symbols (list): Lista di simboli da scaricare.
+        interval (str): Intervallo di tempo per i dati.
+
+    Returns:
+        dict: Dati scaricati.
+    """
+    if symbols is None:
+        symbols = ["BTCUSDT"]
     sources = services["data_sources"]["no_api"]
     data = {}
 
@@ -66,7 +82,17 @@ def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
 async def fetch_data_from_exchanges(
     session, currency="usdt", min_volume=5000000
 ):
-    """Scarica solo coppie USDT con volume alto per ridurre i dati."""
+    """
+    Scarica solo coppie USDT con volume alto per ridurre i dati.
+
+    Args:
+        session (aiohttp.ClientSession): Sessione HTTP.
+        currency (str): Valuta di riferimento.
+        min_volume (int): Volume minimo per filtrare i dati.
+
+    Returns:
+        list: Dati filtrati.
+    """
     tasks = []
     exchange_limits = {}
     for exchange in services["exchanges"]:
@@ -90,7 +116,19 @@ async def fetch_data_from_exchanges(
 async def fetch_market_data(
     session, url, exchange_name, requests_per_minute, retries=3
 ):
-    """Scarica i dati di mercato con gestione avanzata degli errori."""
+    """
+    Scarica i dati di mercato con gestione avanzata degli errori.
+
+    Args:
+        session (aiohttp.ClientSession): Sessione HTTP.
+        url (str): URL dell'API.
+        exchange_name (str): Nome dell'exchange.
+        requests_per_minute (int): Limite di richieste per minuto.
+        retries (int): Numero di tentativi in caso di errore.
+
+    Returns:
+        dict: Dati di mercato.
+    """
     delay = max(2, 60 / requests_per_minute)
 
     for attempt in range(retries):
@@ -121,7 +159,13 @@ async def fetch_market_data(
 
 
 def save_and_sync(data, filename):
-    """Salva i dati senza modificare la logica originale."""
+    """
+    Salva i dati senza modificare la logica originale.
+
+    Args:
+        data (dict): Dati da salvare.
+        filename (str): Nome del file dove salvare i dati.
+    """
     with open(filename, "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
     logging.info("✅ Dati aggiornati in %s.", filename)
@@ -129,7 +173,9 @@ def save_and_sync(data, filename):
 
 
 def sync_to_cloud():
-    """Sincronizza i dati con Google Drive solo se necessario."""
+    """
+    Sincronizza i dati con Google Drive solo se necessario.
+    """
     if os.path.exists(STORAGE_PATH):
         try:
             os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
@@ -143,6 +189,9 @@ def sync_to_cloud():
 
 
 def main():
+    """
+    Funzione principale per l'aggiornamento dei dati.
+    """
     logging.info("🔄 Avvio aggiornamento dati...")
     data_no_api = download_no_api_data()
 
