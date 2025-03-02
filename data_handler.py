@@ -97,24 +97,24 @@ def fetch_and_prepare_data():
 
 
 def normalize_data(df):
-    """Normalizza i dati di mercato e garantisce tutte le colonne."""
+    """
+    Normalizza i dati di mercato e garantisce che tutte le colonne richieste siano presenti.
+    """
     try:
-        required_columns = [
-            'coin_id', 'symbol', 'name', 'image', 'last_updated',
-            'historical_prices', 'timestamp', "close", "open", "high",
-            "low", "volume"
-        ]
         for col in required_columns:
             if col not in df.columns:
                 df[col] = pd.NA  # Usa pd.NA invece di None per valori mancanti
+        
         df = calculate_indicators(df)  # Calcola gli indicatori avanzati
         numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
         if not numeric_cols.empty:
             df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+
         return df
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
+
 
 
 if __name__ == "__main__":
