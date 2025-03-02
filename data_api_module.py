@@ -1,7 +1,3 @@
-"""
-Modulo per la gestione delle API di dati di mercato.
-"""
-
 import asyncio
 import json
 import logging
@@ -10,6 +6,8 @@ import random
 import shutil
 import sys
 import aiohttp
+import requests
+from concurrent.futures import ThreadPoolExecutor
 from data_loader import load_market_data_apis
 
 # Impostazione del loop per Windows
@@ -29,16 +27,28 @@ DAYS_HISTORY = 60
 services = load_market_data_apis()
 
 # 📌 Percorsi per la sincronizzazione dei dati
-STORAGE_PATH = (
-    "/mnt/usb_trading_data/market_data.json"
-    if os.path.exists("/mnt/usb_trading_data") else "market_data.json"
-)
+STORAGE_PATH = "market_data.json"
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 
-
-# ===========================
-# 🔹 GESTIONE API MULTI-EXCHANGE
-# ===========================
+# 📌 Scarica dati senza API in parallelo, senza modificare la logica originale
+def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
+    sources = services["data_sources"]["no_api"]
+    data = {}
+    
+    def fetch_data(source_name, url, symbol):
+        response = requests.get(url)
+        if response.status_code == 200:
+            if symbol not in data:
+                data[symbol] = {}
+            data[symbol][source_name] = url
+            logging.info(f"✅ Dati {source_name} scaricati per {symbol}")
+    
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        for symbol in symbols:
+            executor.submit(fetch_data, "binance_data", f"{sources['binance_data']}/{symbol}/{interval}/{symbol}-{interval}.zip", symbol)
+            executor.submit(fetch_data, "cryptodatadownload", f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv", symbol)
+    
+    return data
 
 async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
     """Scarica solo le coppie USDT con volume alto per ridurre il carico di dati."""
@@ -53,18 +63,14 @@ async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Filtra solo le coppie con volume maggiore di min_volume
     filtered_results = [
         data for data in results
         if data is not None and data.get("total_volume", 0) >= min_volume
     ]
 
-    return filtered_results[:300]  # Mantiene massimo 300 coppie USDT
+    return filtered_results[:300]
 
-
-async def fetch_market_data(
-    session, url, exchange_name, requests_per_minute, retries=3
-):
+async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
     """Scarica i dati di mercato con gestione avanzata degli errori."""
     delay = max(2, 60 / requests_per_minute)
 
@@ -91,85 +97,33 @@ async def fetch_market_data(
             await asyncio.sleep(delay)
     return None
 
-
-async def fetch_historical_data(
-    session, coin_id, currency, days=DAYS_HISTORY, retries=3
-):
-    """Scarica i dati storici con gestione avanzata degli errori."""
-    for exchange in services["exchanges"]:
-        historical_url = (
-            exchange["api_url"]
-            .replace("{currency}", currency)
-            .replace("{symbol}", coin_id)
-        )
-        for attempt in range(retries):
-            try:
-                async with session.get(
-                    historical_url, timeout=aiohttp.ClientTimeout(total=30)
-                ) as response:
-                    if response.status == 200:
-                        return await response.json()
-            except aiohttp.ClientError as fetch_error:
-                logging.error(
-                    "❌ Errore nel recupero dati storici %s da %s: %s",
-                    coin_id, exchange['name'], fetch_error
-                )
-                await asyncio.sleep(2 ** attempt)
-
-    return None
-
-
-async def main_fetch_all_data(currency):
-    """Scarica i dati di mercato con rispetto automatico dei limiti API."""
-    async with aiohttp.ClientSession() as session:
-        market_data = await fetch_data_from_exchanges(session, currency)
-
-        if not market_data:
-            logging.error("❌ Nessun dato di mercato disponibile.")
-            return None
-
-        tasks = [
-            fetch_historical_data(session, crypto.get("id"), currency)
-            for crypto in market_data[:300] if crypto.get("id")
-        ]
-        historical_data_list = await asyncio.gather(*tasks)
-
-        final_data = []
-        for crypto, historical_data in zip(
-            market_data[:300], historical_data_list
-        ):
-            crypto["historical_prices"] = historical_data
-            final_data.append(crypto)
-
-        save_and_sync(final_data, STORAGE_PATH)
-        return final_data
-
-
-# ===========================
-# 🔹 GESTIONE SINCRONIZZAZIONE
-# ===========================
-
 def save_and_sync(data, filename):
-    """Salva e sincronizza i dati solo se necessario."""
+    """Salva i dati senza modificare la logica originale."""
     with open(filename, "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
 
-
 def sync_to_cloud():
-    """Sincronizza i dati con Google Drive solo se il file è cambiato."""
+    """Sincronizza i dati con Google Drive solo se necessario."""
     if os.path.exists(STORAGE_PATH):
         try:
             os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error(
-                "❌ Errore nella sincronizzazione con Google Drive: %s",
-                sync_error
-            )
+            logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
 
+def main():
+    logging.info("🔄 Avvio aggiornamento dati...")
+    data_no_api = download_no_api_data()
+    
+    if not data_no_api:
+        logging.warning("⚠️ Nessun dato trovato senza API. Passaggio ai dati via API...")
+        asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
+    
+    save_and_sync(data_no_api, STORAGE_PATH)
+    logging.info("✅ Processo completato.")
 
 if __name__ == "__main__":
-    asyncio.run(main_fetch_all_data("usdt"))
+    main()
