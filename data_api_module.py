@@ -62,7 +62,7 @@ def get_top_usdt_pairs():
                 "LTCUSDT"]
 
 
-/async def fetch_market_data(session, url, exchange_name,
+async def fetch_market_data(session, url, exchange_name,
                             requests_per_minute, retries=3):
     """
     Scarica i dati di mercato con gestione degli errori.
