@@ -163,7 +163,7 @@ def save_and_sync(data, filename="market_data.parquet"):
         )
         sync_to_cloud()
     except (ValueError, KeyError, OSError, IOError) as e:
-        logging.error("❌ Errore durante il salvataggio dei dati di mercato: %s",
+        logging.error("❌ Error durante il salvataggio dei dati di mercato: %s",
                       e)
 
 
