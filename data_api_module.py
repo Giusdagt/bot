@@ -151,7 +151,7 @@ def save_and_sync(data, filename="market_data.parquet"):
     try:
         if not data:
             logging.warning(
-                "⚠️ Tentativo di salvataggio di dati vuoti. Operazione annullata."
+                "⚠️ Operazione annullata. Salvataggio di dati vuoti."
             )
             return
         df = pd.DataFrame(data)
@@ -163,7 +163,8 @@ def save_and_sync(data, filename="market_data.parquet"):
         )
         sync_to_cloud()
     except (ValueError, KeyError, OSError, IOError) as e:
-        logging.error("❌ Errore durante il salvataggio dei dati di mercato: %s", e)
+        logging.error("❌ Errore durante il salvataggio dei dati di mercato: %s",
+                      e)
 
 
 def sync_to_cloud():
