@@ -30,11 +30,12 @@ services = load_market_data_apis()
 STORAGE_PATH = "market_data.json"
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.json"
 
+
 # 📌 Scarica dati senza API in parallelo, senza modificare la logica originale
 def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
     sources = services["data_sources"]["no_api"]
     data = {}
-    
+
     def fetch_data(source_name, url, symbol):
         response = requests.get(url)
         if response.status_code == 200:
@@ -42,13 +43,24 @@ def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
                 data[symbol] = {}
             data[symbol][source_name] = url
             logging.info(f"✅ Dati {source_name} scaricati per {symbol}")
-    
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         for symbol in symbols:
-            executor.submit(fetch_data, "binance_data", f"{sources['binance_data']}/{symbol}/{interval}/{symbol}-{interval}.zip", symbol)
-            executor.submit(fetch_data, "cryptodatadownload", f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv", symbol)
-    
+            executor.submit(
+                fetch_data,
+                "binance_data",
+                f"{sources['binance_data']}/{symbol}/{interval}/{symbol}-{interval}.zip",
+                symbol
+            )
+            executor.submit(
+                fetch_data,
+                "cryptodatadownload",
+                f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv",
+                symbol
+            )
+
     return data
+
 
 async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
     """Scarica solo le coppie USDT con volume alto per ridurre il carico di dati."""
@@ -59,7 +71,9 @@ async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         exchange_limits[exchange["name"]] = req_per_min
-        tasks.append(fetch_market_data(session, api_url, exchange["name"], req_per_min))
+        tasks.append(
+            fetch_market_data(session, api_url, exchange["name"], req_per_min)
+        )
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -69,6 +83,7 @@ async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000
     ]
 
     return filtered_results[:300]
+
 
 async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
     """Scarica i dati di mercato con gestione avanzata degli errori."""
@@ -97,12 +112,14 @@ async def fetch_market_data(session, url, exchange_name, requests_per_minute, re
             await asyncio.sleep(delay)
     return None
 
+
 def save_and_sync(data, filename):
     """Salva i dati senza modificare la logica originale."""
     with open(filename, "w", encoding='utf-8') as file:
         json.dump(data, file, indent=4)
     logging.info("✅ Dati aggiornati in %s.", filename)
     sync_to_cloud()
+
 
 def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se necessario."""
@@ -114,16 +131,18 @@ def sync_to_cloud():
         except OSError as sync_error:
             logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
 
+
 def main():
     logging.info("🔄 Avvio aggiornamento dati...")
     data_no_api = download_no_api_data()
-    
+
     if not data_no_api:
         logging.warning("⚠️ Nessun dato trovato senza API. Passaggio ai dati via API...")
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
-    
+
     save_and_sync(data_no_api, STORAGE_PATH)
     logging.info("✅ Processo completato.")
+
 
 if __name__ == "__main__":
     main()
