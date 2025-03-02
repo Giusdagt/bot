@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import random
 import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -21,6 +22,7 @@ DAYS_HISTORY = 60
 services = load_market_data_apis()
 STORAGE_PATH = "market_data.parquet"
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.parquet"
+
 
 def download_no_api_data(symbols=None, interval="1d"):
     if symbols is None:
