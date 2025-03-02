@@ -85,6 +85,40 @@ def normalize_data(df):
         logging.error("❌ Errore normalizzazione dati: %s", e)
         return df
 
+def fetch_and_prepare_data():
+    """Scarica, elabora e salva i dati di mercato."""
+    try:
+        logging.info("📥 Avvio elaborazione dati...")
+        if not os.path.exists(RAW_DATA_FILE):
+            logging.warning("⚠️ File dati di mercato non trovato.")
+            data_api_module.main()
+        return process_raw_data()
+    except ValueError as e:
+        logging.error("❌ Errore elaborazione dati: %s", e)
+        return pd.DataFrame()
+
+def process_raw_data():
+    """Elabora i dati dal file Parquet e salva come file parquet elaborati."""
+    try:
+        df_historical = pd.read_parquet(RAW_DATA_FILE)
+        df_historical.set_index("timestamp", inplace=True)
+        df_historical.sort_index(inplace=True)
+        df_historical = normalize_data(df_historical)
+        save_processed_data(df_historical)
+        return df_historical
+    except (ValueError, KeyError) as e:
+        logging.error("❌ Errore elaborazione dati grezzi: %s", e)
+        return pd.DataFrame()
+
+def save_processed_data(df, filename=HISTORICAL_DATA_FILE):
+    """Salva i dati elaborati in formato parquet."""
+    try:
+        df.to_parquet(filename, index=True)
+        logging.info("✅ Dati salvati in: %s", filename)
+        upload_to_drive(filename)
+    except ValueError as e:
+        logging.error("❌ Errore salvataggio dati: %s", e)
+
 def process_websocket_message(message):
     """Elabora il messaggio ricevuto dal WebSocket per dati real-time."""
     try:
