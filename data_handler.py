@@ -82,7 +82,8 @@ def normalized_data():
 
         non_numeric_columns = [
             'coin_id', 'symbol', 'name', 'image', 'last_updated',
-            'historical_prices', 'timestamp'
+            'historical_prices', 'timestamp', "close", "open", "high",
+            "low", "volume"
         ]
         df = df.drop(columns=non_numeric_columns, errors='ignore')
         df = df.select_dtypes(include=['float64', 'int64']).copy()
@@ -162,28 +163,24 @@ def fetch_and_prepare_data():
         return pd.DataFrame()
 
 
-def process_raw_data():
-    """Elabora i dati dal file JSON grezzo e li salva come parquet."""
-    try:
-        with open(RAW_DATA_FILE, "r", encoding="utf-8") as json_file:
-            raw_data = json.load(json_file)
+def load_raw_data_parquet(file_path="market_data.parquet"):
+    """Carica i dati grezzi in formato Parquet."""
+    return pd.read_parquet(file_path)
 
-        df_historical = pd.DataFrame(
-            [
-                {
-                    "timestamp": datetime.utcfromtimestamp(
-                        entry["timestamp"] / 1000
-                    ),
-                    "coin_id": crypto.get("id", "unknown"),
-                    "close": entry["close"]
-                }
-                for crypto in raw_data
-                for entry in crypto.get("historical_prices", [])
-            ]
-        )
+
+def process_raw_data():
+    """Elabora i dati dal file Parquet e li salva come file parquet elaborati."""
+    try:
+        df_historical = load_raw_data_parquet()
         df_historical.set_index("timestamp", inplace=True)
         df_historical.sort_index(inplace=True)
         df_historical = normalize_data(df_historical)
+
+        save_processed_data(df_historical)
+        return df_historical
+    except (ValueError, KeyError) as e:
+        logging.error("❌ Errore elaborazione dati grezzi: %s", e)
+        return pd.DataFrame()
 
         save_processed_data(df_historical)
         return df_historical
