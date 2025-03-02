@@ -103,7 +103,9 @@ def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
         tasks.append(
-            fetch_market_data(session, api_url, exchange["name"], req_per_min)
+            fetch_market_data(
+                session, api_url, exchange["name"], req_per_min
+            )
         )
     results = asyncio.run(asyncio.gather(*tasks, return_exceptions=True))
     return [data for data in results if data is not None and
@@ -148,7 +150,9 @@ def save_and_sync(data, filename="market_data.parquet"):
     """
     try:
         if not data:
-            logging.warning("⚠️ Tentativo di salvataggio di dati vuoti. Operazione annullata.")
+            logging.warning(
+                "⚠️ Tentativo di salvataggio di dati vuoti. Operazione annullata."
+            )
             return
         df = pd.DataFrame(data)
         df = ensure_all_columns(df)
