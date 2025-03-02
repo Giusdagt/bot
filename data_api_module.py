@@ -26,6 +26,7 @@ services = load_market_data_apis()
 STORAGE_PATH = "market_data.parquet"
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.parquet"
 
+
 def ensure_all_columns(df):
     """
     Assicura che il DataFrame contenga tutte le colonne richieste.
@@ -40,6 +41,40 @@ def ensure_all_columns(df):
         if col not in df.columns:
             df[col] = pd.NA
     return df
+
+
+def get_top_usdt_pairs():
+    """
+    Ottiene le prime coppie USDT con volume superiore a 5 milioni.
+    """
+    try:
+        df = pd.read_parquet("market_data.parquet")
+        usdt_pairs = df[
+            (df["symbol"].str.endswith("USDT")) &
+            (df["total_volume"] > 5000000)
+        ].sort_values(by="total_volume", ascending=False).head(300)
+        return usdt_pairs["symbol"].tolist()
+    except (FileNotFoundError, pd.errors.EmptyDataError) as e:
+        logging.error("❌ Errore nel filtrare le coppie USDT: %s", e)
+        return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
+                "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT",
+                "LTCUSDT"]
+
+
+def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000):
+    """
+    Scarica dati dalle borse con un volume minimo specificato.
+    """
+    tasks = []
+    for exchange in services["exchanges"]:
+        api_url = exchange["api_url"].replace("{currency}", currency)
+        req_per_min = exchange["limitations"].get("requests_per_minute", 60)
+        tasks.append(
+            fetch_market_data(session, api_url, exchange["name"], req_per_min)
+        )
+    results = asyncio.run(asyncio.gather(*tasks, return_exceptions=True))
+    return [data for data in results if data is not None and
+            data.get("total_volume", 0) >= min_volume][:300]
 
 
 def download_no_api_data(symbols=None, interval="1d"):
