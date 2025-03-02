@@ -155,7 +155,8 @@ def fetch_and_prepare_data():
             logging.warning(
                 "⚠️ File dati di mercato non trovato. Scaricamento in corso..."
             )
-            asyncio.run(data_api_module.main_fetch_all_data("eur"))
+            # Chiamata alla funzione principale di data_api_module.py
+            data_api_module.main()
 
         return process_raw_data()
     except ValueError as e:
