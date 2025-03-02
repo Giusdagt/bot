@@ -1,4 +1,14 @@
 {
+  "historical_data_source": "auto",
+  "file_path": "market_data.json",
+  "update_interval_days": 7,
+  "data_sources": {
+      "no_api": {
+          "binance_data": "https://data.binance.vision/data/spot/daily/klines",
+          "cryptodatadownload": "https://www.cryptodatadownload.com/cdd",
+          "coingecko": "https://api.coingecko.com/api/v3/coins"
+      }
+  },
   "exchanges": [
     {
       "name": "CoinGecko",
@@ -8,7 +18,7 @@
         "requests_per_minute": 30,
         "rate_limiting": "L'API gratuita permette fino a 30 richieste al minuto"
       },
-      "api_key": "CG-6V"
+      "api_key": "CG-6VXz4ZHe6ASTaqg9D7wghp8M"
     },
     {
       "name": "CryptoCompare",
