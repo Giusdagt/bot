@@ -64,29 +64,28 @@ async def fetch_data_from_exchanges(session, currency="usdt",
     return [data for data in results if data is not None and
             data.get("total_volume", 0) >= min_volume][:300]
 
-async def fetch_market_data(session, url, exchange_name,
-                            requests_per_minute, retries=3):
+async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
     delay = max(2, 60 / requests_per_minute)
     for attempt in range(retries):
         try:
-            async with session.get(url,
-                                   timeout=aiohttp.ClientTimeout(total=15))
-            as response:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
                 if response.status == 200:
-                    logging.info("✅ Dati ottenuti da %s al tentativo %d",
-                                 exchange_name, attempt + 1)
+                    logging.info(
+                        "✅ Dati ottenuti da %s al tentativo %d", exchange_name, attempt + 1
+                    )
                     return await response.json()
                 if response.status in {400, 429}:
                     wait_time = random.randint(10, 30)
-                    logging.warning("⚠️ Errore %d su %s. Attesa %d sec per"
-                                    " riprovare...",
-                                    response.status, exchange_name,
-                                    wait_time)
+                    logging.warning(
+                        "⚠️ Errore %d su %s. Attesa %d sec per riprovare...",
+                        response.status, exchange_name, wait_time
+                    )
                     await asyncio.sleep(wait_time)
         except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
-            logging.error("❌ Errore richiesta API %s su %s al tentativo"
-                          " %d: %s", url, exchange_name,
-                          attempt + 1, client_error)
+            logging.error(
+                "❌ Errore richiesta API %s su %s al tentativo %d: %s",
+                url, exchange_name, attempt + 1, client_error
+            )
             await asyncio.sleep(delay)
     return None
 
