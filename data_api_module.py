@@ -1,5 +1,3 @@
-# data_api_module.py
-
 import asyncio
 import json
 import logging
@@ -40,7 +38,7 @@ def download_no_api_data(symbols=["BTCUSDT"], interval="1d"):
 
     def fetch_data(source_name, url, symbol):
         response = requests.get(url)
-        if response.status_code == 200:
+        if response.status == 200:
             if symbol not in data:
                 data[symbol] = {}
             data[symbol][source_name] = url
@@ -88,7 +86,9 @@ async def fetch_data_from_exchanges(session, currency="usdt", min_volume=5000000
     return filtered_results[:300]
 
 
-async def fetch_market_data(session, url, exchange_name, requests_per_minute, retries=3):
+async def fetch_market_data(
+    session, url, exchange_name, requests_per_minute, retries=3
+):
     """Scarica i dati di mercato con gestione avanzata degli errori."""
     delay = max(2, 60 / requests_per_minute)
 
@@ -132,7 +132,10 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
+            logging.error(
+                "❌ Errore nella sincronizzazione con Google Drive: %s",
+                sync_error
+            )
 
 
 def main():
@@ -140,7 +143,9 @@ def main():
     data_no_api = download_no_api_data()
 
     if not data_no_api:
-        logging.warning("⚠️ Nessun dato trovato senza API. Passaggio ai dati via API...")
+        logging.warning(
+            "⚠️ Nessun dato trovato senza API. Passaggio ai dati via API..."
+        )
         asyncio.run(fetch_data_from_exchanges(aiohttp.ClientSession()))
 
     save_and_sync(data_no_api, STORAGE_PATH)
