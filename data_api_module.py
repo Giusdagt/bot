@@ -69,7 +69,6 @@ async def fetch_data_from_exchanges(
     """Scarica solo coppie USDT con volume alto per ridurre i dati."""
     tasks = []
     exchange_limits = {}
-    
     for exchange in services["exchanges"]:
         api_url = exchange["api_url"].replace("{currency}", currency)
         req_per_min = exchange["limitations"].get("requests_per_minute", 60)
