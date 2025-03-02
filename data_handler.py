@@ -61,7 +61,7 @@ def process_websocket_message(message):
     try:
         data = pd.DataFrame([message])
         data["timestamp"] = datetime.utcnow()
-        data = calculate_indicators(data)  # Calcola indicatori su dati WebSocket
+        data = calculate_indicators(data)  # Calcola indicatori per WebSocket
         logging.info("✅ Dati scalping aggiornati con indicatori: %s",
                      data.tail(1))
     except (ValueError, KeyError) as e:
@@ -76,7 +76,7 @@ async def consume_websocket():
             async for message in websocket:
                 await process_websocket_message(message)
         except websockets.ConnectionClosed:
-            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione...")
+            logging.warning("⚠️ Connessione WebSocket chiusa. Riconnessione..")
             await asyncio.sleep(5)
             await consume_websocket()
         except ValueError as e:
@@ -97,7 +97,7 @@ def fetch_and_prepare_data():
 
 
 def normalize_data(df):
-    """Normalizza i dati di mercato e garantisce tutte le colonne necessarie."""
+    """Normalizza i dati di mercato e garantisce tutte le colonne."""
     try:
         required_columns = [
             'coin_id', 'symbol', 'name', 'image', 'last_updated',
