@@ -1,6 +1,6 @@
 """
 data_handler.py
-Gestione avanzata dei dati di mercato per IA, Deep Reinforcement Learning (DRL)
+Gestione avanzata dei dati di mercato, per IA, Deep Reinforcement Learning (DRL)
 e WebSocket, con massima efficienza su CPU, RAM e Disco.
 """
 
@@ -10,7 +10,7 @@ import asyncio
 import gc
 import shutil
 import websockets
-import pandas as pd
+import polars as pl
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from sklearn.preprocessing import MinMaxScaler
@@ -35,7 +35,10 @@ RAW_DATA_FILE = "market_data.parquet"
 CLOUD_SYNC = "/mnt/google_drive/trading_sync"
 
 # 📌 WebSocket per dati in tempo reale (Scalping)
-WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+TOP_PAIRS = data_api_module.get_top_usdt_pairs()  # Ottiene coppie dinamiche
+WEBSOCKET_URLS = [
+    f"wss://stream.binance.com:9443/ws/{pair.lower()}@trade" for pair in TOP_PAIRS
+]
 
 # 📌 Autenticazione Google Drive
 gauth = GoogleAuth()
@@ -49,7 +52,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 # 📌 Cache & Buffer per massima velocità
 cache_data = {}  # Evita rielaborazioni
 buffer = []
-BUFFER_SIZE = 50  # Ottimizzazione salvataggio
+BUFFER_SIZE = 100  # Ottimizzazione salvataggio per batch
 
 def upload_to_drive(filepath):
     """Sincronizza un file su Google Drive solo se necessario."""
@@ -63,18 +66,20 @@ def upload_to_drive(filepath):
         logging.error("❌ Errore sincronizzazione Google Drive: %s", e)
 
 
-async def process_websocket_message(message):
-    """Elabora e filtra il messaggio ricevuto dal WebSocket."""
+async def process_websocket_message(message, pair):
+    """Elabora e normalizza il messaggio ricevuto dal WebSocket."""
     try:
-        df = pd.DataFrame([{
+        df = pl.DataFrame([{
             "timestamp": datetime.utcnow(),
+            "pair": pair,
             "price": float(message["p"]),
             "volume": float(message["q"])
         }])
+        df = calculate_indicators(df)  # Calcola indicatori real-time
         buffer.append(df)
 
         if len(buffer) >= BUFFER_SIZE:
-            df_batch = pd.concat(buffer, ignore_index=True)
+            df_batch = pl.concat(buffer)
             await asyncio.get_event_loop().run_in_executor(
                 executor, save_processed_data, df_batch, SCALPING_DATA_FILE)
             buffer.clear()
@@ -84,27 +89,31 @@ async def process_websocket_message(message):
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
 
-async def consume_websocket():
-    """Consuma dati dal WebSocket con retry avanzato e gestione CPU/RAM."""
+async def consume_websockets():
+    """Consuma dati da più WebSocket con gestione CPU/RAM ottimizzata."""
     retry_delay = 1
     max_retry_delay = 30
 
-    while True:
-        try:
-            async with websockets.connect(WEBSOCKET_URL, timeout=10) as websocket:
-                logging.info("✅ Connessione WebSocket stabilita.")
-                retry_delay = 1
-                async for message in websocket:
-                    await process_websocket_message(message)
-                    await asyncio.sleep(0.1)  # Riduce consumo CPU
-        except websockets.ConnectionClosed:
-            logging.warning("⚠️ WebSocket disconnesso. Riconnessione in %d sec...", retry_delay)
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, max_retry_delay)
-        except Exception as e:
-            logging.error("❌ Errore WebSocket: %s. Riprovo in %d sec...", e, retry_delay)
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, max_retry_delay)
+    async def connect_to_websocket(url):
+        while True:
+            try:
+                async with websockets.connect(url, timeout=10) as websocket:
+                    logging.info("✅ Connessione WebSocket stabilita: %s", url)
+                    retry_delay = 1
+                    pair = url.split("/")[-1].split("@")[0].upper()
+                    async for message in websocket:
+                        await process_websocket_message(message, pair)
+                        await asyncio.sleep(0.05)  # Riduce consumo CPU
+            except websockets.ConnectionClosed:
+                logging.warning("⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay)
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, max_retry_delay)
+            except Exception as e:
+                logging.error("❌ Errore WebSocket %s: %s. Riprovo in %d sec...", url, e, retry_delay)
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, max_retry_delay)
+
+    await asyncio.gather(*[connect_to_websocket(url) for url in WEBSOCKET_URLS])
 
 
 def normalize_data(df):
@@ -112,11 +121,10 @@ def normalize_data(df):
     try:
         for col in required_columns:
             if col not in df.columns:
-                df[col] = pd.NA
+                df = df.with_columns(pl.lit(None).alias(col))
         df = calculate_indicators(df)
-        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns
-        if not numeric_cols.empty:
-            df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+        numeric_cols = [col for col in df.columns if df[col].dtype in [pl.Float64, pl.Int64]]
+        df = df.with_columns([df[col].cast(pl.Float64) for col in numeric_cols])
         gc.collect()
         return df
     except (ValueError, KeyError) as e:
@@ -128,12 +136,12 @@ def save_processed_data(df, filename):
     """Salva i dati elaborati in formato Parquet con compressione ZSTD solo se necessario."""
     try:
         if os.path.exists(filename):
-            df_old = pd.read_parquet(filename)
+            df_old = pl.read_parquet(filename)
             if df.equals(df_old):
                 logging.info("🔄 Nessuna modifica, skip del salvataggio.")
                 return
 
-        df.to_parquet(filename, index=False, compression="zstd")
+        df.write_parquet(filename, compression="zstd")
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
     except Exception as e:
@@ -159,4 +167,4 @@ def sync_to_cloud():
 
 if __name__ == "__main__":
     logging.info("🔄 Avvio sincronizzazione dati...")
-    asyncio.run(consume_websocket())
+    asyncio.run(consume_websockets())
