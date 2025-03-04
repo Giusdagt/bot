@@ -121,7 +121,7 @@ async def consume_websockets():
                 logging.error(
                     "❌ Errore WebSocket %s: %s. Riprovo in %d sec...", url, e, retry_delay)
                 await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, maxretry_delay)
+                retry_delay = min(retry_delay * 2, max_retry_delay)
 
     await asyncio.gather(*[connect_to_websocket(url) for url in WEBSOCKET_URLS])
 
@@ -167,12 +167,12 @@ def sync_to_cloud():
                 local_size = os.path.getsize(HISTORICAL_DATA_FILE)
                 cloud_size = os.path.getsize(cloud_file)
                 if abs(local_size - cloud_size) < 1024 * 50:
-                    logging.info("🔄 Nessuna modifica significativa, skip della sincronizzazione.")
+                    logging.info("🔄 Nessuna modifica, salto sincronizzazione.")
                     return
             shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
+            logging.error("❌ Errore nella sincro con Google Drive: %s", sync_error)
 
 
 if __name__ == "__main__":
