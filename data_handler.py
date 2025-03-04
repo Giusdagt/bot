@@ -1,6 +1,6 @@
 """
 data_handler.py normalizzazione dei dati
-Gestione avanzata dei dati di mercato, 
+Gestione avanzata dei dati di mercato,
 per IA, Deep Reinforcement Learning (DRL)
 e WebSocket, con massima efficienza su CPU, RAM e Disco.
 """
@@ -97,10 +97,12 @@ async def process_websocket_message(message, pair):
 
 async def consume_websockets():
     """Consuma dati da più WebSocket con gestione CPU/RAM ottimizzata."""
+    global retry_delay
     retry_delay = 1
     max_retry_delay = 30
 
     async def connect_to_websocket(url):
+        global retry_delay
         while True:
             try:
                 async with websockets.connect(url, timeout=10) as websocket:
