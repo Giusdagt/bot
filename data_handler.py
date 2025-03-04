@@ -121,7 +121,7 @@ async def consume_websockets():
                 logging.error(
                     "❌ Errore WebSocket %s: %s. Riprovo in %d sec...", url, e, retry_delay)
                 await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, max_retry_delay)
+                retry_delay = min(retry_delay * 2, maxretry_delay)
 
     await asyncio.gather(*[connect_to_websocket(url) for url in WEBSOCKET_URLS])
 
