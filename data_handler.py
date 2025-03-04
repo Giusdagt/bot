@@ -26,7 +26,7 @@ from column_definitions import required_columns
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levellevelname)s - %(message)s"
 )
 
 # 📌 Percorsi per sincronizzazione e dati compressi
@@ -128,7 +128,8 @@ async def consume_websockets():
                 OSError
             ) as error:
                 logging.warning(
-                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay
+                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...",
+                    url, retry_delay
                 )
                 logging.error("❌ Dettaglio errore: %s", error)
                 await asyncio.sleep(retry_delay)
