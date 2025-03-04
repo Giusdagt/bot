@@ -2,14 +2,14 @@
 Module for calculating various trading indicators.
 """
 
-"""
-Modulo per il calcolo avanzato degli indicatori di trading.
-"""
-
 import logging
 import polars as pl
 import requests
 import talib
+
+"""
+Modulo per il calcolo avanzato degli indicatori di trading.
+"""
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
@@ -25,17 +25,14 @@ def calculate_scalping_indicators(data):
     """Indicatori ottimizzati per Scalping."""
     data = data.with_columns(
         pl.Series("RSI", talib.RSI(data["close"], timeperiod=14)),
-        pl.Series("STOCH_K", talib.STOCH(data["high"], data["low"],
-            data["close"])[0]),  
-        pl.Series("STOCH_D", talib.STOCH(data["high"], data["low"],
-            data["close"])[1]),  
+        pl.Series("STOCH_K", talib.STOCH(data["high"], data["low"], data["close"])[0]),
+        pl.Series("STOCH_D", talib.STOCH(data["high"], data["low"], data["close"])[1]),
     )
-    
+
     macd, macdsignal, macdhist = talib.MACD(
         data["close"], fastperiod=12, slowperiod=26, signalperiod=9
     )
-    atr = talib.ATR(data["high"], data["low"], data["close"],
-                    timeperiod=14)
+    atr = talib.ATR(data["high"], data["low"], data["close"], timeperiod=14)
 
     data = data.with_columns(
         pl.Series("MACD", macd),
@@ -53,16 +50,15 @@ def calculate_historical_indicators(data):
     upper_band, middle_band, lower_band = talib.BBANDS(
         data["close"], timeperiod=20, nbdevup=2, nbdevdn=2
     )
-    adx = talib.ADX(data["high"], data["low"], data["close"],
-                    timeperiod=14)
-    obv = talib.OBV(data["close"], data["volume"])  
+    adx = talib.ADX(data["high"], data["low"], data["close"], timeperiod=14)
+    obv = talib.OBV(data["close"], data["volume"])
 
     data = data.with_columns(
         pl.Series("BB_Upper", upper_band),
         pl.Series("BB_Middle", middle_band),
         pl.Series("BB_Lower", lower_band),
         pl.Series("ADX", adx),
-        pl.Series("OBV", obv),  
+        pl.Series("OBV", obv),
     )
 
     # Ichimoku Cloud
@@ -76,8 +72,7 @@ def calculate_historical_indicators(data):
     data = data.with_columns(
         pl.Series("Ichimoku_Tenkan", (nine_high + nine_low) / 2),
         pl.Series("Ichimoku_Kijun", (twenty_six_high + twenty_six_low) / 2),
-        pl.Series("Senkou_Span_A",
-            ((data["Ichimoku_Tenkan"] + data["Ichimoku_Kijun"]) / 2).shift(26)),
+        pl.Series("Senkou_Span_A", ((data["Ichimoku_Tenkan"] + data["Ichimoku_Kijun"]) / 2).shift(26)),
         pl.Series("Senkou_Span_B", ((fifty_two_high + fifty_two_low) / 2).shift(26)),
     )
 
