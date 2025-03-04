@@ -103,7 +103,7 @@ async def process_websocket_message(message, pair):
             buffer.clear()
             gc.collect()
             logging.info(
-                "✅ Dati scalping aggiornati con batch di %d messaggi", BUFFER_SIZE
+                "✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE
             )
     except (ValueError, KeyError) as error:
         logging.error("❌ Errore elaborazione WebSocket: %s", error)
