@@ -59,17 +59,17 @@ def calculate_indicators(data):
     )
 
     # ADX per forza del trend
-data = data.with_columns(
-    pl.Series(
-        "ADX",
-        talib.ADX(
-            data["high"],
-            data["low"],
-            data["close"],
-            timeperiod=14
+    data = data.with_columns(
+        pl.Series(
+            "ADX",
+            talib.ADX(
+                data["high"],
+                data["low"],
+                data["close"],
+                timeperiod=14
+            )
         )
     )
-)
 
     # 📌 Ichimoku Cloud per trend analysis
     nine_high = data["high"].rolling(window=9).max()
