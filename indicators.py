@@ -1,7 +1,10 @@
-# indicators
+"""
+Module for calculating various trading indicators.
+"""
+
+import logging
 import numpy as np
 import polars as pl
-import logging
 import requests
 import talib
 
@@ -123,11 +126,10 @@ def fetch_sentiment_data():
         if response.status_code == 200:
             sentiment_data = response.json()
             return sentiment_data["sentiment_score"]
-        else:
-            logging.error("❌ Errore nel recupero del sentiment.")
-            return np.nan
+        logging.error("❌ Errore nel recupero del sentiment.")
+        return np.nan
     except Exception as e:
-        logging.error(f"❌ Errore API Sentiment Analysis: {e}")
+        logging.error("❌ Errore API Sentiment Analysis: %s", e)
         return np.nan
 
 
