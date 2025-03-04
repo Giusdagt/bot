@@ -136,8 +136,8 @@ async def consume_websockets():
                 retry_delay = min(retry_delay * 2, max_retry_delay)
 
     await asyncio.gather(
-    *[connect_to_websocket(url) for url in WEBSOCKET_URLS]
-)
+        *[connect_to_websocket(url) for url in WEBSOCKET_URLS]
+    )
 
 
 def normalize_data(df):
@@ -180,9 +180,9 @@ def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
     if os.path.exists(HISTORICAL_DATA_FILE):
         try:
-            cloud_file = CLOUD_SYNC + "/" + os.path.basename(
+            cloud_file = os.path.join(CLOUD_SYNC, os.path.basename(
                 HISTORICAL_DATA_FILE
-            )
+            ))
             if os.path.exists(cloud_file):
                 local_size = os.path.getsize(HISTORICAL_DATA_FILE)
                 cloud_size = os.path.getsize(cloud_file)
