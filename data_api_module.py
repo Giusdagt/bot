@@ -141,7 +141,7 @@ def save_and_sync(data, filename=STORAGE_PATH):
 
 
 def sync_to_cloud():
-    """Sincronizza i dati locali con Google Drive solo se il file è cambiato significativamente."""
+    """Sincronizza i dati locali a Google Drive solo se il file è cambiato."""
     try:
         if os.path.exists(STORAGE_PATH):
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
@@ -156,7 +156,7 @@ async def main():
     top_usdt_pairs = get_top_usdt_pairs()
     data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
     if not data_no_api:
-        logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API...")
+        logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API")
         data_no_api = await fetch_data_from_exchanges()
     save_and_sync(data_no_api, STORAGE_PATH)
 
