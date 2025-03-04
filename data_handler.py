@@ -1,3 +1,4 @@
+
 """
 data_handler.py normalizzazione dei dati
 Gestione avanzata dei dati di mercato,
@@ -10,16 +11,16 @@ import logging
 import asyncio
 import gc
 import shutil
-import websockets
-import polars as pl
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+import websockets
+import polars as pl
 from sklearn.preprocessing import MinMaxScaler
-from indicators import calculate_indicators
-from column_definitions import required_columns
-import data_api_module
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
+import data_api_module
+from indicators import calculate_indicators
+from column_definitions import required_columns
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
@@ -127,7 +128,7 @@ async def consume_websockets():
                 )
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
-            except Exception as e:
+            except (websockets.WebSocketException, OSError) as e:
                 logging.error(
                     "❌ Errore WebSocket %s: %s. Riprovo in %d sec...",
                     url, e, retry_delay
@@ -174,7 +175,7 @@ def save_processed_data(df, filename):
         df.write_parquet(filename, compression="zstd")
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
-    except Exception as e:
+    except IOError as e:
         logging.error("❌ Errore nel salvataggio dati: %s", e)
 
 
