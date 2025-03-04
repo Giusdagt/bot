@@ -66,9 +66,12 @@ async def fetch_market_data(
     delay = max(2, 60 / requests_per_minute)
     for attempt in range(retries):
         try:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as response:
+            async with session.get(url, 
+                                   timeout=aiohttp.ClientTimeout(total=15)) 
+                                   as response:
                 if response.status == 200:
-                    logging.info("✅ Dati ottenuti da %s (tentativo %d)", exchange_name, attempt + 1)
+                    logging.info("✅ Dati ottenuti da %s (tentativo %d)", 
+                                 exchange_name, attempt + 1)
                     return await response.json()
                 if response.status in {400, 429}:
                     wait_time = 15
@@ -94,9 +97,11 @@ async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
             api_url = exchange["api_url"].replace("{currency}", currency)
             limits = exchange["limitations"]
             req_per_min = limits.get("requests_per_minute", 60)
-            tasks.append(fetch_market_data(session, api_url, exchange["name"], req_per_min))
+            tasks.append(fetch_market_data(session, api_url, 
+                                           exchange["name"], req_per_min))
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        return [data for data in results if data and data.get("total_volume", 0) >= min_volume][:300]
+        return [data for data in results if data and 
+                data.get("total_volume", 0) >= min_volume][:300]
 
 
 @lru_cache(maxsize=1)
@@ -114,12 +119,17 @@ def download_no_api_data(symbols=None, interval="1d"):
             if symbol not in data:
                 data[symbol] = {}
             data[symbol][source_name] = url
-            logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
+            logging.info("✅ Dati %s scaricati per %s", 
+                         source_name, symbol)
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         for symbol in symbols:
-            executor.submit(fetch_data, "binance_data", f"{sources['binance_data']}/{symbol}/{interval}/{symbol}-{interval}.zip", symbol)
-            executor.submit(fetch_data, "cryptodatadownload", f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv", symbol)
+            executor.submit(fetch_data, "binance_data", 
+                            f"{sources['binance_data']}/{symbol}/{interval}/"
+                            f"{symbol}-{interval}.zip", symbol)
+            executor.submit(fetch_data, "cryptodatadownload", 
+                            f"{sources['cryptodatadownload']}/Binance_"
+                            f"{symbol}_d.csv", symbol)
 
     return data
 
@@ -148,7 +158,8 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
-        logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
+        logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", 
+                      sync_error)
 
 
 async def main():
