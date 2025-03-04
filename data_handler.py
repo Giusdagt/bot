@@ -108,17 +108,17 @@ async def process_websocket_message(message, pair):
 
 async def consume_websockets():
     """Consuma dati da più WebSocket con gestione CPU/RAM ottimizzata."""
-    global retry_delay
-    retry_delay = 1
+    global RETRY_DELAY
+    RETRY_DELAY = 1
     max_retry_delay = 30
 
     async def connect_to_websocket(url):
-        global retry_delay
+        global RETRY_DELAY
         while True:
             try:
                 async with websockets.connect(url, timeout=10) as websocket:
                     logging.info("✅ Connessione WebSocket stabilita: %s", url)
-                    retry_delay = 1
+                    RETRY_DELAY = 1
                     pair = url.split("/")[-1].split("@")[0].upper()
                     async for message in websocket:
                         await process_websocket_message(message, pair)
@@ -126,17 +126,17 @@ async def consume_websockets():
             except websockets.ConnectionClosed:
                 logging.warning(
                     "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...",
-                    url, retry_delay
+                    url, RETRY_DELAY
                 )
                 await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, max_retry_delay)
+                RETRY_DELAY = min(retry_delay * 2, max_retry_delay)
             except (websockets.WebSocketException, OSError) as e:
                 logging.error(
                     "❌ Errore WebSocket %s: %s. Riprovo in %d sec...",
-                    url, e, retry_delay
+                    url, e, RETRY_DELAY
                 )
                 await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, max_retry_delay)
+                RETRY_DELAY = min(retry_delay * 2, max_retry_delay)
 
     await asyncio.gather(
         *[connect_to_websocket(url) for url in WEBSOCKET_URLS]
