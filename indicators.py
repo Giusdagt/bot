@@ -21,8 +21,12 @@ def calculate_scalping_indicators(data):
     """Indicatori ottimizzati per Scalping."""
     data = data.with_columns(
         pl.Series("RSI", talib.RSI(data["close"], timeperiod=14)),
-        pl.Series("STOCH_K", talib.STOCH(data["high"], data["low"], data["close"])[0]),
-        pl.Series("STOCH_D", talib.STOCH(data["high"], data["low"], data["close"])[1]),
+        pl.Series(
+            "STOCH_K", talib.STOCH(data["high"], data["low"], data["close"])[0]
+        ),
+        pl.Series(
+            "STOCH_D", talib.STOCH(data["high"], data["low"], data["close"])[1]
+        ),
     )
 
     macd, macdsignal, macdhist = talib.MACD(
@@ -68,8 +72,14 @@ def calculate_historical_indicators(data):
     data = data.with_columns(
         pl.Series("Ichimoku_Tenkan", (nine_high + nine_low) / 2),
         pl.Series("Ichimoku_Kijun", (twenty_six_high + twenty_six_low) / 2),
-        pl.Series("Senkou_Span_A", ((data["Ichimoku_Tenkan"] + data["Ichimoku_Kijun"]) / 2).shift(26)),
-        pl.Series("Senkou_Span_B", ((fifty_two_high + fifty_two_low) / 2).shift(26)),
+        pl.Series(
+            "Senkou_Span_A",
+            ((data["Ichimoku_Tenkan"] + data["Ichimoku_Kijun"]) / 2).shift(26),
+        ),
+        pl.Series(
+            "Senkou_Span_B",
+            ((fifty_two_high + fifty_two_low) / 2).shift(26),
+        ),
     )
 
     return data
