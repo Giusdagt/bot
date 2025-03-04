@@ -1,6 +1,6 @@
 """
 data_handler.py - Normalizzazione e gestione avanzata dei dati
-per IA, Deep Reinforcement Learning (DRL) e WebSocket, 
+per IA, Deep Reinforcement Learning (DRL) e WebSocket,
 con massima efficienza su CPU, RAM e Disco.
 """
 
