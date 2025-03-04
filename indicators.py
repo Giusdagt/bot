@@ -1,4 +1,4 @@
-#indicators
+# indicators
 import numpy as np
 import pandas as pd
 import logging
@@ -6,25 +6,29 @@ import requests
 import talib
 
 # 📌 Configurazione del logging avanzato
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(levelname)s - %(message)s")
 
 # 📌 URL per l'analisi del sentiment
 SENTIMENT_API_URL = "https://your-sentiment-api.com/analyze"
 
+
 def calculate_indicators(data):
     """Calcola tutti gli indicatori tecnici principali e li aggiunge ai dati di mercato."""
-    
+
     # 📌 RSI (Relative Strength Index) per trend reversal e scalping
     data['RSI'] = talib.RSI(data['close'], timeperiod=14)
 
     # 📌 Bollinger Bands per volatilità
-    upper_band, middle_band, lower_band = talib.BBANDS(data['close'], timeperiod=20, nbdevup=2, nbdevdn=2)
+    upper_band, middle_band, lower_band = talib.BBANDS(
+        data['close'], timeperiod=20, nbdevup=2, nbdevdn=2)
     data['BB_Upper'] = upper_band
     data['BB_Middle'] = middle_band
     data['BB_Lower'] = lower_band
 
     # 📌 MACD per trend detection e momentum
-    macd, macdsignal, macdhist = talib.MACD(data['close'], fastperiod=12, slowperiod=26, signalperiod=9)
+    macd, macdsignal, macdhist = talib.MACD(
+        data['close'], fastperiod=12, slowperiod=26, signalperiod=9)
     data['MACD'] = macd
     data['MACD_Signal'] = macdsignal
     data['MACD_Hist'] = macdhist
@@ -61,6 +65,7 @@ def calculate_indicators(data):
 
     return data
 
+
 def fetch_sentiment_data():
     """Recupera i dati di sentiment analysis dalle news e dai social media."""
     try:
@@ -75,17 +80,19 @@ def fetch_sentiment_data():
         logging.error(f"❌ Errore API Sentiment Analysis: {e}")
         return np.nan
 
+
 def get_indicators_list():
     """Restituisce una lista di tutti gli indicatori disponibili."""
     return [
         'RSI', 'BB_Upper', 'BB_Middle', 'BB_Lower', 'MACD', 'MACD_Signal', 'MACD_Hist',
-        'EMA_50', 'EMA_200', 'SMA_100', 'ADX', 'Tenkan_Sen', 'Kijun_Sen', 'Senkou_Span_A', 
+        'EMA_50', 'EMA_200', 'SMA_100', 'ADX', 'Tenkan_Sen', 'Kijun_Sen', 'Senkou_Span_A',
         'Senkou_Span_B', 'SuperTrend_Upper', 'SuperTrend_Lower', 'Sentiment_Score'
     ]
 
+
 class TradingIndicators:
     """Classe per calcolare e gestire gli indicatori di trading."""
-    
+
     def __init__(self, data):
         self.data = data
         self.indicators = {}
