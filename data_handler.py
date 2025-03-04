@@ -185,12 +185,16 @@ def sync_to_cloud():
                 local_size = os.path.getsize(HISTORICAL_DATA_FILE)
                 cloud_size = os.path.getsize(cloud_file)
                 if abs(local_size - cloud_size) < 1024 * 50:
-                    logging.info("🔄 Nessuna modifica significativa, skip sincronizzazione.")
+                    logging.info(
+                        "🔄 Nessuna modifica significativa, skip sincronizzazione."
+                    )
                     return
             shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error("❌ Errore sincro con Google Drive: %s", sync_error)
+            logging.error(
+                "❌ Errore sincro con Google Drive: %s", sync_error
+            )
 
 
 if __name__ == "__main__":
