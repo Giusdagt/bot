@@ -35,8 +35,12 @@ SAVE_DIRECTORY = os.path.abspath(
     if os.path.exists("/mnt/usb_trading_data")
     else "D:/trading_data"
 )
-HISTORICAL_DATA_FILE = os.path.join(SAVE_DIRECTORY, "historical_data.zstd.parquet")
-SCALPING_DATA_FILE = os.path.join(SAVE_DIRECTORY, "scalping_data.zstd.parquet")
+HISTORICAL_DATA_FILE = os.path.join(
+    SAVE_DIRECTORY, "historical_data.zstd.parquet"
+)
+SCALPING_DATA_FILE = os.path.join(
+    SAVE_DIRECTORY, "scalping_data.zstd.parquet"
+)
 RAW_DATA_FILE = os.path.abspath("market_data.parquet")
 CLOUD_SYNC = os.path.abspath("/mnt/google_drive/trading_sync")
 
@@ -98,7 +102,9 @@ async def process_websocket_message(message, pair):
             )
             buffer.clear()
             gc.collect()
-            logging.info("✅ Dati scalping aggiornati con batch di %d messaggi", BUFFER_SIZE)
+            logging.info(
+                "✅ Dati scalping aggiornati con batch di %d messaggi", BUFFER_SIZE
+            )
     except (ValueError, KeyError) as error:
         logging.error("❌ Errore elaborazione WebSocket: %s", error)
 
@@ -121,7 +127,9 @@ async def consume_websockets():
                 websockets.WebSocketException,
                 OSError
             ) as error:
-                logging.warning("⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay)
+                logging.warning(
+                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay
+                )
                 logging.error("❌ Dettaglio errore: %s", error)
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
@@ -169,7 +177,9 @@ def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
     try:
         if os.path.exists(HISTORICAL_DATA_FILE):
-            cloud_file = os.path.join(CLOUD_SYNC, os.path.basename(HISTORICAL_DATA_FILE))
+            cloud_file = os.path.join(
+                CLOUD_SYNC, os.path.basename(HISTORICAL_DATA_FILE)
+            )
             if os.path.exists(cloud_file):
                 local_size = os.path.getsize(HISTORICAL_DATA_FILE)
                 cloud_size = os.path.getsize(cloud_file)
