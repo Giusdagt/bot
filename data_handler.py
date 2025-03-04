@@ -1,6 +1,7 @@
 """
-data_handler.py
-Gestione avanzata dei dati di mercato, per IA, Deep Reinforcement Learning (DRL)
+data_handler.py normalizzazione dei dati
+Gestione avanzata dei dati di mercato, 
+per IA, Deep Reinforcement Learning (DRL)
 e WebSocket, con massima efficienza su CPU, RAM e Disco.
 """
 
@@ -29,15 +30,18 @@ logging.basicConfig(
 # 📌 Percorsi per sincronizzazione e dati compressi
 SAVE_DIRECTORY = "/mnt/usb_trading_data/processed_data" if os.path.exists(
     "/mnt/usb_trading_data") else "D:/trading_data"
-HISTORICAL_DATA_FILE = os.path.join(SAVE_DIRECTORY, "historical_data.zstd.parquet")
-SCALPING_DATA_FILE = os.path.join(SAVE_DIRECTORY, "scalping_data.zstd.parquet")
+HISTORICAL_DATA_FILE = os.path.join(
+    SAVE_DIRECTORY, "historical_data.zstd.parquet")
+SCALPING_DATA_FILE = os.path.join(
+    SAVE_DIRECTORY, "scalping_data.zstd.parquet")
 RAW_DATA_FILE = "market_data.parquet"
 CLOUD_SYNC = "/mnt/google_drive/trading_sync"
 
 # 📌 WebSocket per dati in tempo reale (Scalping)
 TOP_PAIRS = data_api_module.get_top_usdt_pairs()  # Ottiene coppie dinamiche
 WEBSOCKET_URLS = [
-    f"wss://stream.binance.com:9443/ws/{pair.lower()}@trade" for pair in TOP_PAIRS
+    f"wss://stream.binance.com:9443/ws/{pair.lower()}@trade"
+    for pair in TOP_PAIRS
 ]
 
 # 📌 Autenticazione Google Drive
@@ -53,6 +57,7 @@ executor = ThreadPoolExecutor(max_workers=4)
 cache_data = {}  # Evita rielaborazioni
 buffer = []
 BUFFER_SIZE = 100  # Ottimizzazione salvataggio per batch
+
 
 def upload_to_drive(filepath):
     """Sincronizza un file su Google Drive solo se necessario."""
@@ -84,7 +89,8 @@ async def process_websocket_message(message, pair):
                 executor, save_processed_data, df_batch, SCALPING_DATA_FILE)
             buffer.clear()
             gc.collect()
-            logging.info("✅ Dati scalping aggiornati con batch di %d messaggi", BUFFER_SIZE)
+            logging.info(
+                "✅ Dati scalping aggiornati con batch di %d messaggi", BUFFER_SIZE)
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
@@ -105,11 +111,13 @@ async def consume_websockets():
                         await process_websocket_message(message, pair)
                         await asyncio.sleep(0.05)  # Riduce consumo CPU
             except websockets.ConnectionClosed:
-                logging.warning("⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay)
+                logging.warning(
+                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay)
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
             except Exception as e:
-                logging.error("❌ Errore WebSocket %s: %s. Riprovo in %d sec...", url, e, retry_delay)
+                logging.error(
+                    "❌ Errore WebSocket %s: %s. Riprovo in %d sec...", url, e, retry_delay)
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
 
