@@ -21,7 +21,9 @@ def calculate_indicators(data):
     """
 
     # 📌 RSI (Relative Strength Index) per trend reversal e scalping
-    data = data.with_columns(pl.Series("RSI", talib.RSI(data["close"], timeperiod=14)))
+    data = data.with_columns(
+        pl.Series("RSI", talib.RSI(data["close"], timeperiod=14))
+    )
 
     # 📌 Bollinger Bands per volatilità
     upper_band, middle_band, lower_band = talib.BBANDS(
@@ -58,7 +60,9 @@ def calculate_indicators(data):
 
     # 📌 ADX per forza del trend
     data = data.with_columns(
-        pl.Series("ADX", talib.ADX(data["high"], data["low"], data["close"], timeperiod=14))
+        pl.Series(
+            "ADX", talib.ADX(data["high"], data["low"], data["close"], timeperiod=14)
+        )
     )
 
     # 📌 Ichimoku Cloud per trend analysis
@@ -78,8 +82,14 @@ def calculate_indicators(data):
     fifty_two_low = data["low"].rolling(window=52).min()
     data = data.with_columns(
         [
-            pl.Series("Senkou_Span_A", ((data["Tenkan_Sen"] + data["Kijun_Sen"]) / 2).shift(26)),
-            pl.Series("Senkou_Span_B", ((fifty_two_high + fifty_two_low) / 2).shift(26)),
+            pl.Series(
+                "Senkou_Span_A",
+                ((data["Tenkan_Sen"] + data["Kijun_Sen"]) / 2).shift(26)
+            ),
+            pl.Series(
+                "Senkou_Span_B",
+                ((fifty_two_high + fifty_two_low) / 2).shift(26)
+            ),
         ]
     )
 
@@ -93,7 +103,9 @@ def calculate_indicators(data):
     )
 
     # 📌 Sentiment Analysis da news e social media
-    data = data.with_columns(pl.Series("Sentiment_Score", fetch_sentiment_data()))
+    data = data.with_columns(
+        pl.Series("Sentiment_Score", fetch_sentiment_data())
+    )
 
     return data
 
