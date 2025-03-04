@@ -29,11 +29,14 @@ logging.basicConfig(
 
 # 📌 Percorsi per sincronizzazione e dati compressi
 SAVE_DIRECTORY = "/mnt/usb_trading_data/processed_data" if os.path.exists(
-    "/mnt/usb_trading_data") else "D:/trading_data"
+    "/mnt/usb_trading_data"
+) else "D:/trading_data"
 HISTORICAL_DATA_FILE = os.path.join(
-    SAVE_DIRECTORY, "historical_data.zstd.parquet")
+    SAVE_DIRECTORY, "historical_data.zstd.parquet"
+)
 SCALPING_DATA_FILE = os.path.join(
-    SAVE_DIRECTORY, "scalping_data.zstd.parquet")
+    SAVE_DIRECTORY, "scalping_data.zstd.parquet"
+)
 RAW_DATA_FILE = "market_data.parquet"
 CLOUD_SYNC = "/mnt/google_drive/trading_sync"
 
@@ -63,7 +66,9 @@ def upload_to_drive(filepath):
     """Sincronizza un file su Google Drive solo se necessario."""
     try:
         if os.path.exists(filepath):
-            file_drive = drive.CreateFile({'title': os.path.basename(filepath)})
+            file_drive = drive.CreateFile(
+                {'title': os.path.basename(filepath)}
+            )
             file_drive.SetContentFile(filepath)
             file_drive.Upload()
             logging.info("✅ File sincronizzato su Google Drive: %s", filepath)
@@ -86,11 +91,14 @@ async def process_websocket_message(message, pair):
         if len(buffer) >= BUFFER_SIZE:
             df_batch = pl.concat(buffer)
             await asyncio.get_event_loop().run_in_executor(
-                executor, save_processed_data, df_batch, SCALPING_DATA_FILE)
+                executor, save_processed_data, df_batch, SCALPING_DATA_FILE
+            )
             buffer.clear()
             gc.collect()
             logging.info(
-                "✅ Dati scalping aggiornati batch di %d messaggi", BUFFER_SIZE)
+                "✅ Dati scalping aggiornati batch di %d messaggi",
+                BUFFER_SIZE
+            )
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
@@ -114,12 +122,16 @@ async def consume_websockets():
                         await asyncio.sleep(0.05)  # Riduce consumo CPU
             except websockets.ConnectionClosed:
                 logging.warning(
-                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...", url, retry_delay)
+                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...",
+                    url, retry_delay
+                )
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
             except Exception as e:
                 logging.error(
-                    "❌ Errore WebSocket %s: %s. Riprovo in %d sec...", url, e, retry_delay)
+                    "❌ Errore WebSocket %s: %s. Riprovo in %d sec...",
+                    url, e, retry_delay
+                )
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
 
@@ -133,8 +145,12 @@ def normalize_data(df):
             if col not in df.columns:
                 df = df.with_columns(pl.lit(None).alias(col))
         df = calculate_indicators(df)
-        numeric_cols = [col for col in df.columns if df[col].dtype in [pl.Float64, pl.Int64]]
-        df = df.with_columns([df[col].cast(pl.Float64) for col in numeric_cols])
+        numeric_cols = [
+            col for col in df.columns if df[col].dtype in [pl.Float64, pl.Int64]
+        ]
+        df = df.with_columns(
+            [df[col].cast(pl.Float64) for col in numeric_cols]
+        )
         gc.collect()
         return df
     except (ValueError, KeyError) as e:
@@ -162,12 +178,14 @@ def sync_to_cloud():
     """Sincronizza i dati con Google Drive solo se il file è cambiato."""
     if os.path.exists(HISTORICAL_DATA_FILE):
         try:
-            cloud_file = CLOUD_SYNC + "/" + os.path.basename(HISTORICAL_DATA_FILE)
+            cloud_file = CLOUD_SYNC + "/" + os.path.basename(
+                HISTORICAL_DATA_FILE
+            )
             if os.path.exists(cloud_file):
                 local_size = os.path.getsize(HISTORICAL_DATA_FILE)
                 cloud_size = os.path.getsize(cloud_file)
                 if abs(local_size - cloud_size) < 1024 * 50:
-                    logging.info("🔄 Nessuna modifica, salto sincronizzazione.")
+                    logging.info("🔄 Nessuna modifica significativa, skip sincronizzazione.")
                     return
             shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
