@@ -1,6 +1,6 @@
 "" 
 indicatori per scalping e historical
-"
+""
 
 import numpy as np
 import polars as pl  # ✅ Usiamo polars invece di pandas
