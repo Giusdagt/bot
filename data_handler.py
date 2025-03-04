@@ -18,7 +18,10 @@ from sklearn.preprocessing import MinMaxScaler
 from pydrive2.auth import GoogleAuth
 from pydrive2.drive import GoogleDrive
 import data_api_module
-from indicators import calculate_indicators
+from indicators import (
+    calculate_scalping_indicators,
+    calculate_historical_indicators
+)
 from column_definitions import required_columns
 
 # 📌 Configurazione logging avanzata
@@ -41,7 +44,7 @@ RAW_DATA_FILE = "market_data.parquet"
 CLOUD_SYNC = "/mnt/google_drive/trading_sync"
 
 # 📌 WebSocket per dati in tempo reale (Scalping)
-TOP_PAIRS = data_api_module.get_top_usdt_pairs()  # Ottiene coppie dinamiche
+TOP_PAIRS = data_api_module.get_top_usdt_pairs()
 WEBSOCKET_URLS = [
     f"wss://stream.binance.com:9443/ws/{pair.lower()}@trade"
     for pair in TOP_PAIRS
@@ -57,12 +60,12 @@ scaler = MinMaxScaler()
 executor = ThreadPoolExecutor(max_workers=4)
 
 # 📌 Cache & Buffer per massima velocità
-cache_data = {}  # Evita rielaborazioni
+cache_data = {}
 buffer = []
 BUFFER_SIZE = 100  # Ottimizzazione salvataggio per batch
 
-# Definizione della variabile globale retry_delay
-retry_delay = 1
+# 📌 Definizione costante RETRY_DELAY
+RETRY_DELAY = 1
 
 
 def upload_to_drive(filepath):
@@ -82,13 +85,15 @@ def upload_to_drive(filepath):
 async def process_websocket_message(message, pair):
     """Elabora e normalizza il messaggio ricevuto dal WebSocket."""
     try:
-        df = pl.DataFrame([{
-            "timestamp": datetime.utcnow(),
-            "pair": pair,
-            "price": float(message["p"]),
-            "volume": float(message["q"])
-        }])
-        df = calculate_indicators(df)  # Calcola indicatori real-time
+        df = pl.DataFrame([
+            {
+                "timestamp": datetime.utcnow(),
+                "pair": pair,
+                "price": float(message["p"]),
+                "volume": float(message["q"])
+            }
+        ])
+        df = calculate_scalping_indicators(df)  # Indicatori specifici per scalping
         buffer.append(df)
 
         if len(buffer) >= BUFFER_SIZE:
@@ -99,8 +104,7 @@ async def process_websocket_message(message, pair):
             buffer.clear()
             gc.collect()
             logging.info(
-                "✅ Dati scalping aggiornati batch di %d messaggi",
-                BUFFER_SIZE
+                "✅ Dati scalping aggiornati batch di %d messaggi", BUFFER_SIZE
             )
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
@@ -109,7 +113,6 @@ async def process_websocket_message(message, pair):
 async def consume_websockets():
     """Consuma dati da più WebSocket con gestione CPU/RAM ottimizzata."""
     global RETRY_DELAY
-    RETRY_DELAY = 1
     max_retry_delay = 30
 
     async def connect_to_websocket(url):
@@ -128,80 +131,19 @@ async def consume_websockets():
                     "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...",
                     url, RETRY_DELAY
                 )
-                await asyncio.sleep(retry_delay)
-                RETRY_DELAY = min(retry_delay * 2, max_retry_delay)
+                await asyncio.sleep(RETRY_DELAY)
+                RETRY_DELAY = min(RETRY_DELAY * 2, max_retry_delay)
             except (websockets.WebSocketException, OSError) as e:
                 logging.error(
                     "❌ Errore WebSocket %s: %s. Riprovo in %d sec...",
                     url, e, RETRY_DELAY
                 )
-                await asyncio.sleep(retry_delay)
-                RETRY_DELAY = min(retry_delay * 2, max_retry_delay)
+                await asyncio.sleep(RETRY_DELAY)
+                RETRY_DELAY = min(RETRY_DELAY * 2, max_retry_delay)
 
     await asyncio.gather(
         *[connect_to_websocket(url) for url in WEBSOCKET_URLS]
     )
-
-
-def normalize_data(df):
-    """Normalizza i dati di mercato e garantisce tutte le colonne."""
-    try:
-        for col in required_columns:
-            if col not in df.columns:
-                df = df.with_columns(pl.lit(None).alias(col))
-        df = calculate_indicators(df)
-        numeric_cols = [
-            col for col in df.columns if df[col].dtype in [
-                pl.Float64, pl.Int64
-            ]
-        ]
-        df = df.with_columns(
-            [df[col].cast(pl.Float64) for col in numeric_cols]
-        )
-        gc.collect()
-        return df
-    except (ValueError, KeyError) as e:
-        logging.error("❌ Errore normalizzazione dati: %s", e)
-        return df
-
-
-def save_processed_data(df, filename):
-    """Salva in formato Parquet con compressione ZSTD solo se necessario."""
-    try:
-        if os.path.exists(filename):
-            df_old = pl.read_parquet(filename)
-            if df.equals(df_old):
-                logging.info("🔄 Nessuna modifica, skip del salvataggio.")
-                return
-
-        df.write_parquet(filename, compression="zstd")
-        logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
-        sync_to_cloud()
-    except IOError as e:
-        logging.error("❌ Errore nel salvataggio dati: %s", e)
-
-
-def sync_to_cloud():
-    """Sincronizza i dati con Google Drive solo se il file è cambiato."""
-    if os.path.exists(HISTORICAL_DATA_FILE):
-        try:
-            cloud_file = os.path.join(CLOUD_SYNC, os.path.basename(
-                HISTORICAL_DATA_FILE
-            ))
-            if os.path.exists(cloud_file):
-                local_size = os.path.getsize(HISTORICAL_DATA_FILE)
-                cloud_size = os.path.getsize(cloud_file)
-                if abs(local_size - cloud_size) < 1024 * 50:
-                    logging.info(
-                        "🔄 Nessuna modifica, skip sincronizzazione."
-                    )
-                    return
-            shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
-            logging.info("☁️ Dati sincronizzati su Google Drive.")
-        except OSError as sync_error:
-            logging.error(
-                "❌ Errore sincro con Google Drive: %s", sync_error
-            )
 
 
 if __name__ == "__main__":
