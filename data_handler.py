@@ -1,4 +1,3 @@
-
 """
 data_handler.py normalizzazione dei dati
 Gestione avanzata dei dati di mercato,
@@ -62,6 +61,8 @@ cache_data = {}  # Evita rielaborazioni
 buffer = []
 BUFFER_SIZE = 100  # Ottimizzazione salvataggio per batch
 
+# Definizione della variabile globale retry_delay
+retry_delay = 1
 
 def upload_to_drive(filepath):
     """Sincronizza un file su Google Drive solo se necessario."""
