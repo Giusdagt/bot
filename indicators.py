@@ -1,15 +1,11 @@
 """
-Module for calculating various trading indicators.
+Modulo per il calcolo avanzato degli indicatori di trading.
 """
 
 import logging
 import polars as pl
 import requests
 import talib
-
-"""
-Modulo per il calcolo avanzato degli indicatori di trading.
-"""
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
