@@ -135,7 +135,9 @@ async def consume_websockets():
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, max_retry_delay)
 
-    await asyncio.gather(*[connect_to_websocket(url) for url in WEBSOCKET_URLS])
+    await asyncio.gather(
+    *[connect_to_websocket(url) for url in WEBSOCKET_URLS]
+)
 
 
 def normalize_data(df):
