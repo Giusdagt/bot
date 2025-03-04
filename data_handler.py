@@ -104,8 +104,8 @@ async def process_websocket_message(message, pair):
             logging.info(
                 "✅ Dati scalping aggiornati batch di %d messaggi", BUFFER_SIZE
             )
-    except (ValueError, KeyError) as e:
-        logging.error("❌ Errore elaborazione WebSocket: %s", e)
+    except (ValueError, KeyError) as error:
+        logging.error("❌ Errore elaborazione WebSocket: %s", error)
 
 
 async def consume_websockets():
@@ -125,11 +125,12 @@ async def consume_websockets():
                 websockets.ConnectionClosed,
                 websockets.WebSocketException,
                 OSError
-            ) as e:
+            ) as error:
                 logging.warning(
                     "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...",
                     url, retry_delay
                 )
+                logging.error("❌ Dettaglio errore: %s", error)
                 await asyncio.sleep(retry_delay)
                 retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
 
@@ -151,8 +152,8 @@ def process_historical_data():
 
         save_processed_data(df, HISTORICAL_DATA_FILE)
         logging.info("✅ Dati storici aggiornati.")
-    except Exception as e:
-        logging.error("❌ Errore elaborazione dati storici: %s", e)
+    except Exception as error:
+        logging.error("❌ Errore elaborazione dati storici: %s", error)
 
 
 def save_processed_data(df, filename):
@@ -167,14 +168,35 @@ def save_processed_data(df, filename):
         df.write_parquet(filename, compression="zstd")
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
-    except IOError as e:
-        logging.error("❌ Errore nel salvataggio dati: %s", e)
+    except IOError as error:
+        logging.error("❌ Errore nel salvataggio dati: %s", error)
+
+
+def sync_to_cloud():
+    """Sincronizza i dati con Google Drive solo se il file è cambiato."""
+    try:
+        if os.path.exists(HISTORICAL_DATA_FILE):
+            cloud_file = os.path.join(CLOUD_SYNC, os.path.basename(
+                HISTORICAL_DATA_FILE
+            ))
+            if os.path.exists(cloud_file):
+                local_size = os.path.getsize(HISTORICAL_DATA_FILE)
+                cloud_size = os.path.getsize(cloud_file)
+                if abs(local_size - cloud_size) < 1024 * 50:
+                    logging.info(
+                        "🔄 Nessuna modifica, skip sincronizzazione."
+                    )
+                    return
+            shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
+            logging.info("☁️ Dati sincronizzati su Google Drive.")
+    except OSError as sync_error:
+        logging.error("❌ Errore sincro con Google Drive: %s", sync_error)
 
 
 if __name__ == "__main__":
     logging.info("🔄 Avvio sincronizzazione dati...")
 
-    # 📌 Esegui il processo storico in parallelo con WebSocket
+    # 📌 Avvia i due processi in parallelo
     loop = asyncio.get_event_loop()
     loop.run_in_executor(executor, process_historical_data)
     loop.run_until_complete(consume_websockets())
