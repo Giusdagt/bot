@@ -64,6 +64,7 @@ BUFFER_SIZE = 100  # Ottimizzazione salvataggio per batch
 # Definizione della variabile globale retry_delay
 retry_delay = 1
 
+
 def upload_to_drive(filepath):
     """Sincronizza un file su Google Drive solo se necessario."""
     try:
