@@ -148,7 +148,9 @@ def normalize_data(df):
                 df = df.with_columns(pl.lit(None).alias(col))
         df = calculate_indicators(df)
         numeric_cols = [
-            col for col in df.columns if df[col].dtype in [pl.Float64, pl.Int64]
+            col for col in df.columns if df[col].dtype in [
+                pl.Float64, pl.Int64
+            ]
         ]
         df = df.with_columns(
             [df[col].cast(pl.Float64) for col in numeric_cols]
@@ -188,7 +190,7 @@ def sync_to_cloud():
                 cloud_size = os.path.getsize(cloud_file)
                 if abs(local_size - cloud_size) < 1024 * 50:
                     logging.info(
-                        "🔄 Nessuna modifica significativa, skip sincronizzazione."
+                        "🔄 Nessuna modifica, skip sincronizzazione."
                     )
                     return
             shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
