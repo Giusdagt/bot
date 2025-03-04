@@ -143,7 +143,7 @@ def normalize_data(df):
 
 
 def save_processed_data(df, filename):
-    """Salva i dati elaborati in formato Parquet con compressione ZSTD solo se necessario."""
+    """Salva dati in formato Parquet con compressione ZSTD solo se necessario."""
     try:
         if os.path.exists(filename):
             df_old = pl.read_parquet(filename)
@@ -159,7 +159,7 @@ def save_processed_data(df, filename):
 
 
 def sync_to_cloud():
-    """Sincronizza i dati con Google Drive solo se il file è cambiato significativamente."""
+    """Sincronizza i dati con Google Drive solo se il file è cambiato."""
     if os.path.exists(HISTORICAL_DATA_FILE):
         try:
             cloud_file = CLOUD_SYNC + "/" + os.path.basename(HISTORICAL_DATA_FILE)
