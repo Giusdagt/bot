@@ -123,14 +123,18 @@ def fetch_sentiment_data():
     """Recupera i dati di sentiment analysis dalle news e dai social media."""
     try:
         response = requests.get(SENTIMENT_API_URL)
-        if response.status_code == 200:
-            sentiment_data = response.json()
-            return sentiment_data["sentiment_score"]
-        logging.error("❌ Errore nel recupero del sentiment.")
-        return np.nan
-    except Exception as e:
-        logging.error("❌ Errore API Sentiment Analysis: %s", e)
-        return np.nan
+        response.raise_for_status()
+        sentiment_data = response.json()
+        return sentiment_data["sentiment_score"]
+    except requests.exceptions.HTTPError as http_err:
+        logging.error("❌ HTTP error occurred: %s", http_err)
+    except requests.exceptions.ConnectionError as conn_err:
+        logging.error("❌ Connection error occurred: %s", conn_err)
+    except requests.exceptions.Timeout as timeout_err:
+        logging.error("❌ Timeout error occurred: %s", timeout_err)
+    except requests.exceptions.RequestException as req_err:
+        logging.error("❌ Error occurred: %s", req_err)
+    return np.nan
 
 
 def get_indicators_list():
