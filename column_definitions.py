@@ -12,4 +12,5 @@ required_columns = [
     "market_cap_change_percentage_24h", "ath",
     "ath_change_percentage", "ath_date", "atl",
     "atl_change_percentage", "atl_date", "roi"
+    "spread", "order_book", "market_depth"
 ]
