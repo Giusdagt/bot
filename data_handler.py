@@ -90,7 +90,7 @@ async def process_websocket_message(message, pair):
             buffer.clear()
             gc.collect()
             logging.info(
-                "✅ Dati scalping aggiornati con batch di %d messaggi", BUFFER_SIZE)
+                "✅ Dati scalping aggiornati batch di %d messaggi", BUFFER_SIZE)
     except (ValueError, KeyError) as e:
         logging.error("❌ Errore elaborazione WebSocket: %s", e)
 
@@ -143,7 +143,7 @@ def normalize_data(df):
 
 
 def save_processed_data(df, filename):
-    """Salva dati in formato Parquet con compressione ZSTD solo se necessario."""
+    """Salva in formato Parquet con compressione ZSTD solo se necessario."""
     try:
         if os.path.exists(filename):
             df_old = pl.read_parquet(filename)
@@ -172,7 +172,7 @@ def sync_to_cloud():
             shutil.copy(HISTORICAL_DATA_FILE, CLOUD_SYNC)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
         except OSError as sync_error:
-            logging.error("❌ Errore nella sincro con Google Drive: %s", sync_error)
+            logging.error("❌ Errore sincro con Google Drive: %s", sync_error)
 
 
 if __name__ == "__main__":
