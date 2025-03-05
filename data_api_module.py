@@ -9,10 +9,10 @@ import os
 import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 import aiohttp
 import requests
 import pandas as pd
-from functools import lru_cache
 from data_loader import load_market_data_apis
 from column_definitions import required_columns
 
@@ -154,7 +154,7 @@ def save_and_sync(data, filename=STORAGE_PATH):
         df.to_parquet(filename, index=False, compression="zstd")
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
-    except Exception as error:
+    except (pd.errors.EmptyDataError, ValueError) as e:
         logging.error("❌ Errore durante il salvataggio dei dati: %s", error)
 
 
