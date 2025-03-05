@@ -150,6 +150,7 @@ def save_and_sync(data, filename=STORAGE_PATH):
         df = pd.DataFrame(data)
         df = ensure_all_columns(df)
         df.to_parquet(filename, index=False, compression="zstd")
+
         
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
