@@ -99,7 +99,8 @@ async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
             limits = exchange["limitations"]
             req_per_min = limits.get("requests_per_minute", 60)
             tasks.append(
-                fetch_market_data(session, api_url, exchange["name"], req_per_min)
+                fetch_market_data(
+                    session, api_url, exchange["name"], req_per_min)
             )
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return [
@@ -133,8 +134,9 @@ def download_no_api_data(symbols=None, interval="1d"):
                 f"{symbol}-{interval}.zip", symbol
             )
             executor.submit(
-                fetch_data, "cryptodatadownload", 
-                f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv", symbol
+                fetch_data, "cryptodatadownload",
+                f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv",
+                symbol
             )
 
     return data
@@ -164,7 +166,7 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
-        logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", 
+        logging.error("❌ Error nella sincronizzazione con Google Drive: %s", 
                       sync_error)
 
 
