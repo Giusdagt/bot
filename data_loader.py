@@ -26,7 +26,7 @@ def load_config(json_file=CONFIG_FILE):
     """Carica il file di configurazione."""
     if not os.path.exists(json_file):
         raise FileNotFoundError(f"❌ Il file {json_file} non esiste.")
-    with open(json_file, 'r', encoding='utf-8') as f:
+    with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -34,17 +34,8 @@ def load_market_data_apis(json_file=MARKET_API_FILE):
     """Carica la configurazione delle API di mercato."""
     if not os.path.exists(json_file):
         raise FileNotFoundError(f"❌ Il file {json_file} non esiste.")
-    with open(json_file, 'r', encoding='utf-8') as f:
-        return json.load(f).get('exchanges', [])
-
-
-def get_usdt_trading_pairs(market_data):
-    """Recupera tutte le coppie di trading in usdt dalle API di mercato."""
-    return [
-        market["symbol"]
-        for market in market_data
-        if "/USDT" in market.get("symbol", "")
-    ]
+    with open(json_file, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 # ===========================
@@ -61,10 +52,6 @@ if __name__ == "__main__":
         # Carica le API di mercato
         market_data_apis = load_market_data_apis()
         logging.info("🔹 Configurazioni API di mercato caricate con successo.")
-
-        # Recupera le coppie USDT
-        usdt_pairs = get_usdt_trading_pairs(market_data_apis)
-        logging.info("✅ Coppie di trading USDT trovate: %s", usdt_pairs)
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
