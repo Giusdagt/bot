@@ -1,13 +1,11 @@
 """
-Modulo per la gestione avanzata del caricamento dei dati di mercato
-grezzi usdt 5_000_000
+Modulo per la gestione avanzata del caricamento dei dati di mercato.
 Ottimizzato per massima efficienza, velocità e scalabilità.
 """
 
 import asyncio
 import logging
 import os
-import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
@@ -30,6 +28,7 @@ services = load_market_data_apis()
 STORAGE_PATH = "market_data.zstd.parquet"
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.zstd.parquet"
 CACHE_TTL = 3600  # Cache valida per 1 ora
+cache_data = {}
 
 executor = ThreadPoolExecutor(max_workers=4)  # Ottimizzazione CPU
 
@@ -127,14 +126,14 @@ def download_no_api_data(symbols=None, interval="1d"):
             data[symbol][source_name] = url
             logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
 
-    with local_executor as exec:
+    with local_executor:
         for symbol in symbols:
-            exec.submit(
+            local_executor.submit(
                 fetch_data, "binance_data",
                 f"{sources['binance_data']}/{symbol}/{interval}/"
                 f"{symbol}-{interval}.zip", symbol
             )
-            exec.submit(
+            local_executor.submit(
                 fetch_data, "cryptodatadownload",
                 f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv",
                 symbol
@@ -164,7 +163,7 @@ def sync_to_cloud():
     """Sincronizza dati locali con Google Drive solo se il file è cambiato."""
     try:
         if os.path.exists(STORAGE_PATH):
-            shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
+            os.replace(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
         logging.error("❌ Errore nella sincronizzazione con Google Drive: %s",
