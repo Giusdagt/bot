@@ -59,7 +59,7 @@ def get_top_usdt_pairs():
         ]
 
 
-async def fetch_market_data(session, url, exchange_name, 
+async def fetch_market_data(session, url, exchange_name,
                             requests_per_minute, retries=3):
     """Scarica i dati di mercato con gestione avanzata degli errori."""
     delay = max(2, 60 / requests_per_minute)
@@ -70,7 +70,7 @@ async def fetch_market_data(session, url, exchange_name,
             ) as response:
                 if response.status == 200:
                     logging.info(
-                        "✅ Dati ottenuti da %s (tentativo %d)", 
+                        "✅ Dati ottenuti da %s (tentativo %d)",
                         exchange_name, attempt + 1
                     )
                     return await response.json()
@@ -104,7 +104,7 @@ async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
             )
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return [
-            data for data in results 
+            data for data in results
             if data and data.get("total_volume", 0) >= min_volume
         ][:300]
 
@@ -129,7 +129,7 @@ def download_no_api_data(symbols=None, interval="1d"):
     with ThreadPoolExecutor(max_workers=5) as executor:
         for symbol in symbols:
             executor.submit(
-                fetch_data, "binance_data", 
+                fetch_data, "binance_data",
                 f"{sources['binance_data']}/{symbol}/{interval}/"
                 f"{symbol}-{interval}.zip", symbol
             )
@@ -160,13 +160,13 @@ def save_and_sync(data, filename=STORAGE_PATH):
 
 
 def sync_to_cloud():
-    """Sincronizza i dati locali con Google Drive solo se il file è cambiato."""
+    """Sincronizza dati locali con Google Drive solo se il file è cambiato."""
     try:
         if os.path.exists(STORAGE_PATH):
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
-        logging.error("❌ Error nella sincronizzazione con Google Drive: %s", 
+        logging.error("❌ Error nella sincronizzazione con Google Drive: %s",
                       sync_error)
 
 
