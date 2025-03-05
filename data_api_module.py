@@ -150,8 +150,6 @@ def save_and_sync(data, filename=STORAGE_PATH):
         df = pd.DataFrame(data)
         df = ensure_all_columns(df)
         df.to_parquet(filename, index=False, compression="zstd")
-
-        
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
     except Exception as e:
@@ -177,6 +175,7 @@ async def main():
         logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API")
         data_no_api = await fetch_data_from_exchanges()
     save_and_sync(data_no_api, STORAGE_PATH)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
