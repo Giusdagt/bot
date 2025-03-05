@@ -150,8 +150,9 @@ def save_and_sync(data, filename=STORAGE_PATH):
         df = pd.DataFrame(data)
         df = ensure_all_columns(df)
 
-        
         df.to_parquet(filename, index=False, compression="zstd")
+
+        
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
     except Exception as e:
@@ -165,7 +166,7 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
-        logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
+        logging.error("❌ Errore nella sincro con Google Drive: %s", sync_error)
 
 
 async def main():
