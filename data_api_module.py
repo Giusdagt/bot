@@ -31,7 +31,7 @@ CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.zstd.parquet"
 CACHE_TTL = 3600  # Cache valida per 1 ora
 cache_data = {}
 
-executor = ThreadPoolExecutor(max_workers=4)  # Ottimizzazione CPU
+EXECUTOR = ThreadPoolExecutor(max_workers=4)  # Ottimizzazione CPU
 
 
 def ensure_all_columns(df):
@@ -51,8 +51,8 @@ def get_top_usdt_pairs():
             (df["total_volume"] > 5_000_000)
         ].sort_values(by="total_volume", ascending=False).head(300)
         return usdt_pairs["symbol"].tolist()
-    except (FileNotFoundError, pd.errors.EmptyDataError) as e:
-        logging.error("❌ Errore nel filtrare le coppie USDT: %s", e)
+    except (FileNotFoundError, pd.errors.EmptyDataError) as error:
+        logging.error("❌ Errore nel filtrare le coppie USDT: %s", error)
         return [
             "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
             "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT"
@@ -97,12 +97,12 @@ async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
         tasks = []
         for exchange in services["exchanges"]:
             api_url = exchange["api_url"].replace("{currency}", currency)
-            req_per_min = exchange["limitations"].get("requests_per_minute",
-                                                      60)
-            tasks.append(
-                fetch_market_data(session, api_url, exchange["name"],
-                                  req_per_min)
+            req_per_min = exchange["limitations"].get(
+                "requests_per_minute", 60
             )
+            tasks.append(fetch_market_data(
+                session, api_url, exchange["name"], req_per_min
+            ))
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return [
             data for data in results
@@ -127,14 +127,14 @@ def download_no_api_data(symbols=None, interval="1d"):
             data[symbol][source_name] = url
             logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=5) as exec_:
         for symbol in symbols:
-            executor.submit(
+            exec_.submit(
                 fetch_data, "binance_data",
                 f"{sources['binance_data']}/{symbol}/{interval}/"
                 f"{symbol}-{interval}.zip", symbol
             )
-            executor.submit(
+            exec_.submit(
                 fetch_data, "cryptodatadownload",
                 f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv",
                 symbol
@@ -154,8 +154,8 @@ def save_and_sync(data, filename=STORAGE_PATH):
         df.to_parquet(filename, index=False, compression="zstd")
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
-    except Exception as e:
-        logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
+    except Exception as error:
+        logging.error("❌ Errore durante il salvataggio dei dati: %s", error)
 
 
 def sync_to_cloud():
@@ -165,7 +165,7 @@ def sync_to_cloud():
             shutil.copy(STORAGE_PATH, CLOUD_SYNC_PATH)
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
-        logging.error("❌ Errore nella sincro con Google Drive: %s", sync_error)
+        logging.error("❌ Errore nella sincronizzazione: %s", sync_error)
 
 
 async def main():
@@ -174,7 +174,7 @@ async def main():
     top_usdt_pairs = get_top_usdt_pairs()
     data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
     if not data_no_api:
-        logging.warning("⚠️ Nessun dato trovato senza API. Passaggio alle API")
+        logging.warning("⚠️ Nessun dato senza API. Passaggio alle API")
         data_no_api = await fetch_data_from_exchanges()
     save_and_sync(data_no_api, STORAGE_PATH)
 
