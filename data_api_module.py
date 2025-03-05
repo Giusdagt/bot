@@ -33,12 +33,14 @@ cache_data = {}
 
 executor = ThreadPoolExecutor(max_workers=4)  # Ottimizzazione CPU
 
+
 def ensure_all_columns(df):
     """Garantisce che il DataFrame contenga tutte le colonne richieste."""
     for col in required_columns:
         if col not in df.columns:
             df[col] = pd.NA
     return df
+
 
 def get_top_usdt_pairs():
     """Ottiene le prime coppie USDT con volume superiore a 5 milioni."""
@@ -55,6 +57,7 @@ def get_top_usdt_pairs():
             "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
             "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT"
         ]
+
 
 async def fetch_market_data(
     session, url, exchange_name, requests_per_minute, retries=3
@@ -87,6 +90,7 @@ async def fetch_market_data(
             await asyncio.sleep(delay)
     return None
 
+
 async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
     """Scarica dati dalle borse con filtro di volume minimo."""
     async with aiohttp.ClientSession() as session:
@@ -102,6 +106,7 @@ async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
             data for data in results
             if data and data.get("total_volume", 0) >= min_volume
         ][:300]
+
 
 @lru_cache(maxsize=1)
 def download_no_api_data(symbols=None, interval="1d"):
@@ -134,6 +139,7 @@ def download_no_api_data(symbols=None, interval="1d"):
             )
     return data
 
+
 def save_and_sync(data, filename=STORAGE_PATH):
     """Salva i dati in formato Parquet con compressione e li sincronizza."""
     try:
@@ -144,11 +150,13 @@ def save_and_sync(data, filename=STORAGE_PATH):
         df = pd.DataFrame(data)
         df = ensure_all_columns(df)
 
+        
         df.to_parquet(filename, index=False, compression="zstd")
         logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
         sync_to_cloud()
     except Exception as e:
         logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
+
 
 def sync_to_cloud():
     """Sincronizza i dati locali a Google Drive solo se il file è cambiato."""
@@ -158,6 +166,7 @@ def sync_to_cloud():
             logging.info("☁️ Dati sincronizzati su Google Drive.")
     except OSError as sync_error:
         logging.error("❌ Errore nella sincronizzazione con Google Drive: %s", sync_error)
+
 
 async def main():
     """Funzione principale per l'aggiornamento dei dati."""
