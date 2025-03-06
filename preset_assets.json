@@ -1,0 +1,6 @@
+{
+  "crypto": ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT"],
+  "forex": ["EURUSD", "USDJPY", "GBPUSD", "USDCHF"],
+  "indices": ["US500", "NAS100", "DE40"],
+  "commodities": ["XAUUSD", "XAGUSD", "WTI", "BRENT"]
+}
