@@ -20,7 +20,7 @@ MARKET_API_FILE = "market_data_apis.json"
 PRESET_ASSETS_FILE = "preset_assets.json"
 
 # 📌 Impostazioni globali
-USE_PRESET_ASSETS = True  # Se True usa preset_assets.json, altrimenti selezione dinamica
+USE_PRESET_ASSETS = True  # Se True usa preset_assets.json, altrimenti dinamica
 MAX_ASSETS = 300  # Numero massimo di asset da selezionare
 
 # 📌 Struttura dati organizzata per categorie di asset
@@ -35,10 +35,11 @@ TRADABLE_ASSETS = {
 # 🔹 FUNZIONI DI UTILITÀ
 # ===========================
 
+
 def load_json_file(json_file):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning(f"⚠️ Il file {json_file} non esiste. Creazione automatica in corso...")
+        logging.warning(f"⚠️ Il file {json_file} non esiste. Creazione in corso.")
         return None
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -65,12 +66,11 @@ def load_preset_assets():
 def categorize_tradable_assets(market_data):
     """Filtra e organizza le coppie di trading per categoria."""
     try:
-        # Se è attivo `USE_PRESET_ASSETS`, usa solo gli asset definiti in `preset_assets.json`
+        # Se use_preset_assets è TRUE usa solo gli asset definiti
         if USE_PRESET_ASSETS:
             preset_assets = load_preset_assets()
             if preset_assets:
-                return preset_assets  # Restituisce direttamente gli asset predefiniti
-        
+                return preset_assets  # Restituisce gli asset predefiniti
         # Selezione dinamica basata sui dati disponibili
         categorized_assets = {"crypto": [], "forex": [], "indices": [], "commodities": []}
 
@@ -95,7 +95,7 @@ def categorize_tradable_assets(market_data):
 
     except Exception as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
-        return TRADABLE_ASSETS  # Restituisce una struttura vuota in caso di errore
+        return TRADABLE_ASSETS  # Da una struttura vuota in caso di errore
 
 
 # ===========================
@@ -124,4 +124,4 @@ if __name__ == "__main__":
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore nella lettura del file JSON. Verifica la sintassi.")
+        logging.error("❌ Errore del file JSON. Verifica la sintassi.")
