@@ -73,11 +73,11 @@ def categorize_tradable_assets(market_data):
                 return preset_assets  # Restituisce gli asset predefiniti
         # Selezione dinamica basata sui dati disponibili
         categorized_assets = {
-    "crypto": [],
-    "forex": [],
-    "indices": [],
-    "commodities": []
-}
+            "crypto": [],
+            "forex": [],
+            "indices": [],
+            "commodities": []
+        }
         for asset in market_data.get("exchanges", []):
             symbol = asset.get("symbol", "").upper()
 
@@ -92,9 +92,9 @@ def categorize_tradable_assets(market_data):
 
         # Limita a MAX_ASSETS totali
         for key in categorized_assets:
-           categorized_assets[key] = categorized_assets[key][
-    :MAX_ASSETS // len(categorized_assets)
-]
+            categorized_assets[key] = categorized_assets[key][
+                :MAX_ASSETS // len(categorized_assets)
+            ]
         logging.info("✅ Asset tradabili organizzati con successo.")
         return categorized_assets
 
