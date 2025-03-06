@@ -39,7 +39,7 @@ TRADABLE_ASSETS = {
 def load_json_file(json_file):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning(f"⚠️ Il file {json_file} non esiste. Creazione in corso.")
+        logging.warning(f"⚠️ Il file {json_file} non c'è. Creazione in corso.")
         return None
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -72,7 +72,11 @@ def categorize_tradable_assets(market_data):
             if preset_assets:
                 return preset_assets  # Restituisce gli asset predefiniti
         # Selezione dinamica basata sui dati disponibili
-        categorized_assets = {"crypto": [], "forex": [], "indices": [], "commodities": []}
+        categorized_assets = {"crypto": [],
+                              "forex": [],
+                              "indices": [],
+                              "commodities": []
+                             }
 
         for asset in market_data.get("exchanges", []):
             symbol = asset.get("symbol", "").upper()
@@ -88,7 +92,9 @@ def categorize_tradable_assets(market_data):
 
         # Limita a MAX_ASSETS totali
         for key in categorized_assets:
-            categorized_assets[key] = categorized_assets[key][:MAX_ASSETS // len(categorized_assets)]
+            categorized_assets[key] = categorized_assets[key][
+            :MAX_ASSETS // len(categorized_assets)
+            ]
 
         logging.info("✅ Asset tradabili organizzati con successo.")
         return categorized_assets
@@ -119,7 +125,7 @@ if __name__ == "__main__":
         logging.info("🔹 Crypto: %s", tradable_assets["crypto"][:10])
         logging.info("🔹 Forex: %s", tradable_assets["forex"][:10])
         logging.info("🔹 Indici: %s", tradable_assets["indices"][:10])
-        logging.info("🔹 Materie Prime: %s", tradable_assets["commodities"][:10])
+        logging.info("🔹Materie Prime: %s", tradable_assets["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
