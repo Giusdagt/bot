@@ -39,7 +39,7 @@ TRADABLE_ASSETS = {
 def load_json_file(json_file):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning(f"⚠️ Il file {json_file} non c'è. Creazione in corso.")
+        logging.warning("⚠️ Il file %s non c'è. Creazione in corso.", json_file)
         return None
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -98,7 +98,7 @@ def categorize_tradable_assets(market_data):
         logging.info("✅ Asset tradabili organizzati con successo.")
         return categorized_assets
 
-    except Exception as e:
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
         return TRADABLE_ASSETS  # Da una struttura vuota in caso di errore
 
