@@ -72,12 +72,12 @@ def categorize_tradable_assets(market_data):
             if preset_assets:
                 return preset_assets  # Restituisce gli asset predefiniti
         # Selezione dinamica basata sui dati disponibili
-        categorized_assets = {"crypto": [],
-                      "forex": [],
-                      "indices": [],
-                      "commodities": []
-                     }
-
+        categorized_assets = {
+    "crypto": [],
+    "forex": [],
+    "indices": [],
+    "commodities": []
+}
         for asset in market_data.get("exchanges", []):
             symbol = asset.get("symbol", "").upper()
 
