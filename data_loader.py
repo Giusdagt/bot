@@ -39,7 +39,7 @@ TRADABLE_ASSETS = {
 def load_json_file(json_file):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning("⚠️ Il file %s non c'è. Creazione in corso.", json_file)
+        logging.warning("⚠️ file %s non c'è. Creazione in corso.", json_file)
         return None
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
