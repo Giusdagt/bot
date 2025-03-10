@@ -106,12 +106,15 @@ def standardize_symbol(symbol):
     save_auto_symbol_mapping()
     return normalized_symbol
 
+
 def categorize_tradable_assets(preset_assets):
     """Filtra e organizza le coppie di trading per categoria,
     con conversione automatica."""
     try:
         for category, assets in preset_assets.items():
-            TRADABLE_ASSETS[category] = [standardize_symbol(asset) for asset in assets]
+            TRADABLE_ASSETS[category] = [
+                standardize_symbol(asset) for asset in assets
+            ]
 
         logging.info("✅ Asset organizzati e normalizzati con successo.")
     except Exception as e:
@@ -120,6 +123,7 @@ def categorize_tradable_assets(preset_assets):
 # ===========================
 # 🔹 ESECUZIONE PRINCIPALE
 # ===========================
+
 
 if __name__ == "__main__":
     try:
