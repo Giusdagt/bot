@@ -68,55 +68,40 @@ def load_market_data_apis():
     return load_json_file(MARKET_API_FILE)
 
 
-def load_preset_assets():
-    """Carica gli asset predefiniti per il trading."""
-    return load_json_file(PRESET_ASSETS_FILE)
-
-
-def load_auto_symbol_mapping():
+def load_auto_symbol_mapping(auto_mapping_file):
     """Carica la mappatura automatica dei simboli."""
-    global AUTO_SYMBOL_MAPPING
-    AUTO_SYMBOL_MAPPING = load_json_file(AUTO_MAPPING_FILE)
+    return load_json_file(auto_mapping_file)
 
-
-def save_auto_symbol_mapping():
+def save_auto_symbol_mapping(auto_symbol_mapping, auto_mapping_file):
     """Salva la mappatura automatica dei simboli."""
-    save_json_file(AUTO_SYMBOL_MAPPING, AUTO_MAPPING_FILE)
+    save_json_file(auto_symbol_mapping, auto_mapping_file)
 
-
-def standardize_symbol(symbol):
+def standardize_symbol(symbol, auto_symbol_mapping, auto_mapping_file):
     """
     Converte automaticamente un simbolo nel formato corretto
-    in base alla valuta e all'exchange di riferimento.
+    basandosi sulle fonti dei dati storici e broker.
     """
-    if symbol in AUTO_SYMBOL_MAPPING:
-        return AUTO_SYMBOL_MAPPING[symbol]
+    if symbol in auto_symbol_mapping:
+        return auto_symbol_mapping[symbol]
 
-    # Rimozione di caratteri speciali
-    normalized_symbol = re.sub(r"[/\-_]", "", symbol).upper()
+    # Regole di conversione automatica
+    normalized_symbol = symbol.replace("/", "").replace("-", "").upper()
 
-    # Identificazione della valuta finale
-    for currency in SUPPORTED_CURRENCIES:
-        if normalized_symbol.endswith(currency):
-            base_symbol = normalized_symbol[:-len(currency)]
-            normalized_symbol = f"{base_symbol}{currency}"
-            break
+    if normalized_symbol.endswith("USD"):
+        normalized_symbol = normalized_symbol[:-3] + "USD"
 
-    AUTO_SYMBOL_MAPPING[symbol] = normalized_symbol
-    save_auto_symbol_mapping()
+    auto_symbol_mapping[symbol] = normalized_symbol
+    save_auto_symbol_mapping(auto_symbol_mapping, auto_mapping_file)
     return normalized_symbol
 
-
-def categorize_tradable_assets(preset_assets):
-    """Filtra e organizza le coppie di trading per categoria,
-    con conversione automatica."""
+def categorize_tradable_assets(preset_assets, auto_symbol_mapping, auto_mapping_file):
+    """Filtra e organizza le coppie di trading per categoria, con conversione automatica."""
     try:
         for category, assets in preset_assets.items():
-            TRADABLE_ASSETS[category] = [
-                standardize_symbol(asset) for asset in assets
-            ]
+            TRADABLE_ASSETS[category] = [standardize_symbol(asset, auto_symbol_mapping, auto_mapping_file)
+                                         for asset in assets]
 
-        logging.info("✅ Asset organizzati e normalizzati con successo.")
+        logging.info("✅ Asset tradabili organizzati e normalizzati con successo.")
     except Exception as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
 
@@ -140,18 +125,18 @@ if __name__ == "__main__":
         logging.info("🔹 Asset predefiniti caricati con successo.")
 
         # Carica la mappatura automatica
-        load_auto_symbol_mapping()
+        auto_symbol_mapping = load_auto_symbol_mapping(AUTO_MAPPING_FILE)
 
-        # Organizza le coppie per categoria con conversione automatica
-        categorize_tradable_assets(loaded_preset_assets)
+        # Organizza le coppie di trading per categoria con conversione automatica
+        categorize_tradable_assets(loaded_preset_assets, auto_symbol_mapping, AUTO_MAPPING_FILE)
 
         # Log delle categorie finali
         logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
         logging.info("🔹 Forex: %s", TRADABLE_ASSETS["forex"][:10])
         logging.info("🔹 Indici: %s", TRADABLE_ASSETS["indices"][:10])
-        logging.info(" Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
+        logging.info("🔹 Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore lettura del file JSON. Verifica la sintassi.")
+        logging.error("❌ Errore nella lettura del file JSON. Verifica la sintassi.")
