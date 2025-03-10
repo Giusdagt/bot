@@ -136,7 +136,7 @@ if __name__ == "__main__":
         logging.info("🔹 Configurazioni API di mercato caricate con successo.")
 
         # Carica gli asset predefiniti
-        preset_assets = load_preset_assets()
+        loaded_preset_assets = load_preset_assets()
         logging.info("🔹 Asset predefiniti caricati con successo.")
 
         # Carica la mappatura automatica
