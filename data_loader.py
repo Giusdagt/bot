@@ -143,7 +143,7 @@ if __name__ == "__main__":
         load_auto_symbol_mapping()
 
         # Organizza le coppie per categoria con conversione automatica
-        categorize_tradable_assets(preset_assets)
+        categorize_tradable_assets(loaded_preset_assets)
 
         # Log delle categorie finali
         logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
