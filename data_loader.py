@@ -41,13 +41,15 @@ SUPPORTED_CURRENCIES = [
 # 🔹 FUNZIONI DI UTILITÀ
 # ===========================
 
+
 def load_json_file(json_file):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning(f"⚠️ Il file {json_file} non esiste, ne verrà creato uno nuovo.")
+        logging.warning(f"⚠️ Il file {json_file} non c'è, ne creo uno nuovo.")
         return {}
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def save_json_file(data, json_file):
     """Salva i dati in un file JSON."""
@@ -55,26 +57,32 @@ def save_json_file(data, json_file):
         json.dump(data, f, indent=4)
         logging.info(f"✅ Dati salvati in {json_file}")
 
+
 def load_config():
     """Carica il file di configurazione principale."""
     return load_json_file(CONFIG_FILE)
+
 
 def load_market_data_apis():
     """Carica la configurazione delle API di mercato."""
     return load_json_file(MARKET_API_FILE)
 
+
 def load_preset_assets():
     """Carica gli asset predefiniti per il trading."""
     return load_json_file(PRESET_ASSETS_FILE)
+
 
 def load_auto_symbol_mapping():
     """Carica la mappatura automatica dei simboli."""
     global AUTO_SYMBOL_MAPPING
     AUTO_SYMBOL_MAPPING = load_json_file(AUTO_MAPPING_FILE)
 
+
 def save_auto_symbol_mapping():
     """Salva la mappatura automatica dei simboli."""
     save_json_file(AUTO_SYMBOL_MAPPING, AUTO_MAPPING_FILE)
+
 
 def standardize_symbol(symbol):
     """
@@ -99,12 +107,13 @@ def standardize_symbol(symbol):
     return normalized_symbol
 
 def categorize_tradable_assets(preset_assets):
-    """Filtra e organizza le coppie di trading per categoria, con conversione automatica."""
+    """Filtra e organizza le coppie di trading per categoria,
+    con conversione automatica."""
     try:
         for category, assets in preset_assets.items():
             TRADABLE_ASSETS[category] = [standardize_symbol(asset) for asset in assets]
 
-        logging.info("✅ Asset tradabili organizzati e normalizzati con successo.")
+        logging.info("✅ Asset organizzati e normalizzati con successo.")
     except Exception as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
 
@@ -129,16 +138,16 @@ if __name__ == "__main__":
         # Carica la mappatura automatica
         load_auto_symbol_mapping()
 
-        # Organizza le coppie di trading per categoria con conversione automatica
+        # Organizza le coppie per categoria con conversione automatica
         categorize_tradable_assets(preset_assets)
 
         # Log delle categorie finali
         logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
         logging.info("🔹 Forex: %s", TRADABLE_ASSETS["forex"][:10])
         logging.info("🔹 Indici: %s", TRADABLE_ASSETS["indices"][:10])
-        logging.info("🔹 Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
+        logging.info(" Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore nella lettura del file JSON. Verifica la sintassi.")
+        logging.error("❌ Errore lettura del file JSON. Verifica la sintassi.")
