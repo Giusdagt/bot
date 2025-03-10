@@ -1,12 +1,12 @@
 """
 data_loader.py
-Gestione avanzata del caricamento dei dati di configurazione e di mercato.
-Ottimizzato per efficienza, espandibilità e robustezza.
+Gestione avanzata del caricamento e normalizzazione automatica degli asset.
 """
 
 import json
 import os
 import logging
+import re
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
@@ -18,12 +18,9 @@ logging.basicConfig(
 CONFIG_FILE = "config.json"
 MARKET_API_FILE = "market_data_apis.json"
 PRESET_ASSETS_FILE = "preset_assets.json"
+AUTO_MAPPING_FILE = "auto_symbol_mapping.json"
 
-# 📌 Impostazioni globali
-USE_PRESET_ASSETS = True  # Se True usa preset_assets.json, altrimenti dinamica
-MAX_ASSETS = 300  # Numero massimo di asset da selezionare
-
-# 📌 Struttura dati organizzata per categorie di asset
+# 📌 Struttura dinamica per asset
 TRADABLE_ASSETS = {
     "crypto": [],
     "forex": [],
@@ -31,77 +28,85 @@ TRADABLE_ASSETS = {
     "commodities": []
 }
 
+AUTO_SYMBOL_MAPPING = {}
+
+# 📌 Lista delle valute principali
+SUPPORTED_CURRENCIES = [
+    "USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD", "HKD", "SGD",
+    "NOK", "SEK", "DKK", "MXN", "ZAR", "TRY", "CNY", "RUB", "PLN", "HUF",
+    "INR", "IDR", "VND", "THB", "KRW", "PHP"
+]
+
 # ===========================
 # 🔹 FUNZIONI DI UTILITÀ
 # ===========================
 
-
 def load_json_file(json_file):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning("⚠️ file %s non c'è. Creazione in corso.", json_file)
-        return None
+        logging.warning(f"⚠️ Il file {json_file} non esiste, ne verrà creato uno nuovo.")
+        return {}
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
 
+def save_json_file(data, json_file):
+    """Salva i dati in un file JSON."""
+    with open(json_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+        logging.info(f"✅ Dati salvati in {json_file}")
 
 def load_config():
     """Carica il file di configurazione principale."""
     return load_json_file(CONFIG_FILE)
 
-
 def load_market_data_apis():
     """Carica la configurazione delle API di mercato."""
     return load_json_file(MARKET_API_FILE)
 
-
 def load_preset_assets():
-    """Carica gli asset predefiniti da preset_assets.json se attivo."""
-    data = load_json_file(PRESET_ASSETS_FILE)
-    if data:
-        logging.info("✅ Asset predefiniti caricati con successo.")
-    return data
+    """Carica gli asset predefiniti per il trading."""
+    return load_json_file(PRESET_ASSETS_FILE)
 
+def load_auto_symbol_mapping():
+    """Carica la mappatura automatica dei simboli."""
+    global AUTO_SYMBOL_MAPPING
+    AUTO_SYMBOL_MAPPING = load_json_file(AUTO_MAPPING_FILE)
 
-def categorize_tradable_assets(market_data):
-    """Filtra e organizza le coppie di trading per categoria."""
+def save_auto_symbol_mapping():
+    """Salva la mappatura automatica dei simboli."""
+    save_json_file(AUTO_SYMBOL_MAPPING, AUTO_MAPPING_FILE)
+
+def standardize_symbol(symbol):
+    """
+    Converte automaticamente un simbolo nel formato corretto
+    in base alla valuta e all'exchange di riferimento.
+    """
+    if symbol in AUTO_SYMBOL_MAPPING:
+        return AUTO_SYMBOL_MAPPING[symbol]
+
+    # Rimozione di caratteri speciali
+    normalized_symbol = re.sub(r"[/\-_]", "", symbol).upper()
+
+    # Identificazione della valuta finale
+    for currency in SUPPORTED_CURRENCIES:
+        if normalized_symbol.endswith(currency):
+            base_symbol = normalized_symbol[:-len(currency)]
+            normalized_symbol = f"{base_symbol}{currency}"
+            break
+
+    AUTO_SYMBOL_MAPPING[symbol] = normalized_symbol
+    save_auto_symbol_mapping()
+    return normalized_symbol
+
+def categorize_tradable_assets(preset_assets):
+    """Filtra e organizza le coppie di trading per categoria, con conversione automatica."""
     try:
-        # Se use_preset_assets è TRUE usa solo gli asset definiti
-        if USE_PRESET_ASSETS:
-            preset_assets = load_preset_assets()
-            if preset_assets:
-                return preset_assets  # Restituisce gli asset predefiniti
-        # Selezione dinamica basata sui dati disponibili
-        categorized_assets = {
-            "crypto": [],
-            "forex": [],
-            "indices": [],
-            "commodities": []
-        }
-        for asset in market_data.get("exchanges", []):
-            symbol = asset.get("symbol", "").upper()
+        for category, assets in preset_assets.items():
+            TRADABLE_ASSETS[category] = [standardize_symbol(asset) for asset in assets]
 
-            if symbol.endswith("USDT") or symbol.endswith("USD"):
-                categorized_assets["crypto"].append(symbol)
-            elif any(fx in symbol for fx in ["EUR", "GBP", "JPY", "AUD"]):
-                categorized_assets["forex"].append(symbol)
-            elif any(idx in symbol for idx in ["SPX", "NDX", "DAX", "US500"]):
-                categorized_assets["indices"].append(symbol)
-            elif any(com in symbol for com in ["XAU", "XAG", "OIL", "BRENT"]):
-                categorized_assets["commodities"].append(symbol)
-
-        # Limita a MAX_ASSETS totali
-        for key in categorized_assets:
-            categorized_assets[key] = categorized_assets[key][
-                :MAX_ASSETS // len(categorized_assets)
-            ]
-        logging.info("✅ Asset tradabili organizzati con successo.")
-        return categorized_assets
-
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
+        logging.info("✅ Asset tradabili organizzati e normalizzati con successo.")
+    except Exception as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
-        return TRADABLE_ASSETS  # Da una struttura vuota in caso di errore
-
 
 # ===========================
 # 🔹 ESECUZIONE PRINCIPALE
@@ -117,16 +122,23 @@ if __name__ == "__main__":
         market_data_apis = load_market_data_apis()
         logging.info("🔹 Configurazioni API di mercato caricate con successo.")
 
-        # Organizza le coppie di trading per categoria
-        tradable_assets = categorize_tradable_assets(market_data_apis)
+        # Carica gli asset predefiniti
+        preset_assets = load_preset_assets()
+        logging.info("🔹 Asset predefiniti caricati con successo.")
 
-        # Log dettagliato delle categorie selezionate
-        logging.info("🔹 Crypto: %s", tradable_assets["crypto"][:10])
-        logging.info("🔹 Forex: %s", tradable_assets["forex"][:10])
-        logging.info("🔹 Indici: %s", tradable_assets["indices"][:10])
-        logging.info("🔹Materie Prime: %s", tradable_assets["commodities"][:10])
+        # Carica la mappatura automatica
+        load_auto_symbol_mapping()
+
+        # Organizza le coppie di trading per categoria con conversione automatica
+        categorize_tradable_assets(preset_assets)
+
+        # Log delle categorie finali
+        logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
+        logging.info("🔹 Forex: %s", TRADABLE_ASSETS["forex"][:10])
+        logging.info("🔹 Indici: %s", TRADABLE_ASSETS["indices"][:10])
+        logging.info("🔹 Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore del file JSON. Verifica la sintassi.")
+        logging.error("❌ Errore nella lettura del file JSON. Verifica la sintassi.")
