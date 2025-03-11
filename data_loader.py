@@ -98,7 +98,7 @@ def categorize_tradable_assets(assets, mapping):
                 standardize_symbol(asset, mapping) for asset in asset_list
             ]
         logging.info("✅ Asset organizzati e normalizzati con successo.")
-    except (KeyError, ValueError, TypeError, json.JSONDecodeError as e:
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError) as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
 
 
