@@ -104,7 +104,7 @@ def categorize_tradable_assets(assets, mapping):
 
 # Ultra-intelligente: prioritariamente no-api, fallback API solo se necessario
 def dynamic_assets_loading(mapping):
-    """Carica dinamicamente gli asset utilizzando fonti senza API prioritariamente."""
+    """Carica dinamicamente gli asset da fonti senza API prioritariamente."""
     market_data_apis = load_market_data_apis()
     assets = {"crypto": [], "forex": [], "indices": [], "commodities": []}
 
