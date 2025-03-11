@@ -146,13 +146,13 @@ def save_and_sync(data):
     else:
         df_final = df_new
 
-   try:
-    df_final.write_parquet(STORAGE_PATH, compression="zstd")
-    logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
-    sync_to_cloud()
+    try:
+        df_final.write_parquet(STORAGE_PATH, compression="zstd")
+        logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
+        sync_to_cloud()
     except (OSError, IOError) as e:
-    logging.error("❌ Errore salvataggio dati: %s", e)
-    # Aggiungere ulteriori eccezioni specifiche se necessario
+        logging.error("❌ Errore salvataggio dati: %s", e)
+        # Aggiungere ulteriori eccezioni specifiche se necessario
 
 
 def sync_to_cloud():
