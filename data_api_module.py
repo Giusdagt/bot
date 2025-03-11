@@ -115,8 +115,8 @@ def download_no_api_data(symbols, interval="1d"):
                 fetch,
                 symbol,
                 source_name,
-                f"{sources[source_name]}/{symbol}/
-                {interval}/{symbol}-{interval}.zip"
+                f"{sources[source_name]}/{symbol}/" \
+                f"{interval}/{symbol}-{interval}.zip"
             )
             for source_name in sources
             for symbol in symbols
