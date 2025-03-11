@@ -74,7 +74,7 @@ def sync_to_cloud():
             return
         shutil.copy2(PROCESSED_DATA_PATH, CLOUD_SYNC_PATH)
         logging.info("☁️ Sincronizzazione cloud completata.")
-    except Exception as e:
+    except (OSError, IOError) as e:
         logging.error("❌ Errore sincronizzazione cloud: %s", e)
 
 
@@ -90,7 +90,7 @@ def save_and_sync(df):
         df.write_parquet(PROCESSED_DATA_PATH, compression="zstd")
         logging.info("✅ Dati elaborati salvati con successo.")
         executor.submit(sync_to_cloud)
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
         logging.error("❌ Errore durante il salvataggio dati: %s", e)
 
 
@@ -122,7 +122,7 @@ def process_historical_data():
         df = ensure_all_columns(df)
         df = normalize_data(df)
         save_and_sync(df)
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
         logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
