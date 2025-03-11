@@ -1,24 +1,23 @@
 """
 data_handler.py
 Modulo definitivo per la gestione autonoma, intelligente e ultra-ottimizzata
-dei dati storici e realtime per IA e DRL.
-Performance estreme, zero sprechi di risorse, massima efficienza CPU/RAM/DISCO.
+per la normalizzazione e gestione avanzata dei dati storici e realtime.
+Ottimizzato per IA, Deep Reinforcement Learning (DRL) e scalping con MetaTrader5.
 """
 
 import os
 import logging
 import hashlib
 import shutil
+import asyncio
 import polars as pl
 import MetaTrader5 as mt5
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from sklearn.preprocessing import MinMaxScaler
 from column_definitions import required_columns
 from indicators import (
     calculate_historical_indicators,
-    calculate_scalping_indicators,
-    fetch_sentiment_data
+    calculate_scalping_indicators
 )
 from data_loader import (
     load_auto_symbol_mapping,
@@ -49,7 +48,7 @@ BUFFER_SIZE = 100
 
 
 def file_hash(filepath):
-    """Calcola hash file per verificare modifiche."""
+    """Calcola l'hash del file per rilevare modifiche."""
     h = hashlib.md5()
     with open(filepath, 'rb') as f:
         while chunk := f.read(8192):
@@ -58,7 +57,7 @@ def file_hash(filepath):
 
 
 def sync_to_cloud():
-    """Sincronizzazione avanzata con Google Drive solo se necessario."""
+    """Sincronizzazione con Google Drive solo se necessario."""
     try:
         if not os.path.exists(PROCESSED_DATA_PATH):
             return
@@ -74,7 +73,7 @@ def sync_to_cloud():
 
 
 def save_and_sync(df):
-    """Salvataggio ultra-intelligente con verifica modifiche."""
+    """Salvataggio ultra-intelligente con verifica delle modifiche."""
     new_hash = hashlib.md5(df.write_csv().encode()).hexdigest()
     if os.path.exists(PROCESSED_DATA_PATH):
         old_hash = file_hash(PROCESSED_DATA_PATH)
@@ -87,7 +86,7 @@ def save_and_sync(df):
 
 
 def normalize_data(df):
-    """Normalizzazione avanzata con selezione dinamica feature IA."""
+    """Normalizzazione avanzata con selezione dinamica delle feature per IA."""
     numeric_cols = df.select(pl.col(pl.NUMERIC_DTYPES)).columns
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
@@ -97,18 +96,19 @@ def normalize_data(df):
     return df
 
 
-def adaptive_scalping_buffer(df):
-    """Gestisce il buffer scalping in modo adattivo."""
-    scalping_buffer.append(df)
-    if len(scalping_buffer) >= BUFFER_SIZE:
-        df_batch = pl.concat(scalping_buffer)
-        save_and_sync(df_batch)
-        scalping_buffer.clear()
-        logging.info("✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE)
+def process_historical_data():
+    """Elabora i dati storici, calcola indicatori avanzati e li normalizza."""
+    try:
+        df = pl.read_parquet(RAW_DATA_PATH)
+        df = calculate_historical_indicators(df)
+        df = normalize_data(df)
+        save_and_sync(df)
+    except Exception as e:
+        logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
 async def get_realtime_data(symbols):
-    """Ottiene i dati realtime da MetaTrader5 (RoboForex) e calcola indicatori."""
+    """Ottiene i dati realtime da MetaTrader5 e calcola indicatori."""
     if not mt5.initialize():
         logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
         return
@@ -126,7 +126,12 @@ def fetch_mt5_data(symbol):
     df = pl.DataFrame(rates)
     df = calculate_scalping_indicators(df)
     df = normalize_data(df)
-    adaptive_scalping_buffer(df)
+    scalping_buffer.append(df)
+    if len(scalping_buffer) >= BUFFER_SIZE:
+        df_batch = pl.concat(scalping_buffer)
+        save_and_sync(df_batch)
+        scalping_buffer.clear()
+        logging.info("✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE)
 
 
 def fetch_and_process_data():
@@ -135,17 +140,6 @@ def fetch_and_process_data():
         logging.info("⚠️ Dati grezzi mancanti, avvio scaricamento...")
         executor.submit(fetch_new_data)
     process_historical_data()
-
-
-def process_historical_data():
-    """Elabora i dati storici e calcola tutti gli indicatori avanzati."""
-    try:
-        df = pl.read_parquet(RAW_DATA_PATH)
-        df = calculate_historical_indicators(df)
-        df = normalize_data(df)
-        save_and_sync(df)
-    except Exception as e:
-        logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
 if __name__ == "__main__":
