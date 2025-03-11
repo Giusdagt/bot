@@ -106,12 +106,13 @@ def standardize_symbol(symbol, auto_symbol_mapping, auto_mapping_file):
 def categorize_tradable_assets(
     preset_assets, auto_symbol_mapping, auto_mapping_file
 ):
-    """Filtra e organizza le coppie di trading per categoria, con 
+    """Filtra e organizza le coppie di trading per categoria, con
     conversione automatica."""
     try:
         for category, assets in preset_assets.items():
             TRADABLE_ASSETS[category] = [
-                standardize_symbol(asset, auto_symbol_mapping, auto_mapping_file)
+                standardize_symbol(asset, auto_symbol_mapping,
+                                   auto_mapping_file)
                 for asset in assets
             ]
 
@@ -140,9 +141,9 @@ if __name__ == "__main__":
         logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
         logging.info("🔹 Forex: %s", TRADABLE_ASSETS["forex"][:10])
         logging.info("🔹 Indici: %s", TRADABLE_ASSETS["indices"][:10])
-        logging.info("🔹 Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
+        logging.info(" Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore nella lettura del file JSON. Verifica la sintassi.")
+        logging.error("❌ Errore di lettura del file JSON. Verifica la sintassi")
