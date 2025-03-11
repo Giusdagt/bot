@@ -98,7 +98,7 @@ def categorize_tradable_assets(assets, mapping):
                 standardize_symbol(asset, mapping) for asset in asset_list
             ]
         logging.info("✅ Asset organizzati e normalizzati con successo.")
-    except Exception as e:
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError as e:
         logging.error("❌ Errore nella categorizzazione asset: %s", e)
 
 
@@ -121,7 +121,7 @@ def dynamic_assets_loading(mapping):
                 if asset_type:
                     assets[asset_type].append(symbol)
             logging.info("✅ Dati senza API da %s caricati.", source_name)
-        except Exception as e:
+        except requests.RequestException as e:
             logging.warning("⚠️ Fonte no-api '%s' fallita: %s", source_name, e)
 
     # Se nessun asset recuperato senza API, usa fonti API
@@ -138,7 +138,7 @@ def dynamic_assets_loading(mapping):
                     if asset_type:
                         assets[asset_type].append(symbol)
                 logging.info("✅ Dati API da %s caricati.", exchange["name"])
-            except Exception as e:
+            except requests.RequestException as e:
                 logging.error(
                     "❌ Errore caricamento API '%s': %s", exchange["name"], e)
 
