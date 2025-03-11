@@ -10,11 +10,9 @@ import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
-
 import aiohttp
 import requests
 import polars as pl
-
 from data_loader import (
     load_market_data_apis,
     load_auto_symbol_mapping,
@@ -167,7 +165,7 @@ def sync_to_cloud():
 
 async def main():
     """
-    Funzione principale per il download e la sincronizzazione dei dati di mercato.
+    Funzione principale per  download e la sincronizzazione dei dati di mercato
 
     - Carica i simboli da utilizzare.
     - Standardizza i simboli caricati.
