@@ -2,7 +2,8 @@
 data_handler.py
 Modulo definitivo per la gestione autonoma, intelligente e ultra-ottimizzata
 per la normalizzazione e gestione avanzata dei dati storici e realtime.
-Ottimizzato per IA, Deep Reinforcement Learning (DRL) e scalping con MetaTrader5.
+Ottimizzato per IA, Deep Reinforcement Learning (DRL) e scalping 
+con MetaTrader5.
 """
 
 import os
@@ -39,7 +40,8 @@ SAVE_DIRECTORY = (
 )
 
 RAW_DATA_PATH = "market_data.zstd.parquet"
-PROCESSED_DATA_PATH = os.path.join(SAVE_DIRECTORY, "processed_data.zstd.parquet")
+PROCESSED_DATA_PATH = os.path.join(
+    SAVE_DIRECTORY, "processed_data.zstd.parquet")
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/processed_data.zstd.parquet"
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count() or 8)
@@ -61,7 +63,8 @@ def sync_to_cloud():
     try:
         if not os.path.exists(PROCESSED_DATA_PATH):
             return
-        existing_hash = file_hash(CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
+        existing_hash = file_hash(
+            CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
         new_hash = file_hash(PROCESSED_DATA_PATH)
         if existing_hash == new_hash:
             logging.info("☁️ Nessuna modifica, skip sincronizzazione.")
@@ -91,7 +94,8 @@ def normalize_data(df):
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
     df = df.with_columns(
-        [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
+        [pl.Series(
+            col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
     )
     return df
 
@@ -131,7 +135,8 @@ def fetch_mt5_data(symbol):
         df_batch = pl.concat(scalping_buffer)
         save_and_sync(df_batch)
         scalping_buffer.clear()
-        logging.info("✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE)
+        logging.info(
+            "✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE)
 
 
 def fetch_and_process_data():
@@ -150,5 +155,6 @@ if __name__ == "__main__":
         if USE_PRESET_ASSETS else
         list(auto_mapping.values())
     )
-    realtime_symbols = [standardize_symbol(s, auto_mapping) for s in realtime_symbols]
+    realtime_symbols = [standardize_symbol(
+        s, auto_mapping) for s in realtime_symbols]
     asyncio.run(get_realtime_data(realtime_symbols))
