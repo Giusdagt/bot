@@ -11,9 +11,9 @@ import logging
 import hashlib
 import shutil
 import asyncio
+from concurrent.futures import ThreadPoolExecutor  # Moved standard import
 import polars as pl
 import MetaTrader5 as mt5
-from concurrent.futures import ThreadPoolExecutor
 from sklearn.preprocessing import MinMaxScaler
 from column_definitions import required_columns
 from indicators import (
