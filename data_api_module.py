@@ -8,11 +8,13 @@ import asyncio
 import logging
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+
 import aiohttp
 import requests
 import polars as pl
-from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
+
 from data_loader import (
     load_market_data_apis,
     load_auto_symbol_mapping,
@@ -144,12 +146,13 @@ def save_and_sync(data):
     else:
         df_final = df_new
 
-    try:
-        df_final.write_parquet(STORAGE_PATH, compression="zstd")
-        logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
-        sync_to_cloud()
-    except Exception as e:
-        logging.error("❌ Errore salvataggio dati: %s", e)
+   try:
+    df_final.write_parquet(STORAGE_PATH, compression="zstd")
+    logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
+    sync_to_cloud()
+    except (OSError, IOError) as e:
+    logging.error("❌ Errore salvataggio dati: %s", e)
+    # Aggiungere ulteriori eccezioni specifiche se necessario
 
 
 def sync_to_cloud():
@@ -163,6 +166,15 @@ def sync_to_cloud():
 
 
 async def main():
+    """
+    Funzione principale per il download e la sincronizzazione dei dati di mercato.
+
+    - Carica i simboli da utilizzare.
+    - Standardizza i simboli caricati.
+    - Tenta di scaricare i dati senza l'uso di API.
+    - Se i dati senza API non sono disponibili, scarica i dati tramite API.
+    - Salva e sincronizza i dati scaricati.
+    """
     symbols = (
         sum(load_preset_assets().values(), [])
         if USE_PRESET_ASSETS else
