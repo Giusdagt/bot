@@ -109,24 +109,24 @@ def download_no_api_data(symbols, interval="1d"):
         except requests.RequestException as e:
             logging.warning("⚠️ Errore fonte no-api '%s': %s", source_name, e)
 
-   with ThreadPoolExecutor(max_workers=8) as executor:
-    futures = [
-        executor.submit(
-            fetch,
-            symbol,
-            source_name,
-            (
-                f"{sources[source_name]}/{symbol}/"
-                f"{interval}/{symbol}-{interval}.zip"
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [
+            executor.submit(
+                fetch,
+                symbol,
+                source_name,
+                (
+                    f"{sources[source_name]}/{symbol}/"
+                    f"{interval}/{symbol}-{interval}.zip"
+                )
             )
-        )
-        for source_name in sources
-        for symbol in symbols
-    ]
-    for future in futures:
-        future.result()
+            for source_name in sources
+            for symbol in symbols
+        ]
+        for future in futures:
+            future.result()
 
-return data
+    return data
 
 def save_and_sync(data):
     """Salvataggio intelligente e sincronizzazione selettiva."""
