@@ -112,6 +112,7 @@ def categorize_tradable_assets(preset_assets, mapping):
 
         logging.info("✅ Asset organizzati e normalizzati con successo.")
     except (KeyError, ValueError, TypeError, json.JSONDecodeError) as e:
+        logging.error("❌ Errore nella categorizzazione asset: %s", e)
 
 
 if __name__ == "__main__":
