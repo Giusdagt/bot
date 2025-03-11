@@ -2,7 +2,7 @@
 data_handler.py
 Modulo definitivo per la gestione autonoma, intelligente e ultra-ottimizzata
 per la normalizzazione e gestione avanzata dei dati storici e realtime.
-Ottimizzato per IA, Deep Reinforcement Learning (DRL) e scalping 
+Ottimizzato per IA, Deep Reinforcement Learning (DRL) e scalping
 con MetaTrader5.
 """
 
