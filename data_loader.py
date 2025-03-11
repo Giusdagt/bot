@@ -20,6 +20,9 @@ MARKET_API_FILE = "market_data_apis.json"
 PRESET_ASSETS_FILE = "preset_assets.json"
 AUTO_MAPPING_FILE = "auto_symbol_mapping.json"
 
+USE_PRESET_ASSETS = True  # True usa preset_assets.json, altrimenti dinamica
+MAX_ASSETS = 300  # Numero massimo di asset da selezionare
+
 # 📌 Struttura dinamica per asset
 TRADABLE_ASSETS = {
     "crypto": [],
