@@ -146,4 +146,4 @@ if __name__ == "__main__":
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore di lettura del file JSON. Verifica la sintassi")
+        logging.error("❌ Errore di lettura del file JSON Verifica la sintassi")
