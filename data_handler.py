@@ -1,200 +1,160 @@
 """
-data_handler.py - Normalizzazione e gestione avanzata dei dati
-per IA, Deep Reinforcement Learning (DRL) e WebSocket,
-con massima efficienza su CPU, RAM e Disco.
+data_handler.py
+Modulo definitivo per la gestione autonoma, intelligente e ultra-ottimizzata
+dei dati storici e realtime per IA e DRL.
+Performance estreme, zero sprechi di risorse, massima efficienza CPU/RAM/DISCO.
 """
 
 import os
 import logging
-import asyncio
-import gc
+import hashlib
 import shutil
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
-import websockets
 import polars as pl
+import MetaTrader5 as mt5
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from sklearn.preprocessing import MinMaxScaler
-from pydrive2.auth import GoogleAuth
-from pydrive2.drive import GoogleDrive
-import data_api_module
-from indicators import (
-    calculate_scalping_indicators,
-    calculate_historical_indicators
-)
 from column_definitions import required_columns
+from indicators import (
+    calculate_historical_indicators,
+    calculate_scalping_indicators,
+    fetch_sentiment_data
+)
+from data_loader import (
+    load_auto_symbol_mapping,
+    standardize_symbol,
+    USE_PRESET_ASSETS,
+    load_preset_assets
+)
+from data_api_module import main as fetch_new_data
 
-# 📌 Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levellevelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# 📌 Percorsi per sincronizzazione e dati compressi
-SAVE_DIRECTORY = os.path.abspath(
+SAVE_DIRECTORY = (
     "/mnt/usb_trading_data/processed_data"
     if os.path.exists("/mnt/usb_trading_data")
     else "D:/trading_data"
 )
-HISTORICAL_DATA_FILE = os.path.join(
-    SAVE_DIRECTORY, "historical_data.zstd.parquet"
-)
-SCALPING_DATA_FILE = os.path.join(
-    SAVE_DIRECTORY, "scalping_data.zstd.parquet"
-)
-RAW_DATA_FILE = os.path.abspath("market_data.parquet")
-CLOUD_SYNC = os.path.abspath("/mnt/google_drive/trading_sync")
 
-# 📌 WebSocket per dati in tempo reale (Scalping)
-TOP_PAIRS = data_api_module.get_top_usdt_pairs()
-WEBSOCKET_URLS = [
-    f"wss://stream.binance.com:9443/ws/{pair.lower()}@trade"
-    for pair in TOP_PAIRS
-]
+RAW_DATA_PATH = "market_data.zstd.parquet"
+PROCESSED_DATA_PATH = os.path.join(SAVE_DIRECTORY, "processed_data.zstd.parquet")
+CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/processed_data.zstd.parquet"
 
-# 📌 Autenticazione Google Drive
-gauth = GoogleAuth()
-gauth.LocalWebserverAuth()
-drive = GoogleDrive(gauth)
-scaler = MinMaxScaler()
-
-# 📌 Multi-threading per parallelizzazione
-executor = ThreadPoolExecutor(max_workers=4)
-
-# 📌 Buffer per efficienza
-buffer = []
+executor = ThreadPoolExecutor(max_workers=os.cpu_count() or 8)
+scalping_buffer = []
 BUFFER_SIZE = 100
 
-# 📌 Costante per retry delay WebSocket
-MAX_RETRY_DELAY = 60  # Massimo 1 minuto
-INITIAL_RETRY_DELAY = 1
 
-
-def upload_to_drive(filepath):
-    """Sincronizza un file su Google Drive solo se necessario."""
-    try:
-        if os.path.exists(filepath):
-            file_drive = drive.CreateFile(
-                {'title': os.path.basename(filepath)}
-            )
-            file_drive.SetContentFile(filepath)
-            file_drive.Upload()
-            logging.info("✅ File sincronizzato su Google Drive: %s", filepath)
-    except IOError as e:
-        logging.error("❌ Errore sincronizzazione Google Drive: %s", e)
-
-
-async def process_websocket_message(message, pair):
-    """Elabora e normalizza il messaggio ricevuto dal WebSocket."""
-    try:
-        df = pl.DataFrame([{
-            "timestamp": datetime.utcnow(),
-            "pair": pair,
-            "price": float(message["p"]),
-            "volume": float(message["q"])
-        }])
-        df = calculate_scalping_indicators(df)
-        buffer.append(df)
-
-        if len(buffer) >= BUFFER_SIZE:
-            df_batch = pl.concat(buffer)
-            await asyncio.get_event_loop().run_in_executor(
-                executor, save_processed_data, df_batch, SCALPING_DATA_FILE
-            )
-            buffer.clear()
-            gc.collect()
-            logging.info(
-                "✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE
-            )
-    except (ValueError, KeyError) as error:
-        logging.error("❌ Errore elaborazione WebSocket: %s", error)
-
-
-async def consume_websockets():
-    """Consuma dati da più WebSocket con gestione CPU/RAM ottimizzata."""
-    async def connect_to_websocket(url):
-        retry_delay = INITIAL_RETRY_DELAY
-        while True:
-            try:
-                async with websockets.connect(url, timeout=10) as websocket:
-                    logging.info("✅ Connessione WebSocket stabilita: %s", url)
-                    retry_delay = INITIAL_RETRY_DELAY
-                    pair = url.split("/")[-1].split("@")[0].upper()
-                    async for message in websocket:
-                        await process_websocket_message(message, pair)
-                        await asyncio.sleep(0.05)
-            except (
-                websockets.ConnectionClosed,
-                websockets.WebSocketException,
-                OSError
-            ) as error:
-                logging.warning(
-                    "⚠️ WebSocket %s disconnesso. Riconnessione in %d sec...",
-                    url, retry_delay
-                )
-                logging.error("❌ Dettaglio errore: %s", error)
-                await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
-
-    await asyncio.gather(
-        *[connect_to_websocket(url) for url in WEBSOCKET_URLS]
-    )
-
-
-def process_historical_data():
-    """Processa e normalizza i dati storici."""
-    try:
-        df = pl.read_parquet(RAW_DATA_FILE)
-        df = calculate_historical_indicators(df)
-        df = df.fill_nan(None)  # Rimuove i NaN
-
-        # 📌 Verifica che tutte le colonne necessarie siano presenti
-        for col in required_columns:
-            if col not in df.columns:
-                df = df.with_columns(pl.lit(None).alias(col))
-
-        save_processed_data(df, HISTORICAL_DATA_FILE)
-        logging.info("✅ Dati storici aggiornati.")
-    except (pl.exceptions.ArrowInvalid, ValueError) as error:
-        logging.error("❌ Errore elaborazione dati storici: %s", error)
-
-
-def save_processed_data(df, filename):
-    """Salva in formato Parquet con compressione ZSTD solo se necessario."""
-    try:
-        if os.path.exists(filename):
-            df_old = pl.read_parquet(filename)
-            if df.equals(df_old):
-                logging.info("🔄 Nessuna modifica, skip del salvataggio.")
-                return
-
-        df.write_parquet(filename, compression="zstd")
-        logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
-        sync_to_cloud()
-    except IOError as error:
-        logging.error("❌ Errore nel salvataggio dati: %s", error)
+def file_hash(filepath):
+    """Calcola hash file per verificare modifiche."""
+    h = hashlib.md5()
+    with open(filepath, 'rb') as f:
+        while chunk := f.read(8192):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def sync_to_cloud():
-    """Sincronizza i dati con Google Drive solo se il file è cambiato."""
+    """Sincronizzazione avanzata con Google Drive solo se necessario."""
     try:
-        if os.path.exists(HISTORICAL_DATA_FILE):
-            cloud_file = os.path.join(
-                CLOUD_SYNC, os.path.basename(HISTORICAL_DATA_FILE)
-            )
-            if os.path.exists(cloud_file):
-                local_size = os.path.getsize(HISTORICAL_DATA_FILE)
-                cloud_size = os.path.getsize(cloud_file)
-                if abs(local_size - cloud_size) < 1024 * 50:
-                    logging.info("🔄 Nessuna modifica, skip sincronizzazione.")
-                    return
-            shutil.copy(HISTORICAL_DATA_FILE, cloud_file)
-            logging.info("☁️ Dati sincronizzati su Google Drive.")
-    except OSError as sync_error:
-        logging.error("❌ Errore sincro con Google Drive: %s", sync_error)
+        if not os.path.exists(PROCESSED_DATA_PATH):
+            return
+        existing_hash = file_hash(CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
+        new_hash = file_hash(PROCESSED_DATA_PATH)
+        if existing_hash == new_hash:
+            logging.info("☁️ Nessuna modifica, skip sincronizzazione.")
+            return
+        shutil.copy2(PROCESSED_DATA_PATH, CLOUD_SYNC_PATH)
+        logging.info("☁️ Sincronizzazione cloud completata.")
+    except Exception as e:
+        logging.error("❌ Errore sincronizzazione cloud: %s", e)
+
+
+def save_and_sync(df):
+    """Salvataggio ultra-intelligente con verifica modifiche."""
+    new_hash = hashlib.md5(df.write_csv().encode()).hexdigest()
+    if os.path.exists(PROCESSED_DATA_PATH):
+        old_hash = file_hash(PROCESSED_DATA_PATH)
+        if old_hash == new_hash:
+            logging.info("🔄 Nessuna modifica, salvataggio non necessario.")
+            return
+    df.write_parquet(PROCESSED_DATA_PATH, compression="zstd")
+    logging.info("✅ Dati elaborati salvati con successo.")
+    executor.submit(sync_to_cloud)
+
+
+def normalize_data(df):
+    """Normalizzazione avanzata con selezione dinamica feature IA."""
+    numeric_cols = df.select(pl.col(pl.NUMERIC_DTYPES)).columns
+    scaler = MinMaxScaler()
+    scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
+    df = df.with_columns(
+        [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
+    )
+    return df
+
+
+def adaptive_scalping_buffer(df):
+    """Gestisce il buffer scalping in modo adattivo."""
+    scalping_buffer.append(df)
+    if len(scalping_buffer) >= BUFFER_SIZE:
+        df_batch = pl.concat(scalping_buffer)
+        save_and_sync(df_batch)
+        scalping_buffer.clear()
+        logging.info("✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE)
+
+
+async def get_realtime_data(symbols):
+    """Ottiene i dati realtime da MetaTrader5 (RoboForex) e calcola indicatori."""
+    if not mt5.initialize():
+        logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
+        return
+    tasks = [asyncio.to_thread(fetch_mt5_data, symbol) for symbol in symbols]
+    await asyncio.gather(*tasks)
+    mt5.shutdown()
+
+
+def fetch_mt5_data(symbol):
+    """Scarica dati in parallelo da MT5."""
+    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
+    if rates is None or len(rates) == 0:
+        logging.warning("⚠️ Nessun dato realtime per %s", symbol)
+        return
+    df = pl.DataFrame(rates)
+    df = calculate_scalping_indicators(df)
+    df = normalize_data(df)
+    adaptive_scalping_buffer(df)
+
+
+def fetch_and_process_data():
+    """Scarica i dati grezzi solo se necessario e li elabora."""
+    if not os.path.exists(RAW_DATA_PATH):
+        logging.info("⚠️ Dati grezzi mancanti, avvio scaricamento...")
+        executor.submit(fetch_new_data)
+    process_historical_data()
+
+
+def process_historical_data():
+    """Elabora i dati storici e calcola tutti gli indicatori avanzati."""
+    try:
+        df = pl.read_parquet(RAW_DATA_PATH)
+        df = calculate_historical_indicators(df)
+        df = normalize_data(df)
+        save_and_sync(df)
+    except Exception as e:
+        logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
 if __name__ == "__main__":
-    logging.info("🔄 Avvio sincronizzazione dati...")
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(executor, process_historical_data)
-    loop.run_until_complete(consume_websockets())
+    auto_mapping = load_auto_symbol_mapping()
+    fetch_and_process_data()
+    realtime_symbols = (
+        sum(load_preset_assets().values(), [])
+        if USE_PRESET_ASSETS else
+        list(auto_mapping.values())
+    )
+    realtime_symbols = [standardize_symbol(s, auto_mapping) for s in realtime_symbols]
+    asyncio.run(get_realtime_data(realtime_symbols))
