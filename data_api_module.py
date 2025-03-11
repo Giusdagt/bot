@@ -40,7 +40,8 @@ executor = ThreadPoolExecutor(max_workers=8)
 def ensure_all_columns(df):
     """Garantisce presenza di tutte le colonne necessarie."""
     existing_columns = df.columns
-    missing_columns = [col for col in required_columns if col not in existing_columns]
+    missing_columns = [
+        col for col in required_columns if col not in existing_columns]
     for col in missing_columns:
         df = df.with_columns(pl.lit(None).alias(col))
     return df
@@ -114,7 +115,8 @@ def download_no_api_data(symbols, interval="1d"):
                 fetch,
                 symbol,
                 source_name,
-                f"{sources[source_name]}/{symbol}/{interval}/{symbol}-{interval}.zip"
+                f"{sources[source_name]}/{symbol}/
+                {interval}/{symbol}-{interval}.zip"
             )
             for source_name in sources
             for symbol in symbols
@@ -165,7 +167,8 @@ async def main():
         list(load_auto_symbol_mapping().values())
     )
 
-    symbols = [standardize_symbol(s, load_auto_symbol_mapping()) for s in symbols]
+    symbols = [standardize_symbol(
+        s, load_auto_symbol_mapping()) for s in symbols]
 
     data_no_api = download_no_api_data(tuple(symbols))
 
