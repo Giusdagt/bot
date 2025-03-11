@@ -6,7 +6,7 @@ Gestione avanzata del caricamento e normalizzazione automatica degli asset.
 import json
 import os
 import logging
-import re  # 🔥 Reinserito per normalizzazione avanzata dei simboli
+import re  # 🔥 per normalizzazione avanzata dei simboli
 
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
@@ -111,8 +111,7 @@ def categorize_tradable_assets(preset_assets, mapping):
             ]
 
         logging.info("✅ Asset organizzati e normalizzati con successo.")
-    except Exception as e:
-        logging.error("❌ Errore nella categorizzazione asset: %s", e)
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError) as e:
 
 
 if __name__ == "__main__":
