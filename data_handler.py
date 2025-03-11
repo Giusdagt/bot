@@ -66,7 +66,8 @@ def sync_to_cloud():
     try:
         if not os.path.exists(PROCESSED_DATA_PATH):
             return
-        existing_hash = file_hash(CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
+        existing_hash = file_hash(
+            CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
         new_hash = file_hash(PROCESSED_DATA_PATH)
         if existing_hash == new_hash:
             logging.info("☁️ Nessuna modifica, skip sincronizzazione.")
@@ -107,7 +108,8 @@ def normalize_data(df):
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
     df = df.with_columns(
-        [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
+        [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(
+            numeric_cols)]
     )
     return df
 
