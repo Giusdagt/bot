@@ -128,6 +128,7 @@ def download_no_api_data(symbols, interval="1d"):
 
     return data
 
+
 def save_and_sync(data):
     """Salvataggio intelligente e sincronizzazione selettiva."""
     if not data:
