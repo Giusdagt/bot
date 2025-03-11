@@ -8,11 +8,11 @@ import asyncio
 import logging
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 import aiohttp
 import requests
 import polars as pl
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from data_loader import (
     load_market_data_apis,
     load_auto_symbol_mapping,
@@ -48,20 +48,20 @@ def ensure_all_columns(df):
 
 async def fetch_market_data(session, url, exchange_name, rpm, retries=3):
     """Scarica dati API con gestione avanzata."""
-    delay = max(1, 60 / rpm)
     for attempt in range(retries):
         try:
             async with session.get(url, timeout=15) as response:
                 if response.status == 200:
                     logging.info(
-                        "✅ Dati ottenuti da %s (tentativo %d)", exchange_name, attempt + 1
+                        "✅ Dati ottenuti da %s (tentativo %d)",
+                        exchange_name, attempt + 1
                     )
                     return await response.json()
                 if response.status in {400, 429}:
                     await asyncio.sleep(15)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logging.error(
-                "❌ Errore richiesta API %s (tentativo %d): %s",
+                "❌ Errore API %s (tentativo %d): %s",
                 exchange_name, attempt + 1, e
             )
             await asyncio.sleep(max(1, 60 / rpm))
@@ -75,10 +75,13 @@ async def fetch_from_all_exchanges(symbols, days_history):
     async with aiohttp.ClientSession() as session:
         for exchange in market_data_apis["exchanges"]:
             for symbol in symbols:
-                api_url = exchange["api_url"].replace("{symbol}", symbol).replace("{days}", str(days_history))
+                api_url = exchange["api_url"]
+                api_url = api_url.replace("{symbol}", symbol)
+                api_url = api_url.replace("{days}", str(days_history))
                 rpm = exchange["limitations"].get("requests_per_minute", 60)
-                tasks.append(fetch_market_data(session, api_url, exchange["name"], rpm))
-
+                tasks.append(
+                    fetch_market_data(session, api_url, exchange["name"], rpm)
+                )
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
     valid_data = []
@@ -123,22 +126,22 @@ def download_no_api_data(symbols, interval="1d"):
 
 
 def save_and_sync(data):
-    """Salvataggio ultra-intelligente e sincronizzazione selettiva."""
+    """Salvataggio intelligente e sincronizzazione selettiva."""
     if not data:
         logging.warning("⚠️ Nessun dato valido da salvare.")
         return
 
     df_new = pl.DataFrame(data)
-    df = ensure_all_columns(df)
+    df_new = ensure_all_columns(df_new)
 
     if os.path.exists(STORAGE_PATH):
         existing_df = pl.read_parquet(STORAGE_PATH)
-        df_new = pl.concat([existing_columns, df]).unique()
+        df_final = pl.concat([existing_df, df_new]).unique()
     else:
-        df = ensure_all_columns(df)
+        df_final = df_new
 
     try:
-        df.write_parquet(STORAGE_PATH, compression="zstd")
+        df_final.write_parquet(STORAGE_PATH, compression="zstd")
         logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
         sync_to_cloud()
     except Exception as e:
@@ -156,16 +159,13 @@ def sync_to_cloud():
 
 
 async def main():
-    auto_mapping = load_auto_symbol_mapping()
-    days_history = DAYS_HISTORY
-
     symbols = (
         sum(load_preset_assets().values(), [])
         if USE_PRESET_ASSETS else
-        list(auto_mapping.values())
+        list(load_auto_symbol_mapping().values())
     )
 
-    symbols = [standardize_symbol(s, auto_mapping) for s in symbols]
+    symbols = [standardize_symbol(s, load_auto_symbol_mapping()) for s in symbols]
 
     data_no_api = download_no_api_data(tuple(symbols))
 
