@@ -41,7 +41,7 @@ SUPPORTED_CURRENCIES = [
 def load_json_file(json_file, default=None):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning("⚠️ File %s non trovato, ne creo uno nuovo.", json_file)
+        logging.warning("⚠️ File %s non trovato, ne creo uno nuovo", json_file)
         return {} if default is None else default
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
