@@ -41,7 +41,7 @@ SUPPORTED_CURRENCIES = [
 def load_json_file(json_file, default=None):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning("⚠️ Il file %s non esiste, ne verrà creato uno nuovo.", json_file)
+        logging.warning("⚠️ File %s non trovato, ne creo uno nuovo.", json_file)
         return {} if default is None else default
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -103,7 +103,7 @@ def standardize_symbol(symbol, mapping):
 
 
 def categorize_tradable_assets(preset_assets, mapping):
-    """Filtra e organizza le coppie di trading per categoria, con conversione automatica."""
+    """Organizza le coppie di trading per categoria automaticamente."""
     try:
         for category, assets in preset_assets.items():
             TRADABLE_ASSETS[category] = [
@@ -133,9 +133,9 @@ if __name__ == "__main__":
         logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
         logging.info("🔹 Forex: %s", TRADABLE_ASSETS["forex"][:10])
         logging.info("🔹 Indici: %s", TRADABLE_ASSETS["indices"][:10])
-        logging.info("🔹 Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
+        logging.info(" Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore di lettura del file JSON. Verifica la sintassi.")
+        logging.error("❌ Errore di lettura JSON. Verifica sintassi.")
