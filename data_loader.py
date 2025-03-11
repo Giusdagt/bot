@@ -32,6 +32,7 @@ SUPPORTED_CURRENCIES = [
 
 
 def load_json_file(json_file, default=None):
+    """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
         logging.warning("⚠️ File %s non trovato, ne creo uno nuovo", json_file)
         return {} if default is None else default
@@ -40,32 +41,39 @@ def load_json_file(json_file, default=None):
 
 
 def save_json_file(data, json_file):
+    """Salva i dati in un file JSON."""
     with open(json_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     logging.info("✅ Dati salvati in %s", json_file)
 
 
 def load_config():
+    """Carica il file di configurazione principale."""
     return load_json_file(CONFIG_FILE)
 
 
 def load_market_data_apis():
+    """Carica la configurazione delle API/NO di mercato."""
     return load_json_file(MARKET_API_FILE)
 
 
 def load_preset_assets():
+    """Carica gli asset predefiniti per il trading."""
     return load_json_file(PRESET_ASSETS_FILE)
 
 
 def load_auto_symbol_mapping():
+    """Carica la mappatura automatica dei simboli."""
     return load_json_file(AUTO_MAPPING_FILE, default={})
 
 
 def save_auto_symbol_mapping(mapping):
+    """Salva la mappatura automatica dei simboli."""
     save_json_file(mapping, AUTO_MAPPING_FILE)
 
 
 def standardize_symbol(symbol, mapping):
+    """Converte automaticamente un simbolo nel formato corretto."""
     if symbol in mapping:
         return mapping[symbol]
 
@@ -83,6 +91,7 @@ def standardize_symbol(symbol, mapping):
 
 
 def categorize_tradable_assets(assets, mapping):
+    """Organizza le coppie di trading per categoria automaticamente."""
     try:
         for category, asset_list in assets.items():
             TRADABLE_ASSETS[category] = [
@@ -95,6 +104,7 @@ def categorize_tradable_assets(assets, mapping):
 
 # Ultra-intelligente: prioritariamente no-api, fallback API solo se necessario
 def dynamic_assets_loading(mapping):
+    """Carica dinamicamente gli asset utilizzando fonti senza API prioritariamente."""
     market_data_apis = load_market_data_apis()
     assets = {"crypto": [], "forex": [], "indices": [], "commodities": []}
 
@@ -136,6 +146,7 @@ def dynamic_assets_loading(mapping):
 
 
 def exchange_asset_type(symbol):
+    """Determina il tipo di asset in base al simbolo."""
     if symbol.endswith(tuple(SUPPORTED_CURRENCIES)):
         return "forex"
     if symbol.startswith(("BTC", "ETH", "BNB")):
