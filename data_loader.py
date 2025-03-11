@@ -38,12 +38,11 @@ SUPPORTED_CURRENCIES = [
 ]
 
 
-def load_json_file(json_file):
+def load_json_file(json_file, default=None):
     """Carica e restituisce il contenuto di un file JSON."""
     if not os.path.exists(json_file):
-        logging.warning("⚠️ Il file %s non esiste, ne verrà creato uno nuovo.",
-                        json_file)
-        return {}
+        logging.warning("⚠️ Il file %s non esiste, ne verrà creato uno nuovo.", json_file)
+        return {} if default is None else default
     with open(json_file, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -70,23 +69,23 @@ def load_preset_assets():
     return load_json_file(PRESET_ASSETS_FILE)
 
 
-def load_auto_symbol_mapping(auto_mapping_file):
+def load_auto_symbol_mapping():
     """Carica la mappatura automatica dei simboli."""
-    return load_json_file(auto_mapping_file)
+    return load_json_file(AUTO_MAPPING_FILE, default={})
 
 
-def save_auto_symbol_mapping(auto_symbol_mapping, auto_mapping_file):
+def save_auto_symbol_mapping(mapping):
     """Salva la mappatura automatica dei simboli."""
-    save_json_file(auto_symbol_mapping, auto_mapping_file)
+    save_json_file(mapping, AUTO_MAPPING_FILE)
 
 
-def standardize_symbol(symbol, auto_symbol_mapping, auto_mapping_file):
+def standardize_symbol(symbol, mapping):
     """
     Converte automaticamente un simbolo nel formato corretto
     basandosi sulle fonti dei dati storici e broker.
     """
-    if symbol in auto_symbol_mapping:
-        return auto_symbol_mapping[symbol]
+    if symbol in mapping:
+        return mapping[symbol]
 
     # 🔥 Rimozione avanzata di caratteri speciali e simboli non standard
     normalized_symbol = re.sub(r"[^\w]", "", symbol).upper()
@@ -98,22 +97,17 @@ def standardize_symbol(symbol, auto_symbol_mapping, auto_mapping_file):
             normalized_symbol = f"{base_symbol}{currency}"
             break
 
-    auto_symbol_mapping[symbol] = normalized_symbol
-    save_auto_symbol_mapping(auto_symbol_mapping, auto_mapping_file)
+    mapping[symbol] = normalized_symbol
+    save_auto_symbol_mapping(mapping)
     return normalized_symbol
 
 
-def categorize_tradable_assets(
-    preset_assets, auto_symbol_mapping, auto_mapping_file
-):
-    """Filtra e organizza le coppie di trading per categoria, con
-    conversione automatica."""
+def categorize_tradable_assets(preset_assets, mapping):
+    """Filtra e organizza le coppie di trading per categoria, con conversione automatica."""
     try:
         for category, assets in preset_assets.items():
             TRADABLE_ASSETS[category] = [
-                standardize_symbol(asset, auto_symbol_mapping,
-                                   auto_mapping_file)
-                for asset in assets
+                standardize_symbol(asset, mapping) for asset in assets
             ]
 
         logging.info("✅ Asset organizzati e normalizzati con successo.")
@@ -132,18 +126,16 @@ if __name__ == "__main__":
         loaded_preset_assets = load_preset_assets()
         logging.info("🔹 Asset predefiniti caricati con successo.")
 
-        auto_symbol_mapping = load_auto_symbol_mapping(AUTO_MAPPING_FILE)
+        auto_symbol_mapping = load_auto_symbol_mapping()
 
-        categorize_tradable_assets(
-            loaded_preset_assets, auto_symbol_mapping, AUTO_MAPPING_FILE
-        )
+        categorize_tradable_assets(loaded_preset_assets, auto_symbol_mapping)
 
         logging.info("🔹 Crypto: %s", TRADABLE_ASSETS["crypto"][:10])
         logging.info("🔹 Forex: %s", TRADABLE_ASSETS["forex"][:10])
         logging.info("🔹 Indici: %s", TRADABLE_ASSETS["indices"][:10])
-        logging.info(" Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
+        logging.info("🔹 Materie Prime: %s", TRADABLE_ASSETS["commodities"][:10])
 
     except FileNotFoundError as e:
         logging.error("❌ Errore: %s", e)
     except json.JSONDecodeError:
-        logging.error("❌ Errore di lettura del file JSON Verifica la sintassi")
+        logging.error("❌ Errore di lettura del file JSON. Verifica la sintassi.")
