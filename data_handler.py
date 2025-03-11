@@ -44,6 +44,9 @@ PROCESSED_DATA_PATH = os.path.join(
     SAVE_DIRECTORY, "processed_data.zstd.parquet")
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/processed_data.zstd.parquet"
 
+os.makedirs(SAVE_DIRECTORY, exist_ok=True)
+os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
+
 executor = ThreadPoolExecutor(max_workers=os.cpu_count() or 8)
 scalping_buffer = []
 BUFFER_SIZE = 100
@@ -63,8 +66,7 @@ def sync_to_cloud():
     try:
         if not os.path.exists(PROCESSED_DATA_PATH):
             return
-        existing_hash = file_hash(
-            CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
+        existing_hash = file_hash(CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
         new_hash = file_hash(PROCESSED_DATA_PATH)
         if existing_hash == new_hash:
             logging.info("☁️ Nessuna modifica, skip sincronizzazione.")
@@ -77,15 +79,26 @@ def sync_to_cloud():
 
 def save_and_sync(df):
     """Salvataggio ultra-intelligente con verifica delle modifiche."""
-    new_hash = hashlib.md5(df.write_csv().encode()).hexdigest()
-    if os.path.exists(PROCESSED_DATA_PATH):
-        old_hash = file_hash(PROCESSED_DATA_PATH)
-        if old_hash == new_hash:
-            logging.info("🔄 Nessuna modifica, salvataggio non necessario.")
-            return
-    df.write_parquet(PROCESSED_DATA_PATH, compression="zstd")
-    logging.info("✅ Dati elaborati salvati con successo.")
-    executor.submit(sync_to_cloud)
+    try:
+        new_hash = hashlib.md5(df.write_csv().encode()).hexdigest()
+        if os.path.exists(PROCESSED_DATA_PATH):
+            old_hash = file_hash(PROCESSED_DATA_PATH)
+            if old_hash == new_hash:
+                logging.info("🔄 Nessuna modifica, salvataggio non necessario.")
+                return
+        df.write_parquet(PROCESSED_DATA_PATH, compression="zstd")
+        logging.info("✅ Dati elaborati salvati con successo.")
+        executor.submit(sync_to_cloud)
+    except Exception as e:
+        logging.error("❌ Errore durante il salvataggio dati: %s", e)
+
+
+def ensure_all_columns(df):
+    """Garantisce che il DataFrame contenga tutte le colonne richieste."""
+    for col in required_columns:
+        if col not in df.columns:
+            df = df.with_columns(pl.lit(None).alias(col))
+    return df
 
 
 def normalize_data(df):
@@ -94,8 +107,7 @@ def normalize_data(df):
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
     df = df.with_columns(
-        [pl.Series(
-            col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
+        [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
     )
     return df
 
@@ -105,6 +117,7 @@ def process_historical_data():
     try:
         df = pl.read_parquet(RAW_DATA_PATH)
         df = calculate_historical_indicators(df)
+        df = ensure_all_columns(df)
         df = normalize_data(df)
         save_and_sync(df)
     except Exception as e:
@@ -129,6 +142,7 @@ def fetch_mt5_data(symbol):
         return
     df = pl.DataFrame(rates)
     df = calculate_scalping_indicators(df)
+    df = ensure_all_columns(df)
     df = normalize_data(df)
     scalping_buffer.append(df)
     if len(scalping_buffer) >= BUFFER_SIZE:
