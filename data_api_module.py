@@ -109,9 +109,9 @@ def download_no_api_data(symbols, interval="1d"):
         except requests.RequestException as e:
             logging.warning("⚠️ Errore fonte no-api '%s': %s", source_name, e)
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=8) as local_executor:
         futures = [
-            executor.submit(
+            local_executor.submit(
                 fetch,
                 symbol,
                 source_name,
