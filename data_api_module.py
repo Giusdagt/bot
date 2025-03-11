@@ -1,6 +1,7 @@
 """
-Modulo per la gestione avanzata del caricamento dei dati di mercato.
-Ottimizzato per massima efficienza, velocità e scalabilità.
+data_api_module.py
+Modulo ultra-avanzato, dinamico e intelligente per download dati di mercato.
+Performance massimizzata, completamente automatico e intelligente.
 """
 
 import asyncio
@@ -11,8 +12,14 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 import aiohttp
 import requests
-import pandas as pd
-from data_loader import load_market_data_apis
+import polars as pl
+from data_loader import (
+    load_market_data_apis,
+    load_auto_symbol_mapping,
+    standardize_symbol,
+    USE_PRESET_ASSETS,
+    load_preset_assets,
+)
 from column_definitions import required_columns
 
 if sys.platform == "win32":
@@ -23,164 +30,151 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-DAYS_HISTORY = 60
-services = load_market_data_apis()
 STORAGE_PATH = "market_data.zstd.parquet"
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.zstd.parquet"
-CACHE_TTL = 3600  # Cache valida per 1 ora
-cache_data = {}
+DAYS_HISTORY = 60
 
-executor = ThreadPoolExecutor(max_workers=4)  # Ottimizzazione CPU
+executor = ThreadPoolExecutor(max_workers=8)
 
 
 def ensure_all_columns(df):
-    """Garantisce che il DataFrame contenga tutte le colonne richieste."""
-    for col in required_columns:
-        if col not in df.columns:
-            df[col] = pd.NA
+    """Garantisce presenza di tutte le colonne necessarie."""
+    existing_columns = df.columns
+    missing_columns = [col for col in required_columns if col not in existing_columns]
+    for col in missing_columns:
+        df = df.with_columns(pl.lit(None).alias(col))
     return df
 
 
-def get_top_usdt_pairs():
-    """Ottiene le prime coppie USDT con volume superiore a 5 milioni."""
-    try:
-        df = pd.read_parquet(STORAGE_PATH)
-        usdt_pairs = df[
-            (df["symbol"].str.endswith("USDT")) &
-            (df["total_volume"] > 5_000_000)
-        ].sort_values(by="total_volume", ascending=False).head(300)
-        return usdt_pairs["symbol"].tolist()
-    except (FileNotFoundError, pd.errors.EmptyDataError) as e:
-        logging.error("❌ Errore nel filtrare le coppie USDT: %s", e)
-        return [
-            "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
-            "SOLUSDT", "DOGEUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT"
-        ]
-
-
-async def fetch_market_data(session, url, exchange_name,
-                            requests_per_minute, retries=3):
-    """Scarica i dati di mercato con gestione avanzata degli errori."""
-    delay = max(2, 60 / requests_per_minute)
+async def fetch_market_data(session, url, exchange_name, rpm, retries=3):
+    """Scarica dati API con gestione avanzata."""
+    delay = max(1, 60 / rpm)
     for attempt in range(retries):
         try:
-            async with session.get(
-                url, timeout=aiohttp.ClientTimeout(total=15)
-            ) as response:
+            async with session.get(url, timeout=15) as response:
                 if response.status == 200:
                     logging.info(
-                        "✅ Dati ottenuti da %s (tentativo %d)",
-                        exchange_name, attempt + 1
+                        "✅ Dati ottenuti da %s (tentativo %d)", exchange_name, attempt + 1
                     )
                     return await response.json()
                 if response.status in {400, 429}:
-                    wait_time = 15
-                    logging.warning(
-                        "⚠️ Errore %d su %s. Attesa %d sec...",
-                        response.status, exchange_name, wait_time
-                    )
-                    await asyncio.sleep(wait_time)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as error:
+                    await asyncio.sleep(15)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logging.error(
-                "❌ Errore richiesta API %s su %s (tentativo %d): %s",
-                url, exchange_name, attempt + 1, error
+                "❌ Errore richiesta API %s (tentativo %d): %s",
+                exchange_name, attempt + 1, e
             )
-            await asyncio.sleep(delay)
+            await asyncio.sleep(max(1, 60 / rpm))
     return None
 
 
-async def fetch_data_from_exchanges(currency="usdt", min_volume=5_000_000):
-    """Scarica dati dalle borse con filtro di volume minimo."""
+async def fetch_from_all_exchanges(symbols, days_history):
+    """Scarica dati API con storico dinamico ultra-avanzato."""
+    market_data_apis = load_market_data_apis()
+    tasks = []
     async with aiohttp.ClientSession() as session:
-        tasks = []
-        for exchange in services["exchanges"]:
-            api_url = exchange["api_url"].replace("{currency}", currency)
-            limits = exchange["limitations"]
-            req_per_min = limits.get("requests_per_minute", 60)
-            tasks.append(
-                fetch_market_data(
-                    session, api_url, exchange["name"], req_per_min)
-            )
+        for exchange in market_data_apis["exchanges"]:
+            for symbol in symbols:
+                api_url = exchange["api_url"].replace("{symbol}", symbol).replace("{days}", str(days_history))
+                rpm = exchange["limitations"].get("requests_per_minute", 60)
+                tasks.append(fetch_market_data(session, api_url, exchange["name"], rpm))
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        return [
-            data for data in results
-            if data and data.get("total_volume", 0) >= min_volume
-        ][:300]
+
+    valid_data = []
+    for data in results:
+        if isinstance(data, (dict, list)):
+            valid_data.extend(data if isinstance(data, list) else [data])
+
+    return valid_data
 
 
-@lru_cache(maxsize=1)
-def download_no_api_data(symbols=None, interval="1d"):
-    """Scarica dati senza l'uso di API con caching avanzato."""
-    local_executor = ThreadPoolExecutor(max_workers=5)
-    if symbols is None:
-        symbols = get_top_usdt_pairs()
+@lru_cache(maxsize=128)
+def download_no_api_data(symbols, interval="1d"):
+    """Download prioritario e intelligente senza API."""
+    market_data_apis = load_market_data_apis()
+    sources = market_data_apis["data_sources"]["no_api"]
+    data = []
 
-    sources = services["data_sources"]["no_api"]
-    data = {}
+    def fetch(symbol, source_name, url):
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data.append({"symbol": symbol, "source": source_name})
+            logging.info("✅ %s scaricato da %s", symbol, source_name)
+        except requests.RequestException as e:
+            logging.warning("⚠️ Errore fonte no-api '%s': %s", source_name, e)
 
-    def fetch_data(source_name, url, symbol):
-        response = requests.get(url)
-        if response.status_code == 200:
-            if symbol not in data:
-                data[symbol] = {}
-            data[symbol][source_name] = url
-            logging.info("✅ Dati %s scaricati per %s", source_name, symbol)
-
-    with local_executor:
-        for symbol in symbols:
-            local_executor.submit(
-                fetch_data, "binance_data",
-                f"{sources['binance_data']}/{symbol}/{interval}/"
-                f"{symbol}-{interval}.zip", symbol
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [
+            executor.submit(
+                fetch,
+                symbol,
+                source_name,
+                f"{sources[source_name]}/{symbol}/{interval}/{symbol}-{interval}.zip"
             )
-            local_executor.submit(
-                fetch_data, "cryptodatadownload",
-                f"{sources['cryptodatadownload']}/Binance_{symbol}_d.csv",
-                symbol
-            )
+            for source_name in sources
+            for symbol in symbols
+        ]
+        for future in futures:
+            future.result()
 
     return data
 
 
-def save_and_sync(data, filename=STORAGE_PATH):
-    """Salva i dati in formato Parquet con compressione e li sincronizza."""
-    try:
-        if not data:
-            logging.warning("⚠️ Nessun dato valido. Skip salvataggio.")
-            return
+def save_and_sync(data):
+    """Salvataggio ultra-intelligente e sincronizzazione selettiva."""
+    if not data:
+        logging.warning("⚠️ Nessun dato valido da salvare.")
+        return
 
-        df = pd.DataFrame(data)
+    df_new = pl.DataFrame(data)
+    df = ensure_all_columns(df)
+
+    if os.path.exists(STORAGE_PATH):
+        existing_df = pl.read_parquet(STORAGE_PATH)
+        df_new = pl.concat([existing_columns, df]).unique()
+    else:
         df = ensure_all_columns(df)
 
-        df.to_parquet(filename, index=False, compression="zstd")
-        logging.info("✅ Dati salvati con compressione ZSTD: %s", filename)
+    try:
+        df.write_parquet(STORAGE_PATH, compression="zstd")
+        logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
         sync_to_cloud()
-    except (pd.errors.EmptyDataError, ValueError) as e:
-        logging.error("❌ Errore durante il salvataggio dei dati: %s", e)
+    except Exception as e:
+        logging.error("❌ Errore salvataggio dati: %s", e)
 
 
 def sync_to_cloud():
-    """Sincronizza dati locali con Google Drive solo se il file è cambiato."""
+    """Sincronizzazione avanzata intelligente con il cloud."""
     try:
         if os.path.exists(STORAGE_PATH):
             os.replace(STORAGE_PATH, CLOUD_SYNC_PATH)
-            logging.info("☁️ Dati sincronizzati su Google Drive.")
-    except OSError as sync_error:
-        logging.error("❌ Errore nella sincronizzazione con Google Drive: %s",
-                      sync_error)
+            logging.info("☁️ Sincronizzazione intelligente cloud completata.")
+    except OSError as e:
+        logging.error("❌ Errore sincronizzazione cloud: %s", e)
 
 
 async def main():
-    """Funzione principale per l'aggiornamento dei dati."""
-    logging.info("🔄 Avvio aggiornamento dati senza API...")
-    top_usdt_pairs = get_top_usdt_pairs()
-    data_no_api = download_no_api_data(symbols=top_usdt_pairs, interval="1d")
+    auto_mapping = load_auto_symbol_mapping()
+    days_history = DAYS_HISTORY
+
+    symbols = (
+        sum(load_preset_assets().values(), [])
+        if USE_PRESET_ASSETS else
+        list(auto_mapping.values())
+    )
+
+    symbols = [standardize_symbol(s, auto_mapping) for s in symbols]
+
+    data_no_api = download_no_api_data(tuple(symbols))
+
     if not data_no_api:
-        logging.warning(
-            "⚠️ Nessun dato trovato senza API. Passaggio alle API..."
-        )
-        data_no_api = await fetch_data_from_exchanges()
-    save_and_sync(data_no_api, STORAGE_PATH)
+        logging.info("⚠️ Nessun dato senza API, passo alle API.")
+        data_api = await fetch_from_all_exchanges(symbols, DAYS_HISTORY)
+        save_and_sync(data_api)
+    else:
+        save_and_sync(data_no_api)
 
 
 if __name__ == "__main__":
