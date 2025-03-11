@@ -20,7 +20,7 @@ MARKET_API_FILE = "market_data_apis.json"
 PRESET_ASSETS_FILE = "preset_assets.json"
 AUTO_MAPPING_FILE = "auto_symbol_mapping.json"
 
-USE_PRESET_ASSETS = True  # True usa preset_assets.json, False dinamico senza limiti
+USE_PRESET_ASSETS = True  # usa preset_assets.json, False dinamico senza limiti
 
 TRADABLE_ASSETS = {"crypto": [], "forex": [], "indices": [], "commodities": []}
 
@@ -129,7 +129,8 @@ def dynamic_assets_loading(mapping):
                         assets[asset_type].append(symbol)
                 logging.info("✅ Dati API da %s caricati.", exchange["name"])
             except Exception as e:
-                logging.error("❌ Errore caricamento API '%s': %s", exchange["name"], e)
+                logging.error(
+                    "❌ Errore caricamento API '%s': %s", exchange["name"], e)
 
     categorize_tradable_assets(assets, mapping)
 
