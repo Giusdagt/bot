@@ -34,7 +34,7 @@ def get_tradable_assets():
 
 
 class RiskManagement:
-    """Gestisce rischio, allocazione del capitale e trailing stop avanzato"""
+    """Gestisce rischio, allocazione del capitale e trailing stop"""
     def __init__(self):
         """Inizializza il sistema di gestione del rischio dalla configurazione"""
         settings = config["risk_management"]
@@ -57,7 +57,7 @@ class RiskManagement:
         return stop_loss, trailing_stop
 
     def adjust_risk(self, symbol):
-        """Adatta dinamicamente il trailing stop e il capitale 
+        """Adatta dinamicamente il trailing stop e il capitale
         usando dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
 
@@ -83,10 +83,12 @@ class RiskManagement:
             self.risk_per_trade = 0.02
 
     def calculate_position_size(self, balance, symbol):
-        """Determina la dimensione ottimale della posizione 
+        """Determina la dimensione ottimale della posizione
         in base al saldo e ai dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
         base_position_size = balance * self.risk_per_trade
-        adjusted_position_size = base_position_size * (1 + market_data["momentum"])
+        adjusted_position_size = base_position_size * (
+            1 + market_data["momentum"]
+        )
         max_allowed = balance * self.max_exposure
         return min(adjusted_position_size, max_allowed)
