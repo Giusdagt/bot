@@ -49,8 +49,6 @@ os.makedirs(SAVE_DIRECTORY, exist_ok=True)
 os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count() or 8)
-scalping_buffer = []
-BUFFER_SIZE = 100
 
 
 def file_hash(filepath):
@@ -119,8 +117,8 @@ def process_historical_data():
     """Elabora i dati storici, calcola indicatori avanzati e li normalizza."""
     try:
         if not os.path.exists(RAW_DATA_PATH):
-            logging.warning("⚠️ File dati grezzi non trovato, impossibile processare.")
-            return
+            logging.warning("⚠️ File dati grezzi non trovato, avvio fetch.")
+            fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
             logging.warning("⚠️ File dati grezzi vuoto, nessun dato da processare.")
@@ -133,28 +131,66 @@ def process_historical_data():
         logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
-def get_normalized_market_data(symbol):
-    """Restituisce tutti i dati normalizzati per un singolo simbolo."""
+def fetch_mt5_data(symbol):
+    """Recupera dati di scalping in tempo reale da MetaTrader5."""
     try:
+        if not mt5.initialize():
+            logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
+            return None
+
+        rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
+        if rates is None or len(rates) == 0:
+            logging.warning(f"⚠️ Nessun dato realtime disponibile per {symbol}")
+            return None
+
+        df = pl.DataFrame(rates)
+        df = calculate_scalping_indicators(df)
+        df = ensure_all_columns(df)
+        df = normalize_data(df)
+
+        return df
+
+    except Exception as e:
+        logging.error(f"❌ Errore nel recupero dati MT5 per {symbol}: {e}")
+        return None
+
+
+def get_realtime_data(symbols):
+    """Ottiene dati in tempo reale da MT5 e aggiorna il database."""
+    try:
+        for symbol in symbols:
+            logging.info(f"📡 Recupero dati real-time per {symbol}")
+            df = fetch_mt5_data(symbol)
+            if df is None:
+                continue
+
+            save_and_sync(df)
+            logging.info(f"✅ Dati real-time per {symbol} aggiornati con scalping.")
+    except Exception as e:
+        logging.error(f"❌ Errore nel recupero dei dati real-time: {e}")
+
+
+def get_normalized_market_data(symbol):
+    """Recupera i dati normalizzati per un singolo simbolo in modo efficiente."""
+    try:
+        if not os.path.exists(PROCESSED_DATA_PATH):
+            logging.warning("⚠️ File dati processati non trovato.")
+            return None
+
         df = pl.scan_parquet(PROCESSED_DATA_PATH).filter(
             pl.col("symbol") == symbol
         ).collect()
 
         if df.is_empty():
-            raise ValueError(f"Nessun dato trovato per {symbol}")
+            logging.warning(f"⚠️ Nessun dato trovato per {symbol}, avvio fetch.")
+            fetch_new_data()
+            return None
 
-        latest_data = df[-1]
-
-        # Rimuove automaticamente le colonne con valori NaN o None
-        clean_data = latest_data.drop_nulls()
-
-        return clean_data.to_dict()  # Restituisce tutti i dati disponibili
+        latest_data = df[-1]  # Prende l'ultimo valore disponibile
+        return latest_data.to_dict()
 
     except Exception as e:
-        logging.error(
-            f"❌ Errore durante il recupero dei dati normalizzati per "
-            f"{symbol}: {e}"
-        )
+        logging.error(f"❌ Errore durante il recupero dei dati normalizzati per {symbol}: {e}")
         return None
 
 
