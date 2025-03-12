@@ -1,6 +1,6 @@
 """
 data_handler.py
-Modulo definitivo per la gestione autonoma, intelligente e ultra-ottimizzata
+Modulo definitivo per la gestione autonoma, intelligente e ottimizzata
 per la normalizzazione e gestione avanzata dei dati storici e realtime.
 Ottimizzato per IA, Deep Reinforcement Learning (DRL) e scalping
 con MetaTrader5.
@@ -11,7 +11,7 @@ import logging
 import hashlib
 import shutil
 import asyncio
-from concurrent.futures import ThreadPoolExecutor  # Moved standard import
+from concurrent.futures import ThreadPoolExecutor
 import polars as pl
 import MetaTrader5 as mt5
 from sklearn.preprocessing import MinMaxScaler
@@ -41,7 +41,8 @@ SAVE_DIRECTORY = (
 
 RAW_DATA_PATH = "market_data.zstd.parquet"
 PROCESSED_DATA_PATH = os.path.join(
-    SAVE_DIRECTORY, "processed_data.zstd.parquet")
+    SAVE_DIRECTORY, "processed_data.zstd.parquet"
+)
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/processed_data.zstd.parquet"
 
 os.makedirs(SAVE_DIRECTORY, exist_ok=True)
@@ -54,6 +55,8 @@ BUFFER_SIZE = 100
 
 def file_hash(filepath):
     """Calcola l'hash del file per rilevare modifiche."""
+    if not os.path.exists(filepath):
+        return None
     h = hashlib.md5()
     with open(filepath, 'rb') as f:
         while chunk := f.read(8192):
@@ -66,8 +69,7 @@ def sync_to_cloud():
     try:
         if not os.path.exists(PROCESSED_DATA_PATH):
             return
-        existing_hash = file_hash(
-            CLOUD_SYNC_PATH) if os.path.exists(CLOUD_SYNC_PATH) else None
+        existing_hash = file_hash(CLOUD_SYNC_PATH)
         new_hash = file_hash(PROCESSED_DATA_PATH)
         if existing_hash == new_hash:
             logging.info("☁️ Nessuna modifica, skip sincronizzazione.")
@@ -79,14 +81,11 @@ def sync_to_cloud():
 
 
 def save_and_sync(df):
-    """Salvataggio ultra-intelligente con verifica delle modifiche."""
+    """Salvataggio intelligente con verifica delle modifiche."""
     try:
-        new_hash = hashlib.md5(df.write_csv().encode()).hexdigest()
-        if os.path.exists(PROCESSED_DATA_PATH):
-            old_hash = file_hash(PROCESSED_DATA_PATH)
-            if old_hash == new_hash:
-                logging.info("🔄 Nessuna modifica, salvataggio non necessario.")
-                return
+        if df.is_empty():
+            logging.warning("⚠️ Tentativo di salvataggio di un DataFrame vuoto.")
+            return
         df.write_parquet(PROCESSED_DATA_PATH, compression="zstd")
         logging.info("✅ Dati elaborati salvati con successo.")
         executor.submit(sync_to_cloud)
@@ -104,6 +103,8 @@ def ensure_all_columns(df):
 
 def normalize_data(df):
     """Normalizzazione avanzata con selezione dinamica delle feature per IA."""
+    if df.is_empty():
+        return df
     numeric_cols = df.select(pl.col(pl.NUMERIC_DTYPES)).columns
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
@@ -117,7 +118,13 @@ def normalize_data(df):
 def process_historical_data():
     """Elabora i dati storici, calcola indicatori avanzati e li normalizza."""
     try:
+        if not os.path.exists(RAW_DATA_PATH):
+            logging.warning("⚠️ File dati grezzi non trovato, impossibile processare.")
+            return
         df = pl.read_parquet(RAW_DATA_PATH)
+        if df.is_empty():
+            logging.warning("⚠️ File dati grezzi vuoto, nessun dato da processare.")
+            return
         df = calculate_historical_indicators(df)
         df = ensure_all_columns(df)
         df = normalize_data(df)
@@ -126,51 +133,40 @@ def process_historical_data():
         logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
-async def get_realtime_data(symbols):
-    """Ottiene i dati realtime da MetaTrader5 e calcola indicatori."""
-    if not mt5.initialize():
-        logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
-        return
-    tasks = [asyncio.to_thread(fetch_mt5_data, symbol) for symbol in symbols]
-    await asyncio.gather(*tasks)
-    mt5.shutdown()
+def get_normalized_market_data(symbol):
+    """Restituisce tutti i dati normalizzati per un singolo simbolo."""
+    try:
+        df = pl.scan_parquet(PROCESSED_DATA_PATH).filter(
+            pl.col("symbol") == symbol
+        ).collect()
 
+        if df.is_empty():
+            raise ValueError(f"Nessun dato trovato per {symbol}")
 
-def fetch_mt5_data(symbol):
-    """Scarica dati in parallelo da MT5."""
-    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
-    if rates is None or len(rates) == 0:
-        logging.warning("⚠️ Nessun dato realtime per %s", symbol)
-        return
-    df = pl.DataFrame(rates)
-    df = calculate_scalping_indicators(df)
-    df = ensure_all_columns(df)
-    df = normalize_data(df)
-    scalping_buffer.append(df)
-    if len(scalping_buffer) >= BUFFER_SIZE:
-        df_batch = pl.concat(scalping_buffer)
-        save_and_sync(df_batch)
-        scalping_buffer.clear()
-        logging.info(
-            "✅ Dati scalping aggiornati, batch di %d messaggi", BUFFER_SIZE)
+        latest_data = df[-1]
 
+        # Rimuove automaticamente le colonne con valori NaN o None
+        clean_data = latest_data.drop_nulls()
 
-def fetch_and_process_data():
-    """Scarica i dati grezzi solo se necessario e li elabora."""
-    if not os.path.exists(RAW_DATA_PATH):
-        logging.info("⚠️ Dati grezzi mancanti, avvio scaricamento...")
-        executor.submit(fetch_new_data)
-    process_historical_data()
+        return clean_data.to_dict()  # Restituisce tutti i dati disponibili
+
+    except Exception as e:
+        logging.error(
+            f"❌ Errore durante il recupero dei dati normalizzati per "
+            f"{symbol}: {e}"
+        )
+        return None
 
 
 if __name__ == "__main__":
     auto_mapping = load_auto_symbol_mapping()
-    fetch_and_process_data()
+    process_historical_data()
     realtime_symbols = (
         sum(load_preset_assets().values(), [])
         if USE_PRESET_ASSETS else
         list(auto_mapping.values())
     )
-    realtime_symbols = [standardize_symbol(
-        s, auto_mapping) for s in realtime_symbols]
+    realtime_symbols = [
+        standardize_symbol(s, auto_mapping) for s in realtime_symbols
+    ]
     asyncio.run(get_realtime_data(realtime_symbols))
