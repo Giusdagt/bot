@@ -154,10 +154,6 @@ def fetch_mt5_data(symbol):
         logging.error("❌ Errore nel recupero dati MT5 per %s: %s", symbol, e)
         return None
 
-    except (OSError, IOError, ValueError) as e:
-        logging.error(f"❌ Errore nel recupero dati MT5 per {symbol}: {e}")
-        return None
-
 
 def get_realtime_data(symbols):
     """Ottiene dati in tempo reale da MT5 e aggiorna il database."""
