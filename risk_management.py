@@ -57,7 +57,7 @@ class RiskManagement:
         trailing_stop = entry_price * (1 - (volatility * 0.8))
         return stop_loss, trailing_stop
 
-        def adjust_risk(self, symbol):
+    def adjust_risk(self, symbol):
         """Adatta dinamicamente il trailing stop e il capitale usando dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
 
