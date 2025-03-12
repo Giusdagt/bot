@@ -121,7 +121,7 @@ def process_historical_data():
             fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
-            logging.warning("⚠️ File dati grezzi vuoto, nessun dato da processare.")
+            logging.warning("⚠️ Dati grezzi vuoto, nessun dato da processare.")
             return
         df = calculate_historical_indicators(df)
         df = ensure_all_columns(df)
@@ -193,7 +193,6 @@ def get_normalized_market_data(symbol):
         logging.error(f"❌ Errore durante il recupero dei dati "
                       f"normalizzati per {symbol}: {e}")
         return None
-
 
 if __name__ == "__main__":
     auto_mapping = load_auto_symbol_mapping()
