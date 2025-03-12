@@ -9,13 +9,13 @@ config.json per automazione totale.
 
 import logging
 import numpy as np
+from ai_model import VolatilityPredictor
 from data_loader import (
     load_config,
     load_auto_symbol_mapping,
     USE_PRESET_ASSETS,
     load_preset_assets
 )
-from ai_model import VolatilityPredictor
 import data_handler
 
 logging.basicConfig(
@@ -42,8 +42,7 @@ class RiskManagement:
         self.trailing_stop_pct = settings["trailing_stop_pct"]
         self.risk_per_trade = settings["risk_per_trade"]
         self.max_exposure = settings["max_exposure"]
-        self.min_balance = float('inf')
-        self.highest_balance = 0
+        self.balance_info = {'min': float('inf'), 'max': 0}
         self.kill_switch_activated = False
         self.volatility_predictor = VolatilityPredictor()
         self.recovery_counter = 0
