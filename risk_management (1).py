@@ -7,13 +7,10 @@ Configurazione dinamica tramite config.json per automazione totale.
 """
 
 import logging
-import json
 import numpy as np
-import talib
-from datetime import datetime
 from data_loader import (
+    load_config,
     load_auto_symbol_mapping,
-    standardize_symbol,
     USE_PRESET_ASSETS,
     load_preset_assets
 )
@@ -23,13 +20,6 @@ import data_handler  # Importa i dati normalizzati per ottimizzare la gestione d
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-
-def load_config():
-    """Carica il file di configurazione JSON."""
-    with open("config.json", "r") as f:
-        return json.load(f)
-
 
 # Carica configurazione globale
 config = load_config()
@@ -58,15 +48,18 @@ class RiskManagement:
         self.volatility_predictor = VolatilityPredictor()
         self.recovery_counter = 0
 
-    def adaptive_stop_loss(self, entry_price, market_data):
-        """Calcola uno stop-loss e trailing-stop basato su volatilità e trend."""
+    def adaptive_stop_loss(self, entry_price, symbol):
+        """Calcola stop-loss e trailing-stop basati su dati normalizzati."""
+        market_data = data_handler.get_normalized_market_data(symbol)  # Ottiene dati normalizzati
         volatility = market_data["volatility"]
         stop_loss = entry_price * (1 - (volatility * 1.5))
         trailing_stop = entry_price * (1 - (volatility * 0.8))
         return stop_loss, trailing_stop
 
-    def adjust_risk(self, market_data):
-        """Adatta dinamicamente il trailing stop e il capitale in base alla volatilità del mercato."""
+    def adjust_risk(self, symbol):
+        """Adatta dinamicamente il trailing stop e il capitale usando dati normalizzati."""
+        market_data = data_handler.get_normalized_market_data(symbol)  # Usa dati normalizzati
+
         future_volatility = self.volatility_predictor.predict_volatility(
             np.array([
                 [
@@ -88,9 +81,10 @@ class RiskManagement:
             self.trailing_stop_pct = 0.05
             self.risk_per_trade = 0.02
 
-    def calculate_position_size(self, balance, market_conditions):
-        """Determina la dimensione ottimale della posizione in base al saldo e alle condizioni di mercato."""
+    def calculate_position_size(self, balance, symbol):
+        """Determina la dimensione ottimale della posizione in base al saldo e ai dati normalizzati."""
+        market_data = data_handler.get_normalized_market_data(symbol)  # Usa dati normalizzati
         base_position_size = balance * self.risk_per_trade
-        adjusted_position_size = base_position_size * (1 + market_conditions["momentum"])
+        adjusted_position_size = base_position_size * (1 + market_data["momentum"])
         max_allowed = balance * self.max_exposure
         return min(adjusted_position_size, max_allowed)
