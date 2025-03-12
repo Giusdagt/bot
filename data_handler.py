@@ -140,7 +140,7 @@ def fetch_mt5_data(symbol):
 
         rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
         if rates is None or len(rates) == 0:
-            logging.warning(f"⚠️Nessun dato realtime disponibile per {symbol}")
+            logging.warning("⚠️Nessun dato realtime disponibile per %s", symbol)
             return None
 
         df = pl.DataFrame(rates)
@@ -150,7 +150,11 @@ def fetch_mt5_data(symbol):
 
         return df
 
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
+        logging.error("❌ Errore nel recupero dati MT5 per %s: %s", symbol, e)
+        return None
+
+    except (OSError, IOError, ValueError) as e:
         logging.error(f"❌ Errore nel recupero dati MT5 per {symbol}: {e}")
         return None
 
@@ -166,7 +170,7 @@ def get_realtime_data(symbols):
 
             save_and_sync(df)
             logging.info(f"✅ Dati real-time per {symbol} aggiornati.")
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
         logging.error(f"❌ Errore nel recupero dei dati real-time: {e}")
 
 
@@ -189,7 +193,7 @@ def get_normalized_market_data(symbol):
         latest_data = df[-1]  # Prende l'ultimo valore disponibile
         return latest_data.to_dict()
 
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
         logging.error(f"❌ Errore durante il recupero dei dati "
                       f"normalizzati per {symbol}: {e}")
         return None
