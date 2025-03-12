@@ -20,9 +20,6 @@ logging.basicConfig(
 # ThreadPoolExecutor per calcoli paralleli
 executor = ThreadPoolExecutor(max_workers=4)
 
-# Cache per evitare calcoli ripetuti
-cache = {}
-
 
 class PortfolioOptimizer:
     """
@@ -51,8 +48,8 @@ class PortfolioOptimizer:
     def _optimize_historical(self):
         """Ottimizzazione basata su dati storici con gestione avanzata del rischio."""
         prices = self._prepare_price_data()
-        mu = mean_historical_return(prices.to_pandas())
-        S = CovarianceShrinkage(prices.to_pandas()).ledoit_wolf()
+        mu = mean_historical_return(prices)
+        S = CovarianceShrinkage(prices).ledoit_wolf()
         ef = EfficientFrontier(mu, S)
 
         # Massimizza Sharpe Ratio con gestione del rischio dinamica
@@ -66,7 +63,7 @@ class PortfolioOptimizer:
     def _optimize_scalping(self):
         """Ottimizzazione per scalping basata su alta frequenza e liquidità."""
         recent_prices = self._prepare_price_data().tail(20)
-        hrp = HRPOpt(recent_prices.to_pandas())
+        hrp = HRPOpt(recent_prices)
         hrp_weights = hrp.optimize()
 
         # Gestione avanzata del rischio per scalping
@@ -84,7 +81,7 @@ class PortfolioOptimizer:
 
         def objective(weights):
             """Funzione obiettivo: massimizzare Sharpe Ratio con penalizzazione rischio."""
-            port_return = np.dot(weights, self.market_data.mean().to_numpy())
+            port_return = np.dot(weights, self.market_data.mean(axis=0).to_numpy())
             port_volatility = np.sqrt(
                 np.dot(weights.T, np.dot(self.market_data.cov().to_numpy(), weights))
             )
@@ -118,10 +115,9 @@ class PortfolioOptimizer:
 
     def _prepare_price_data(self):
         """
-        Prepara i dati dei prezzi per l'ottimizzazione convertendoli in Polars
-        e successivamente in Pandas solo se necessario.
+        Prepara i dati dei prezzi per l'ottimizzazione convertendoli in Polars.
         """
-        df = self.market_data.select(["timestamp", "symbol", "close"]).to_pandas()
+        df = self.market_data.select(["timestamp", "symbol", "close"])
         return df.pivot(index="timestamp", columns="symbol", values="close")
 
 
