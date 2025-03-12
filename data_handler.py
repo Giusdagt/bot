@@ -140,7 +140,7 @@ def fetch_mt5_data(symbol):
 
         rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
         if rates is None or len(rates) == 0:
-            logging.warning("⚠️Nessun dato realtime disponibile per %s", symbol)
+            logging.warning("⚠️Nessun dato realtime disponibile x %s", symbol)
             return None
 
         df = pl.DataFrame(rates)
