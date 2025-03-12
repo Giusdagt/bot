@@ -82,7 +82,7 @@ def save_and_sync(df):
     """Salvataggio intelligente con verifica delle modifiche."""
     try:
         if df.is_empty():
-            logging.warning("⚠️ Tentativo di salvataggio di un DataFrame vuoto.")
+            logging.warning("⚠️ Tentativo salvataggio, un DataFrame vuoto.")
             return
         df.write_parquet(PROCESSED_DATA_PATH, compression="zstd")
         logging.info("✅ Dati elaborati salvati con successo.")
@@ -117,7 +117,7 @@ def process_historical_data():
     """Elabora i dati storici, calcola indicatori avanzati e li normalizza."""
     try:
         if not os.path.exists(RAW_DATA_PATH):
-            logging.warning("⚠️ File dati grezzi non trovato, avvio fetch.")
+            logging.warning("⚠️ Dati grezzi non trovato, avvio fetch.")
             fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
@@ -135,12 +135,12 @@ def fetch_mt5_data(symbol):
     """Recupera dati di scalping in tempo reale da MetaTrader5."""
     try:
         if not mt5.initialize():
-            logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
+            logging.error("❌Errore inizializzazione MT5: %s", mt5.last_error())
             return None
 
         rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
         if rates is None or len(rates) == 0:
-            logging.warning(f"⚠️ Nessun dato realtime disponibile per {symbol}")
+            logging.warning(f"⚠️Nessun dato realtime disponibile per {symbol}")
             return None
 
         df = pl.DataFrame(rates)
@@ -165,13 +165,13 @@ def get_realtime_data(symbols):
                 continue
 
             save_and_sync(df)
-            logging.info(f"✅ Dati real-time per {symbol} aggiornati con scalping.")
+            logging.info(f"✅ Dati real-time per {symbol} aggiornati.")
     except Exception as e:
         logging.error(f"❌ Errore nel recupero dei dati real-time: {e}")
 
 
 def get_normalized_market_data(symbol):
-    """Recupera i dati normalizzati per un singolo simbolo in modo efficiente."""
+    """Recupera dati normalizzati per un singolo simbolo in modo efficiente"""
     try:
         if not os.path.exists(PROCESSED_DATA_PATH):
             logging.warning("⚠️ File dati processati non trovato.")
@@ -182,7 +182,7 @@ def get_normalized_market_data(symbol):
         ).collect()
 
         if df.is_empty():
-            logging.warning(f"⚠️ Nessun dato trovato per {symbol}, avvio fetch.")
+            logging.warning(f"⚠️ Nessun dato trovato {symbol}, avvio fetch.")
             fetch_new_data()
             return None
 
@@ -190,8 +190,9 @@ def get_normalized_market_data(symbol):
         return latest_data.to_dict()
 
     except Exception as e:
-        logging.error(f"❌ Errore durante il recupero dei dati normalizzati per {symbol}: {e}")
-        return None
+    logging.error(f"❌ Errore durante il recupero dei dati " 
+                  f"normalizzati per {symbol}: {e}")
+    return None
 
 
 if __name__ == "__main__":
