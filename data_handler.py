@@ -194,6 +194,7 @@ def get_normalized_market_data(symbol):
                       f"normalizzati per {symbol}: {e}")
         return None
 
+
 if __name__ == "__main__":
     auto_mapping = load_auto_symbol_mapping()
     process_historical_data()
