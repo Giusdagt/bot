@@ -159,15 +159,15 @@ def get_realtime_data(symbols):
     """Ottiene dati in tempo reale da MT5 e aggiorna il database."""
     try:
         for symbol in symbols:
-            logging.info(f"📡 Recupero dati real-time per {symbol}")
+            logging.info("📡 Recupero dati realtime per %s", symbol)
             df = fetch_mt5_data(symbol)
             if df is None:
                 continue
 
             save_and_sync(df)
-            logging.info(f"✅ Dati real-time per {symbol} aggiornati.")
+            logging.info("✅ Dati realtime per %s aggiornati.", symbol)
     except (OSError, IOError, ValueError) as e:
-        logging.error(f"❌ Errore nel recupero dei dati real-time: {e}")
+        logging.error("❌ Errore nel recupero dei dati realtime: %s", e)
 
 
 def get_normalized_market_data(symbol):
@@ -182,7 +182,7 @@ def get_normalized_market_data(symbol):
         ).collect()
 
         if df.is_empty():
-            logging.warning(f"⚠️ Nessun dato trovato {symbol}, avvio fetch.")
+            logging.warning("⚠️ Nessun dato trovato %s, avvio fetch.", symbol)
             fetch_new_data()
             return None
 
@@ -190,8 +190,8 @@ def get_normalized_market_data(symbol):
         return latest_data.to_dict()
 
     except (OSError, IOError, ValueError) as e:
-        logging.error(f"❌ Errore durante il recupero dei dati "
-                      f"normalizzati per {symbol}: {e}")
+        logging.error("❌ Errore durante il recupero dei dati "
+                      "normalizzati per %s: %s", symbol, e)
         return None
 
 
