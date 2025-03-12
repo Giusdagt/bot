@@ -58,7 +58,7 @@ class RiskManagement:
         return stop_loss, trailing_stop
 
     def adjust_risk(self, symbol):
-        """Adatta dinamicamente il trailing stop e il capitale usando dati normalizzati."""
+        """Adatta trailing stop e il capitale usando dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
 
         future_volatility = self.volatility_predictor.predict_volatility(
@@ -83,7 +83,7 @@ class RiskManagement:
             self.risk_settings["risk_per_trade"] = 0.02
 
     def calculate_position_size(self, balance, symbol):
-        """Determina la dimensione ottimale della posizione in base al saldo e ai dati normalizzati."""
+        """Dimensione ottimale della posizione in base al saldo e ai dati"""
         market_data = data_handler.get_normalized_market_data(symbol)
         base_position_size = balance * self.risk_settings["risk_per_trade"]
         adjusted_position_size = base_position_size * (
