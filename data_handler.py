@@ -117,7 +117,7 @@ def process_historical_data():
     """Elabora i dati storici, calcola indicatori avanzati e li normalizza."""
     try:
         if not os.path.exists(RAW_DATA_PATH):
-            logging.warning("⚠️ Dati grezzi non trovato, avvio fetch.")
+            logging.warning("⚠️ Grezzi non trovato, avvio fetch.")
             fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
@@ -191,7 +191,7 @@ def get_normalized_market_data(symbol):
 
     except Exception as e:
         logging.error(f"❌ Errore durante il recupero dei dati "
-                    f"normalizzati per {symbol}: {e}")
+                      f"normalizzati per {symbol}: {e}")
         return None
 
 
