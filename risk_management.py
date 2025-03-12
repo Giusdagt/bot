@@ -38,10 +38,12 @@ class RiskManagement:
     def __init__(self):
         """Starta il sistema di gestione del rischio dalla configurazione"""
         settings = config["risk_management"]
-        self.max_drawdown = settings["max_drawdown"]
-        self.trailing_stop_pct = settings["trailing_stop_pct"]
-        self.risk_per_trade = settings["risk_per_trade"]
-        self.max_exposure = settings["max_exposure"]
+        self.risk_settings = {
+            "max_drawdown": settings["max_drawdown"],
+            "trailing_stop_pct": settings["trailing_stop_pct"],
+            "risk_per_trade": settings["risk_per_trade"],
+            "max_exposure": settings["max_exposure"]
+        }
         self.balance_info = {'min': float('inf'), 'max': 0}
         self.kill_switch_activated = False
         self.volatility_predictor = VolatilityPredictor()
@@ -55,9 +57,8 @@ class RiskManagement:
         trailing_stop = entry_price * (1 - (volatility * 0.8))
         return stop_loss, trailing_stop
 
-    def adjust_risk(self, symbol):
-        """Adatta dinamicamente il trailing stop e il capitale
-        usando dati normalizzati."""
+        def adjust_risk(self, symbol):
+        """Adatta dinamicamente il trailing stop e il capitale usando dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
 
         future_volatility = self.volatility_predictor.predict_volatility(
@@ -72,22 +73,21 @@ class RiskManagement:
         )
         atr = future_volatility[0] * 100  # Previsione volatilità futura
         if atr > 15:
-            self.trailing_stop_pct = 0.15
-            self.risk_per_trade = 0.01
+            self.risk_settings["trailing_stop_pct"] = 0.15
+            self.risk_settings["risk_per_trade"] = 0.01
         elif atr > 10:
-            self.trailing_stop_pct = 0.1
-            self.risk_per_trade = 0.015
+            self.risk_settings["trailing_stop_pct"] = 0.1
+            self.risk_settings["risk_per_trade"] = 0.015
         else:
-            self.trailing_stop_pct = 0.05
-            self.risk_per_trade = 0.02
+            self.risk_settings["trailing_stop_pct"] = 0.05
+            self.risk_settings["risk_per_trade"] = 0.02
 
     def calculate_position_size(self, balance, symbol):
-        """Determina la dimensione ottimale della posizione
-        in base al saldo e ai dati normalizzati."""
+        """Determina la dimensione ottimale della posizione in base al saldo e ai dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
-        base_position_size = balance * self.risk_per_trade
+        base_position_size = balance * self.risk_settings["risk_per_trade"]
         adjusted_position_size = base_position_size * (
             1 + market_data["momentum"]
         )
-        max_allowed = balance * self.max_exposure
+        max_allowed = balance * self.risk_settings["max_exposure"]
         return min(adjusted_position_size, max_allowed)
