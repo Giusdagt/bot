@@ -36,7 +36,7 @@ def get_tradable_assets():
 class RiskManagement:
     """Gestisce rischio, allocazione del capitale e trailing stop"""
     def __init__(self):
-        """Inizializza il sistema di gestione del rischio dalla configurazione"""
+        """Starta il sistema di gestione del rischio dalla configurazione"""
         settings = config["risk_management"]
         self.max_drawdown = settings["max_drawdown"]
         self.trailing_stop_pct = settings["trailing_stop_pct"]
