@@ -190,9 +190,9 @@ def get_normalized_market_data(symbol):
         return latest_data.to_dict()
 
     except Exception as e:
-    logging.error(f"❌ Errore durante il recupero dei dati "
-                  f"normalizzati per {symbol}: {e}")
-    return None
+        logging.error(f"❌ Errore durante il recupero dei dati "
+                    f"normalizzati per {symbol}: {e}")
+        return None
 
 
 if __name__ == "__main__":
