@@ -15,7 +15,7 @@ from sklearn.preprocessing import MinMaxScaler
 # 📌 Configurazione del logging avanzato
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levellevel)s - %(message)s"
 )
 
 # ThreadPoolExecutor per calcoli paralleli
@@ -170,11 +170,20 @@ async def dynamic_allocation(trading_pairs, capital):
 
     return allocations
 
+def complex_calculation(df):
+    """
+    Placeholder function for complex calculations.
+    Replace this with the actual implementation.
+    """
+    # Implement your complex calculation logic here
+    # For now, let's just return the input DataFrame
+    return df
+
 def parallel_calculations(df):
     """
     Esegue calcoli paralleli su DataFrame di Polars.
     """
     with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [executor.submit(complex_calculation, df[df['symbol'] == symbol]) for symbol in df['symbol'].unique()]
+        futures = [executor.submit(complex_calculation, df.filter(pl.col('symbol') == symbol)) for symbol in df['symbol'].unique()]
         results = [future.result() for future in futures]
     return pl.concat(results)
