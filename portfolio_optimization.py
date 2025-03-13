@@ -71,7 +71,7 @@ class PortfolioOptimizer:
         optimized_weights = self.risk_management.apply_risk_constraints(
             hrp_weights
         )
-        logging.info("⚡Allocazione scalping ottimizzata: %s", optimized_weights)
+        logging.info("Allocazione scalping ottimizzata: %s", optimized_weights)
         return optimized_weights, hrp_weights
 
     async def optimize_with_constraints(self):
