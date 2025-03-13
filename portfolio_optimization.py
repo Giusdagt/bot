@@ -191,7 +191,8 @@ def complex_calculation(df, market_returns=None):
     df = df.with_columns(
         pl.col("close").cummax().alias("rolling_max")
     ).with_columns(
-        ((df["close"] - df["rolling_max"]) / df["rolling_max"]).alias("drawdown")
+        ((df["close"] - df["rolling_max"]) /
+         df["rolling_max"]).alias("drawdown")
     )
 
     max_drawdown = df.select(pl.min("drawdown").alias("max_drawdown"))
