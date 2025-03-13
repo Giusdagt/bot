@@ -42,7 +42,7 @@ class PortfolioOptimizer:
         if self.scalping:
             logging.info("\u26a1 Ottimizzazione per scalping in corso...")
             return await asyncio.to_thread(self._optimize_scalping)
-        logging.info("\ud83d\udcca Ottimizzazione per dati storici in corso...")
+        logging.info("\ud83d\udcca Ottimizzazione per dati storici in corso..")
         return await asyncio.to_thread(self._optimize_historical)
 
     def _optimize_historical(self):
@@ -57,11 +57,11 @@ class PortfolioOptimizer:
         cleaned_weights = self.risk_management.apply_risk_constraints(
             ef.clean_weights()
         )
-        logging.info(f"\u2705 Allocazione storica ottimizzata: {cleaned_weights}")
+        logging.info(f"\u2705 Allocazione ottimizzata: {cleaned_weights}")
         return cleaned_weights
 
     def _optimize_scalping(self):
-        """Ottimizzazione per scalping basata su alta frequenza e liquidit\u00e0."""
+        """Ottimizzazione per scalping su alta frequenza e liquidit\u00e0."""
         recent_prices = self._prepare_price_data().tail(20)
         hrp = HRPOpt(recent_prices)
         hrp_weights = hrp.optimize()
@@ -70,7 +70,7 @@ class PortfolioOptimizer:
         optimized_weights = self.risk_management.apply_risk_constraints(
             hrp_weights
         )
-        logging.info(f"\u26a1Allocazione scalping ottimizzata: {optimized_weights}")
+        logging.info(f"\u26a1Allocazione scalping: {optimized_weights}")
         return optimized_weights
 
     async def optimize_with_constraints(self):
@@ -114,7 +114,8 @@ class PortfolioOptimizer:
             initial_guess
         )
         logging.info(
-            f"\ud83d\udd0d Allocazione con vincoli di rischio: {optimized_allocation}"
+            f"\ud83d\udd0d
+            Allocazione con vincoli di rischio: {optimized_allocation}"
         )
         return optimized_allocation
 
