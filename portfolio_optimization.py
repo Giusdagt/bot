@@ -1,9 +1,7 @@
 """
 portfolio_optimization.py
-Questo modulo contiene classi e funzioni per ottimizzare
-portafogli finanziari. Include la gestione avanzata del
-rischio, supporto per lo scalping e auto-adattamento basato
-su Polars.
+Modulo per l'ottimizzazione del portafoglio con gestione avanzata del rischio,
+supporto per scalping e auto-adattamento basato su Polars.
 """
 import logging
 import asyncio
@@ -33,12 +31,21 @@ class PortfolioOptimizer:
     supporto per scalping e auto-adattamento basato su Polars.
     """
 
-    def __init__(self, market_data, balance, risk_tolerance=0.05,
-                 scalping=False):
+    def __init__(self, market_data, balances, scalping=False):
+        """
+        balances = {
+            "Danny": 1000,
+            "Giuseppe": 1500
+        }
+        """
         self.market_data = market_data
         self.scalping = scalping
-        self.risk_management = RiskManagement()
-        self.balance = balance  # Il saldo attuale per regolare l'allocazione
+        self.balances = balances  
+        self.risk_tolerances = self._calculate_dynamic_risk_tolerances()
+        self.risk_management = {
+            account: RiskManagement(self.risk_tolerances[account])
+            for account in self.balances
+        }
 
     async def optimize_portfolio(self):
         """
@@ -51,6 +58,48 @@ class PortfolioOptimizer:
         logging.info("📊 Ottimizzazione per dati storici in corso...")
         return await asyncio.to_thread(self._optimize_historical)
 
+    def _calculate_dynamic_risk_tolerances(self):
+        """
+        Calcola automaticamente `risk_tolerance` per ogni account basandosi su:
+        - Volatilità del mercato
+        - Saldo individuale
+        - Drawdown recente
+        """
+        risk_tolerances = {}
+
+        for account, balance in self.balances.items():
+            try:
+                volatility = self.market_data.select(
+                    pl.col("volatility").mean()
+                ).item()
+                drawdown = self.market_data.select(
+                    pl.col("drawdown").min()
+                ).item()
+
+                balance_factor = min(0.05, balance / 10000)
+
+                if volatility == 0:
+                    volatility = 1e-6  
+
+                risk_tolerance = max(0.01, min(
+                    0.05, balance_factor / (volatility * 10)
+                ))
+
+                risk_tolerances[account] = risk_tolerance
+                logging.info(
+                    "📊 %s - Risk Tolerance Dinamico: %.4f",
+                    account, risk_tolerance
+                )
+
+            except Exception as e:
+                logging.error(
+                    "❌ Errore nel calcolo della tolleranza al rischio per %s: %s",
+                    account, e
+                )
+                risk_tolerances[account] = 0.01  
+
+        return risk_tolerances
+
     def _optimize_historical(self):
         """Ottimizzazione basata su dati storici con gestione avanzata."""
         prices = self._prepare_price_data()
@@ -58,12 +107,12 @@ class PortfolioOptimizer:
         cov_matrix = CovarianceShrinkage(prices).ledoit_wolf()
         ef = EfficientFrontier(mu, cov_matrix)
 
-        # Massimizza Sharpe Ratio con gestione del rischio dinamica
         weights = ef.max_sharpe()
-        cleaned_weights = self.risk_management.apply_risk_constraints(
-            ef.clean_weights()
-        )
-
+        cleaned_weights = {
+            acc: self.risk_management[acc].apply_risk_constraints(
+                ef.clean_weights()
+            ) for acc in self.balances
+        }
         logging.info("✅ Allocazione storica ottimizzata: %s", cleaned_weights)
         return cleaned_weights, weights
 
@@ -73,60 +122,13 @@ class PortfolioOptimizer:
         hrp = HRPOpt(recent_prices)
         hrp_weights = hrp.optimize()
 
-        # Gestione avanzata del rischio per scalping
-        optimized_weights = self.risk_management.apply_risk_constraints(
-            hrp_weights
-        )
-        logging.info("Allocazione scalping ottimizzata: %s", optimized_weights)
+        optimized_weights = {
+            acc: self.risk_management[acc].apply_risk_constraints(
+                hrp_weights
+            ) for acc in self.balances
+        }
+        logging.info("⚡ Allocazione scalping ottimizzata: %s", optimized_weights)
         return optimized_weights, hrp_weights
-
-    async def optimize_with_constraints(self):
-        """Ottimizza il portafoglio con vincoli e gestione del rischio."""
-        max_risk_allowed = await asyncio.to_thread(
-            self.risk_management.adjust_risk, self.balance
-        )
-
-        def objective(weights):
-            """
-            Massimizza Sharpe Ratio con penalizzazione del rischio.
-            """
-            port_return = np.dot(
-                weights, self.market_data.mean(axis=0).to_numpy()
-            )
-            port_volatility = np.sqrt(
-                np.dot(weights.T, np.dot(
-                    self.market_data.cov().to_numpy(), weights))
-            )
-            sharpe_ratio = (
-                port_return - 0.01
-            ) / port_volatility
-
-            if port_volatility > max_risk_allowed:
-                return np.inf
-            return -sharpe_ratio
-
-        constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
-        bounds = [(0, 1)] * len(self.market_data.columns)
-        initial_guess = np.ones(len(self.market_data.columns)) / len(
-            self.market_data.columns
-        )
-
-        result = await asyncio.to_thread(
-            minimize,
-            objective,
-            initial_guess,
-            method="SLSQP",
-            bounds=bounds,
-            constraints=constraints,
-        )
-
-        optimized_allocation = result.x if result.success else np.zeros_like(
-            initial_guess
-        )
-        logging.info(
-            "🔍 Allocazione con vincoli di rischio: %s", optimized_allocation
-        )
-        return optimized_allocation
 
     def _prepare_price_data(self):
         """
@@ -137,33 +139,15 @@ class PortfolioOptimizer:
         return df.pivot(index="timestamp", columns="symbol", values="close")
 
 
-async def optimize_for_conditions(market_data, balance, market_condition,
-                                  risk_tolerance=0.05):
+async def optimize_for_conditions(market_data, balances, market_condition):
     """
     Seleziona automaticamente l'ottimizzazione migliore in base alle condizioni
     di mercato e al saldo disponibile.
     """
     optimizer = PortfolioOptimizer(
-        market_data, balance, risk_tolerance,
-        scalping=(market_condition == "scalping")
+        market_data, balances, scalping=(market_condition == "scalping")
     )
-    return await optimizer.optimize_with_constraints()
-
-
-async def dynamic_allocation(trading_pairs, capital):
-    """
-    Distribuisce il capitale basandosi su volatilità, trend e liquidità.
-    """
-    total_score = sum(
-        pair[2] * abs(pair[3] - pair[4]) for pair in trading_pairs
-    )  # Ponderazione
-    allocations = {}
-
-    for pair in trading_pairs:
-        weight = (pair[2] * abs(pair[3] - pair[4])) / total_score
-        allocations[pair[0]] = capital * weight  # Distribuzione intelligente
-
-    return allocations
+    return await optimizer.optimize_portfolio()
 
 
 def parallel_calculations(df):
