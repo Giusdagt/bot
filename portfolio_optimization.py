@@ -10,7 +10,6 @@ from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt.expected_returns import mean_historical_return
 from pypfopt.hierarchical_risk_parity import HRPOpt
 from risk_management import RiskManagement
-from sklearn.preprocessing import MinMaxScaler
 
 # 📌 Configurazione del logging avanzato
 logging.basicConfig(
