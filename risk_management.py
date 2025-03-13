@@ -35,11 +35,12 @@ def get_tradable_assets():
 
 class RiskManagement:
     """Gestisce rischio, allocazione del capitale e trailing stop"""
-    def __init__(self):
+    def __init__(self, max_drawdown=None):
         """Starta il sistema di gestione del rischio dalla configurazione"""
         settings = config["risk_management"]
         self.risk_settings = {
-            "max_drawdown": settings["max_drawdown"],
+            "max_drawdown": (max_drawdown if max_drawdown is not None
+                             else settings["max_drawdown"]),
             "trailing_stop_pct": settings["trailing_stop_pct"],
             "risk_per_trade": settings["risk_per_trade"],
             "max_exposure": settings["max_exposure"]
