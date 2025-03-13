@@ -68,14 +68,23 @@ class PortfolioOptimizer:
         risk_tolerances = {}
 
         for account, balance in self.balances.items():
-            volatility = self.market_data.select(pl.col("volatility").mean()).item()
-            drawdown = self.market_data.select(pl.col("drawdown").min()).item()
+            volatility = self.market_data.select(
+                pl.col("volatility").mean()
+            ).item()
+            drawdown = self.market_data.select(
+                pl.col("drawdown").min()
+            ).item()
 
             balance_factor = min(0.05, balance / 10000)
-            risk_tolerance = max(0.01, min(0.05, balance_factor / (volatility * 10)))
+            risk_tolerance = max(
+                0.01, min(0.05, balance_factor / (volatility * 10))
+            )
 
             risk_tolerances[account] = risk_tolerance
-            logging.info("📊 %s - Risk Tolerance Dinamico: %.4f", account, risk_tolerance)
+            logging.info(
+                "📊 %s - Risk Tolerance Dinamico: %.4f",
+                account, risk_tolerance
+            )
 
         return risk_tolerances
 
