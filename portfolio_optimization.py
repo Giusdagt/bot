@@ -10,7 +10,6 @@ from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt.expected_returns import mean_historical_return
 from pypfopt.hierarchical_risk_parity import HRPOpt
 from risk_management import RiskManagement
-from sklearn.preprocessing import MinMaxScaler
 
 # 📌 Configurazione del logging avanzato
 logging.basicConfig(
@@ -55,13 +54,13 @@ class PortfolioOptimizer:
         ef = EfficientFrontier(mu, S)
 
         # Massimizza Sharpe Ratio con gestione del rischio dinamica
-        weights = ef.max_sharpe()
+        ef.max_sharpe()
         cleaned_weights = self.risk_management.apply_risk_constraints(
             ef.clean_weights()
         )
 
         logging.info(f"✅ Allocazione storica ottimizzata: {cleaned_weights}")
-        return cleaned_weights, weights
+        return cleaned_weights
 
     def _optimize_scalping(self):
         """Ottimizzazione per scalping basata su alta frequenza e liquidità."""
@@ -73,11 +72,11 @@ class PortfolioOptimizer:
         optimized_weights = self.risk_management.apply_risk_constraints(
             hrp_weights
         )
-        logging.info(f"⚡Allocazione scalping ottimizzata: {optimized_weights}")
-        return optimized_weights, hrp_weights
+        logging.info(f"⚡ Allocazione scalping ottimizzata: {optimized_weights}")
+        return optimized_weights
 
     async def optimize_with_constraints(self):
-        """Ottimizza il portafoglio con vincoli e gestione del rischio."""
+        """Ottimizza il portafoglio con vincoli avanzati e gestione del rischio."""
         max_risk_allowed = await asyncio.to_thread(
             self.risk_management.adjust_risk, self.balance
         )
@@ -93,7 +92,10 @@ class PortfolioOptimizer:
             )
             sharpe_ratio = (port_return - 0.01) / port_volatility
 
-            return np.inf if port_volatility > max_risk_allowed else -sharpe_ratio
+            if port_volatility > max_risk_allowed:
+                return np.inf
+
+            return -sharpe_ratio
 
         constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
         bounds = [(0, 1)] * len(self.market_data.columns)
@@ -114,7 +116,7 @@ class PortfolioOptimizer:
             initial_guess
         )
         logging.info(
-            f"Allocazione con vincoli di rischio: {optimized_allocation}"
+            f"🔍 Allocazione con vincoli di rischio: {optimized_allocation}"
         )
         return optimized_allocation
 
@@ -163,49 +165,6 @@ def parallel_calculations(df):
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [executor.submit(
             complex_calculation, df.filter(pl.col('symbol') == symbol)
-        ) for symbol in df['symbol'].unique()]
+        ) for symbol in df.select("symbol").unique()]
         results = [future.result() for future in futures]
     return pl.concat(results)
-
-
-def complex_calculation(df, market_returns=None):
-    """
-    Esegue calcoli avanzati su un dataset:
-    - Volatilità annualizzata
-    - Beta rispetto al mercato (se i dati di mercato sono forniti)
-    - Maximum Drawdown (per misurare la perdita massima)
-    """
-    df = df.with_columns(
-        pl.col("close").pct_change().alias("returns")
-    ).drop_nulls()
-
-    annual_volatility = df.select(
-        (pl.col("returns").std() * (252 ** 0.5)).alias("annualized_volatility")
-    )
-
-    df = df.with_columns(annual_volatility)
-
-    if market_returns is not None:
-        market_returns = market_returns.with_columns(
-            pl.col("market_close").pct_change().alias("market_returns")
-        ).drop_nulls()
-
-        merged_df = df.join(market_returns, on="timestamp")
-
-        beta = merged_df.select(
-            (pl.corr("returns", "market_returns")).alias("beta")
-        )
-
-        df = df.with_columns(beta)
-
-    df = df.with_columns(
-        pl.col("close").cummax().alias("rolling_max")
-    ).with_columns(
-        ((df["close"] - df["rolling_max"]) / df["rolling_max"]).alias("drawdown")
-    )
-
-    max_drawdown = df.select(pl.min("drawdown").alias("max_drawdown"))
-
-    df = df.with_columns(max_drawdown)
-
-    return df
