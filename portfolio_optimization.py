@@ -71,7 +71,7 @@ class PortfolioOptimizer:
         optimized_weights = self.risk_management.apply_risk_constraints(
             hrp_weights
         )
-        logging.info("⚡ Allocazione scalping ottimizzata: %s", optimized_weights)
+        logging.info("⚡Allocazione scalping ottimizzata: %s", optimized_weights)
         return optimized_weights, hrp_weights
 
     async def optimize_with_constraints(self):
@@ -91,8 +91,9 @@ class PortfolioOptimizer:
                 np.dot(weights.T, np.dot(
                     self.market_data.cov().to_numpy(), weights))
             )
-            sharpe_ratio = (port_return - 0.01) / \
-            port_volatility
+            sharpe_ratio = (
+                port_return - 0.01
+            ) / port_volatility
 
             if port_volatility > max_risk_allowed:
                 return np.inf
