@@ -10,6 +10,7 @@ from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt.expected_returns import mean_historical_return
 from pypfopt.hierarchical_risk_parity import HRPOpt
 from risk_management import RiskManagement
+from sklearn.preprocessing import MinMaxScaler
 
 # 📌 Configurazione del logging avanzato
 logging.basicConfig(
@@ -117,8 +118,30 @@ class PortfolioOptimizer:
         """
         Prepara i dati dei prezzi per l'ottimizzazione convertendoli in Polars.
         """
-        df = self.market_data.select(["timestamp", "symbol", "close"])
+        df = pl.DataFrame(self.market_data)
+        df = df.select(["timestamp", "symbol", "close"])
         return df.pivot(index="timestamp", columns="symbol", values="close")
+
+    def calculate_performance_metrics(self):
+        """
+        Calcola metriche di performance del portafoglio utilizzando Polars.
+        """
+        return self.market_data.groupby('symbol').agg([
+            pl.col('return').mean().alias('mean_return'),
+            pl.col('return').std().alias('return_volatility'),
+            (pl.col('return').mean() / pl.col('return').std()).alias('sharpe_ratio')
+        ])
+
+    def normalize_data(self):
+        """
+        Normalizza e scala i dati di mercato utilizzando Polars.
+        """
+        numeric_cols = self.market_data.select(pl.col(pl.NUMERIC_DTYPES)).columns
+        scaler = MinMaxScaler()
+        scaled_data = scaler.fit_transform(self.market_data.select(numeric_cols).to_numpy())
+        self.market_data = self.market_data.with_columns(
+            [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
+        )
 
 
 async def optimize_for_conditions(market_data, balance, market_condition, risk_tolerance=0.05):
@@ -146,3 +169,12 @@ async def dynamic_allocation(trading_pairs, capital):
         allocations[pair[0]] = capital * weight  # Distribuzione intelligente
 
     return allocations
+
+def parallel_calculations(df):
+    """
+    Esegue calcoli paralleli su DataFrame di Polars.
+    """
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(complex_calculation, df[df['symbol'] == symbol]) for symbol in df['symbol'].unique()]
+        results = [future.result() for future in futures]
+    return pl.concat(results)
