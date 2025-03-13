@@ -27,22 +27,21 @@ class PortfolioOptimizer:
     """
 
     def __init__(self, market_data, balances, scalping=False):
-    """
-    balances = {
-        "Danny": 1000,
-        "Giuseppe": 1500
-    }
-    """
-    self.market_data = market_data
-    self.scalping = scalping
-    self.balances = balances  # 🔥 Saldo per ogni account
-    self.risk_tolerances = self._calculate_dynamic_risk_tolerances()
-    
-    self.risk_management = {
-        account: RiskManagement(
-            max_drawdown=self.risk_tolerances[account]
-        ) for account in self.balances
-    }  # 🔥 Creiamo un RiskManagement per ogni account
+        """
+        balances = {
+            "Danny": 1000,
+            "Giuseppe": 1500
+        }
+        """
+        self.market_data = market_data
+        self.scalping = scalping
+        self.balances = balances  # 🔥 Saldo per ogni account
+        self.risk_tolerances = self._calculate_dynamic_risk_tolerances()
+        self.risk_management = {
+            account: RiskManagement(
+                max_drawdown=self.risk_tolerances[account]
+            ) for account in self.balances
+        }  # 🔥 Creiamo un RiskManagement per ogni account
 
     async def optimize_portfolio(self):
         """
