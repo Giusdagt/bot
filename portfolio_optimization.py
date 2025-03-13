@@ -91,7 +91,8 @@ class PortfolioOptimizer:
                 np.dot(weights.T, np.dot(
                     self.market_data.cov().to_numpy(), weights))
             )
-            sharpe_ratio = (port_return - 0.01) / port_volatility
+            sharpe_ratio = (port_return - 0.01) / \
+            port_volatility
 
             if port_volatility > max_risk_allowed:
                 return np.inf
@@ -189,7 +190,8 @@ def complex_calculation(df):
     df = df.with_columns(
         pl.col("close").cummax().alias("rolling_max")
     ).with_columns(
-        ((df["close"] - df["rolling_max"]) / df["rolling_max"]).alias("drawdown")
+        ((df["close"] - df["rolling_max"]) /
+         df["rolling_max"]).alias("drawdown")
     )
 
     max_drawdown = df.select(pl.min("drawdown").alias("max_drawdown"))
