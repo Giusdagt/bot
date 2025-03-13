@@ -28,7 +28,7 @@ class PortfolioOptimizer:
     supporto per scalping e auto-adattamento basato su Polars.
     """
 
-    def __init__(self, market_data, balance, risk_tolerance=0.05, 
+    def __init__(self, market_data, balance, risk_tolerance=0.05,
                  scalping=False):
         self.market_data = market_data
         self.scalping = scalping
@@ -37,7 +37,7 @@ class PortfolioOptimizer:
 
     async def optimize_portfolio(self):
         """
-        Ottimizza il portafoglio in base al tipo di trading 
+        Ottimizza il portafoglio in base al tipo di trading
         (scalping o dati storici) e gestione del rischio.
         """
         if self.scalping:
@@ -73,11 +73,11 @@ class PortfolioOptimizer:
         optimized_weights = self.risk_management.apply_risk_constraints(
             hrp_weights
         )
-        logging.info(f"⚡ Allocazione scalping ottimizzata: {optimized_weights}")
+        logging.info(f"⚡Allocazione scalping ottimizzata: {optimized_weights}")
         return optimized_weights, hrp_weights
 
     async def optimize_with_constraints(self):
-        """Ottimizza il portafoglio con vincoli avanzati e gestione del rischio."""
+        """Ottimizza il portafoglio con vincoli e gestione del rischio."""
         max_risk_allowed = await asyncio.to_thread(
             self.risk_management.adjust_risk, self.balance
         )
@@ -114,7 +114,7 @@ class PortfolioOptimizer:
             initial_guess
         )
         logging.info(
-            f"🔍 Allocazione finale con vincoli di rischio: {optimized_allocation}"
+            f"Allocazione con vincoli di rischio: {optimized_allocation}"
         )
         return optimized_allocation
 
@@ -127,14 +127,15 @@ class PortfolioOptimizer:
         return df.pivot(index="timestamp", columns="symbol", values="close")
 
 
-async def optimize_for_conditions(market_data, balance, market_condition, 
+async def optimize_for_conditions(market_data, balance, market_condition,
                                   risk_tolerance=0.05):
     """
     Seleziona automaticamente l'ottimizzazione migliore in base alle condizioni
     di mercato e al saldo disponibile.
     """
     optimizer = PortfolioOptimizer(
-        market_data, balance, risk_tolerance, scalping=(market_condition == "scalping")
+        market_data, balance, risk_tolerance,
+        scalping=(market_condition == "scalping")
     )
     return await optimizer.optimize_with_constraints()
 
