@@ -1,9 +1,15 @@
-# portfolio_optimization.py
-import numpy as np
-import polars as pl
+"""
+portfolio_optimization.py
+Questo modulo contiene classi e funzioni per ottimizzare 
+portafogli finanziari. Include la gestione avanzata del 
+rischio, supporto per lo scalping e auto-adattamento basato 
+su Polars.
+"""
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import numpy as np
+import polars as pl
 from scipy.optimize import minimize
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt.risk_models import CovarianceShrinkage
