@@ -1,3 +1,9 @@
+"""
+Modulo per l'ottimizzazione del portafoglio con gestione
+avanzata del rischio,
+supporto per scalping e auto-adattamento basato su Polars.
+"""
+
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -70,7 +76,7 @@ class PortfolioOptimizer:
             drawdown = self.market_data.select(
                 pl.col("drawdown").min()
             ).item()
-            logging.info(f"Drawdown minimo: {drawdown}")
+            logging.info("Drawdown minimo: %s", drawdown)
 
             balance_factor = min(0.05, balance / 10000)
             risk_tolerance = max(
@@ -176,13 +182,13 @@ def complex_calculation(df):
 
     # Esempio di utilizzo di `numpy` per calcoli aggiuntivi
     np_array = np.array(df['returns'])
-    logging.info(f"Media dei rendimenti: {np.mean(np_array)}")
+    logging.info("Media dei rendimenti: %s", np.mean(np_array))
 
     # Esempio di utilizzo di `minimize` per l'ottimizzazione
     def objective_function(x):
         return np.sum(x**2)
 
     result = minimize(objective_function, np_array[:10])
-    logging.info(f"Risultato dell'ottimizzazione: {result.fun}")
+    logging.info("Risultato dell'ottimizzazione: %s", result.fun)
 
     return df
