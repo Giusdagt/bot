@@ -1,15 +1,16 @@
 # portfolio_optimization.py
-import numpy as np
-import polars as pl
 import logging
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import numpy as np
+import polars as pl
 from scipy.optimize import minimize
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt.expected_returns import mean_historical_return
 from pypfopt.hierarchical_risk_parity import HRPOpt
 from risk_management import RiskManagement
+from sklearn.preprocessing import MinMaxScaler
 
 # 📌 Configurazione del logging avanzato
 logging.basicConfig(
