@@ -1,8 +1,8 @@
 """
 portfolio_optimization.py
-Questo modulo contiene classi e funzioni per ottimizzare 
-portafogli finanziari. Include la gestione avanzata del 
-rischio, supporto per lo scalping e auto-adattamento basato 
+Questo modulo contiene classi e funzioni per ottimizzare
+portafogli finanziari. Include la gestione avanzata del
+rischio, supporto per lo scalping e auto-adattamento basato
 su Polars.
 """
 import logging
