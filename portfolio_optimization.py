@@ -46,7 +46,8 @@ class PortfolioOptimizer:
         self.risk_management = {
             account: RiskManagement(
                 max_drawdown=self.risk_tolerances[account]
-            ) for account in self.balances
+            )
+            for account in self.balances
         }  # 🔥 Creiamo un RiskManagement per ogni account
 
     async def optimize_portfolio(self):
@@ -59,6 +60,12 @@ class PortfolioOptimizer:
             return await asyncio.to_thread(self._optimize_scalping)
         logging.info("📊 Ottimizzazione per dati storici in corso...")
         return await asyncio.to_thread(self._optimize_historical)
+
+    def get_risk_management(self):
+        """
+        Restituisce le impostazioni di gestione del rischio corrente.
+        """
+        return self.risk_management
 
     def _calculate_dynamic_risk_tolerances(self):
         """
