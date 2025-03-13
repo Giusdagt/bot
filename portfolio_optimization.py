@@ -40,12 +40,12 @@ class PortfolioOptimizer:
         """
         self.market_data = market_data
         self.scalping = scalping
-        self.balances = balances  
+        self.balances = balances  # 🔥 Saldo per ogni account
         self.risk_tolerances = self._calculate_dynamic_risk_tolerances()
         self.risk_management = {
             account: RiskManagement(self.risk_tolerances[account])
             for account in self.balances
-        }
+        }  # 🔥 Creiamo un RiskManagement per ogni account
 
     async def optimize_portfolio(self):
         """
@@ -68,35 +68,14 @@ class PortfolioOptimizer:
         risk_tolerances = {}
 
         for account, balance in self.balances.items():
-            try:
-                volatility = self.market_data.select(
-                    pl.col("volatility").mean()
-                ).item()
-                drawdown = self.market_data.select(
-                    pl.col("drawdown").min()
-                ).item()
+            volatility = self.market_data.select(pl.col("volatility").mean()).item()
+            drawdown = self.market_data.select(pl.col("drawdown").min()).item()
 
-                balance_factor = min(0.05, balance / 10000)
+            balance_factor = min(0.05, balance / 10000)
+            risk_tolerance = max(0.01, min(0.05, balance_factor / (volatility * 10)))
 
-                if volatility == 0:
-                    volatility = 1e-6  
-
-                risk_tolerance = max(0.01, min(
-                    0.05, balance_factor / (volatility * 10)
-                ))
-
-                risk_tolerances[account] = risk_tolerance
-                logging.info(
-                    "📊 %s - Risk Tolerance Dinamico: %.4f",
-                    account, risk_tolerance
-                )
-
-            except Exception as e:
-                logging.error(
-                    "❌ Errore nel calcolo della tolleranza al rischio per %s: %s",
-                    account, e
-                )
-                risk_tolerances[account] = 0.01  
+            risk_tolerances[account] = risk_tolerance
+            logging.info("📊 %s - Risk Tolerance Dinamico: %.4f", account, risk_tolerance)
 
         return risk_tolerances
 
@@ -127,7 +106,7 @@ class PortfolioOptimizer:
                 hrp_weights
             ) for acc in self.balances
         }
-        logging.info("⚡ Allocazione scalping ottimizzata: %s", optimized_weights)
+        logging.info("Allocazione scalping ottimizzata: %s", optimized_weights)
         return optimized_weights, hrp_weights
 
     def _prepare_price_data(self):
