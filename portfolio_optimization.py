@@ -114,8 +114,7 @@ class PortfolioOptimizer:
             initial_guess
         )
         logging.info(
-            f"\ud83d\udd0d
-            Allocazione con vincoli di rischio: {optimized_allocation}"
+            f"\ud83d\udd0d Allocazione con vincoli: {optimized_allocation}"
         )
         return optimized_allocation
 
