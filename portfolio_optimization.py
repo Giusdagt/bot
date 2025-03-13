@@ -15,7 +15,7 @@ from sklearn.preprocessing import MinMaxScaler
 # 📌 Configurazione del logging avanzato
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levellevel)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 # ThreadPoolExecutor per calcoli paralleli
@@ -28,7 +28,8 @@ class PortfolioOptimizer:
     supporto per scalping e auto-adattamento basato su Polars.
     """
 
-    def __init__(self, market_data, balance, risk_tolerance=0.05, scalping=False):
+    def __init__(self, market_data, balance, risk_tolerance=0.05, 
+                 scalping=False):
         self.market_data = market_data
         self.scalping = scalping
         self.risk_management = RiskManagement(max_risk=risk_tolerance)
@@ -47,7 +48,7 @@ class PortfolioOptimizer:
             return await asyncio.to_thread(self._optimize_historical)
 
     def _optimize_historical(self):
-        """Ottimizzazione basata su dati storici con gestione avanzata del rischio."""
+        """Ottimizzazione basata su dati storici con gestione avanzata."""
         prices = self._prepare_price_data()
         mu = mean_historical_return(prices)
         S = CovarianceShrinkage(prices).ledoit_wolf()
@@ -58,8 +59,9 @@ class PortfolioOptimizer:
         cleaned_weights = self.risk_management.apply_risk_constraints(
             ef.clean_weights()
         )
+
         logging.info(f"✅ Allocazione storica ottimizzata: {cleaned_weights}")
-        return cleaned_weights
+        return cleaned_weights, weights
 
     def _optimize_scalping(self):
         """Ottimizzazione per scalping basata su alta frequenza e liquidità."""
@@ -72,7 +74,7 @@ class PortfolioOptimizer:
             hrp_weights
         )
         logging.info(f"⚡ Allocazione scalping ottimizzata: {optimized_weights}")
-        return optimized_weights
+        return optimized_weights, hrp_weights
 
     async def optimize_with_constraints(self):
         """Ottimizza il portafoglio con vincoli avanzati e gestione del rischio."""
@@ -81,14 +83,16 @@ class PortfolioOptimizer:
         )
 
         def objective(weights):
-            """Funzione obiettivo: massimizzare Sharpe Ratio con penalizzazione rischio."""
-            port_return = np.dot(weights, self.market_data.mean(axis=0).to_numpy())
+            """Massimizza Sharpe Ratio con penalizzazione del rischio."""
+            port_return = np.dot(
+                weights, self.market_data.mean(axis=0).to_numpy()
+            )
             port_volatility = np.sqrt(
-                np.dot(weights.T, np.dot(self.market_data.cov().to_numpy(), weights))
+                np.dot(weights.T, np.dot(
+                    self.market_data.cov().to_numpy(), weights))
             )
             sharpe_ratio = (port_return - 0.01) / port_volatility
 
-            # Penalizza se il rischio supera il massimo consentito
             return np.inf if port_volatility > max_risk_allowed else -sharpe_ratio
 
         constraints = {"type": "eq", "fun": lambda w: np.sum(w) - 1}
@@ -122,29 +126,9 @@ class PortfolioOptimizer:
         df = df.select(["timestamp", "symbol", "close"])
         return df.pivot(index="timestamp", columns="symbol", values="close")
 
-    def calculate_performance_metrics(self):
-        """
-        Calcola metriche di performance del portafoglio utilizzando Polars.
-        """
-        return self.market_data.groupby('symbol').agg([
-            pl.col('return').mean().alias('mean_return'),
-            pl.col('return').std().alias('return_volatility'),
-            (pl.col('return').mean() / pl.col('return').std()).alias('sharpe_ratio')
-        ])
 
-    def normalize_data(self):
-        """
-        Normalizza e scala i dati di mercato utilizzando Polars.
-        """
-        numeric_cols = self.market_data.select(pl.col(pl.NUMERIC_DTYPES)).columns
-        scaler = MinMaxScaler()
-        scaled_data = scaler.fit_transform(self.market_data.select(numeric_cols).to_numpy())
-        self.market_data = self.market_data.with_columns(
-            [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(numeric_cols)]
-        )
-
-
-async def optimize_for_conditions(market_data, balance, market_condition, risk_tolerance=0.05):
+async def optimize_for_conditions(market_data, balance, market_condition, 
+                                  risk_tolerance=0.05):
     """
     Seleziona automaticamente l'ottimizzazione migliore in base alle condizioni
     di mercato e al saldo disponibile.
@@ -170,6 +154,19 @@ async def dynamic_allocation(trading_pairs, capital):
 
     return allocations
 
+
+def parallel_calculations(df):
+    """
+    Esegue calcoli paralleli su DataFrame di Polars.
+    """
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(
+            complex_calculation, df.filter(pl.col('symbol') == symbol)
+        ) for symbol in df['symbol'].unique()]
+        results = [future.result() for future in futures]
+    return pl.concat(results)
+
+
 def complex_calculation(df, market_returns=None):
     """
     Esegue calcoli avanzati su un dataset:
@@ -177,8 +174,6 @@ def complex_calculation(df, market_returns=None):
     - Beta rispetto al mercato (se i dati di mercato sono forniti)
     - Maximum Drawdown (per misurare la perdita massima)
     """
-
-    # 📌 1️⃣ Calcolo della volatilità annualizzata
     df = df.with_columns(
         pl.col("close").pct_change().alias("returns")
     ).drop_nulls()
@@ -189,7 +184,6 @@ def complex_calculation(df, market_returns=None):
 
     df = df.with_columns(annual_volatility)
 
-    # 📌 2️⃣ Calcolo del Beta rispetto al mercato (se i dati di mercato sono forniti)
     if market_returns is not None:
         market_returns = market_returns.with_columns(
             pl.col("market_close").pct_change().alias("market_returns")
@@ -203,7 +197,6 @@ def complex_calculation(df, market_returns=None):
 
         df = df.with_columns(beta)
 
-    # 📌 3️⃣ Calcolo del Maximum Drawdown
     df = df.with_columns(
         pl.col("close").cummax().alias("rolling_max")
     ).with_columns(
@@ -215,13 +208,3 @@ def complex_calculation(df, market_returns=None):
     df = df.with_columns(max_drawdown)
 
     return df
-
-
-def parallel_calculations(df):
-    """
-    Esegue calcoli paralleli su DataFrame di Polars.
-    """
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [executor.submit(complex_calculation, df.filter(pl.col('symbol') == symbol)) for symbol in df['symbol'].unique()]
-        results = [future.result() for future in futures]
-    return pl.concat(results)
