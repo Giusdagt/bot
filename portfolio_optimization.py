@@ -170,14 +170,52 @@ async def dynamic_allocation(trading_pairs, capital):
 
     return allocations
 
-def complex_calculation(df):
+def complex_calculation(df, market_returns=None):
     """
-    Placeholder function for complex calculations.
-    Replace this with the actual implementation.
+    Esegue calcoli avanzati su un dataset:
+    - Volatilità annualizzata
+    - Beta rispetto al mercato (se i dati di mercato sono forniti)
+    - Maximum Drawdown (per misurare la perdita massima)
     """
-    # Implement your complex calculation logic here
-    # For now, let's just return the input DataFrame
+
+    # 📌 1️⃣ Calcolo della volatilità annualizzata
+    df = df.with_columns(
+        pl.col("close").pct_change().alias("returns")
+    ).drop_nulls()
+
+    annual_volatility = df.select(
+        (pl.col("returns").std() * (252 ** 0.5)).alias("annualized_volatility")
+    )
+
+    df = df.with_columns(annual_volatility)
+
+    # 📌 2️⃣ Calcolo del Beta rispetto al mercato (se i dati di mercato sono forniti)
+    if market_returns is not None:
+        market_returns = market_returns.with_columns(
+            pl.col("market_close").pct_change().alias("market_returns")
+        ).drop_nulls()
+
+        merged_df = df.join(market_returns, on="timestamp")
+
+        beta = merged_df.select(
+            (pl.corr("returns", "market_returns")).alias("beta")
+        )
+
+        df = df.with_columns(beta)
+
+    # 📌 3️⃣ Calcolo del Maximum Drawdown
+    df = df.with_columns(
+        pl.col("close").cummax().alias("rolling_max")
+    ).with_columns(
+        ((df["close"] - df["rolling_max"]) / df["rolling_max"]).alias("drawdown")
+    )
+
+    max_drawdown = df.select(pl.min("drawdown").alias("max_drawdown"))
+
+    df = df.with_columns(max_drawdown)
+
     return df
+
 
 def parallel_calculations(df):
     """
