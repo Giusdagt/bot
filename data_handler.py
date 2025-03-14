@@ -199,6 +199,13 @@ def get_normalized_market_data(symbol):
 
 
 async def main():
+     ""
+    Funzione principale per inizializzare MT5,
+    elaborare dati storici e recuperare dati in tempo reale.
+    Questa funzione carica la mappatura automatica dei simboli,
+    elabora i dati storici e recupera i dati in tempo reale per
+    i simboli specificati utilizzando MetaTrader5.
+    """
     try:
         auto_mapping = load_auto_symbol_mapping()
         await process_historical_data()
