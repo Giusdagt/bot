@@ -56,6 +56,7 @@ os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count() or 8)
 
+
 def file_hash(filepath):
     """Calcola l'hash del file per rilevare modifiche."""
     if not os.path.exists(filepath):
