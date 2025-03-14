@@ -7,6 +7,7 @@ con MetaTrader5.
 """
 
 import os
+import sys
 import logging
 import hashlib
 import shutil
@@ -33,6 +34,11 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+# Inizializza MetaTrader5 solo una volta all'avvio
+if not mt5.initialize():
+    logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
+    sys.exit()
+
 SAVE_DIRECTORY = (
     "/mnt/usb_trading_data/processed_data"
     if os.path.exists("/mnt/usb_trading_data")
@@ -49,7 +55,6 @@ os.makedirs(SAVE_DIRECTORY, exist_ok=True)
 os.makedirs(os.path.dirname(CLOUD_SYNC_PATH), exist_ok=True)
 
 executor = ThreadPoolExecutor(max_workers=os.cpu_count() or 8)
-
 
 def file_hash(filepath):
     """Calcola l'hash del file per rilevare modifiche."""
@@ -113,12 +118,12 @@ def normalize_data(df):
     return df
 
 
-def process_historical_data():
+async def process_historical_data():
     """Elabora i dati storici, calcola indicatori avanzati e li normalizza."""
     try:
         if not os.path.exists(RAW_DATA_PATH):
             logging.warning("⚠️ Grezzi non trovato, avvio fetch.")
-            fetch_new_data()
+        await fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
             logging.warning("⚠️ Dati grezzi vuoto, nessun dato da processare.")
@@ -134,9 +139,6 @@ def process_historical_data():
 def fetch_mt5_data(symbol):
     """Recupera dati di scalping in tempo reale da MetaTrader5."""
     try:
-        if not mt5.initialize():
-            logging.error("❌Errore inizializzazione MT5: %s", mt5.last_error())
-            return None
 
         rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
         if rates is None or len(rates) == 0:
@@ -155,7 +157,7 @@ def fetch_mt5_data(symbol):
         return None
 
 
-def get_realtime_data(symbols):
+async def get_realtime_data(symbols):
     """Ottiene dati in tempo reale da MT5 e aggiorna il database."""
     try:
         for symbol in symbols:
@@ -195,15 +197,21 @@ def get_normalized_market_data(symbol):
         return None
 
 
+async def main():
+    try:
+        auto_mapping = load_auto_symbol_mapping()
+        await process_historical_data()
+        realtime_symbols = (
+            sum(load_preset_assets().values(), [])
+            if USE_PRESET_ASSETS else
+            list(auto_mapping.values())
+        )
+        realtime_symbols = [
+            standardize_symbol(s, auto_mapping) for s in realtime_symbols
+        ]
+        await get_realtime_data(realtime_symbols)
+    finally:
+        mt5.shutdown()  # Assicura che la connessione venga chiusa alla fine
+
 if __name__ == "__main__":
-    auto_mapping = load_auto_symbol_mapping()
-    process_historical_data()
-    realtime_symbols = (
-        sum(load_preset_assets().values(), [])
-        if USE_PRESET_ASSETS else
-        list(auto_mapping.values())
-    )
-    realtime_symbols = [
-        standardize_symbol(s, auto_mapping) for s in realtime_symbols
-    ]
-    asyncio.run(get_realtime_data(realtime_symbols))
+    asyncio.run(main())
