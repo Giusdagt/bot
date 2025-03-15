@@ -37,7 +37,7 @@ CLOUD_MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 class AIModel:
     """
-    Classe AI per il trading automatico. Utilizza modelli di deep learning e 
+    Classe AI per il trading automatico. Utilizza modelli di deep learning e
     machine learning per analizzare i mercati e decidere le operazioni.
     """
 
@@ -57,11 +57,9 @@ class AIModel:
             bool: True se il trade è consentito, False altrimenti.
         """
         market_data = get_best_market_data(symbol)
-        
         if market_data is None or market_data.is_empty():
             logging.warning(f"⚠️ Nessun dato valido per {symbol}.")
-            return False
-        
+            return False        
         self.risk_manager.adjust_risk(symbol)
         risk = self.risk_manager.risk_settings["trailing_stop_pct"]
 
@@ -136,14 +134,12 @@ def example_prediction(symbol: str):
         return
     
     lstm_predictions = lstm_model.predict(X_lstm) if lstm_model else [None]
-    xgb_predictions = xgb_model.predict(X_xgb) if xgb_model else [None]
-    
+    xgb_predictions = xgb_model.predict(X_xgb) if xgb_model else [None] 
     logging.info(f"📊 Previsione LSTM: {lstm_predictions[-1]}")
     logging.info(f"📊 Previsione XGBoost: {xgb_predictions[-1]}")
-    
     optimizer = PortfolioOptimizer(data)
     optimized_allocation = optimizer.optimize()
-    logging.info(f"💰 Portafoglio ottimizzato per {symbol}: {optimized_allocation}")
+    logging.info(f"Portafoglio ottimizzato X {symbol}: {optimized_allocation}")
 
 
 if __name__ == "__main__":
