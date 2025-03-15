@@ -55,7 +55,7 @@ class RiskManagement:
         market_data = data_handler.get_normalized_market_data(symbol)
         if not market_data or "volatility" not in market_data:
             logging.warning(f"⚠️ Dati non disponibili X {symbol}, uso default")
-            return entry_price * 0.95, entry_price * 0.98        
+            return entry_price * 0.95, entry_price * 0.98
         volatility = market_data["volatility"]
         stop_loss = entry_price * (1 - (volatility * 1.5))
         trailing_stop = entry_price * (1 - (volatility * 0.8))
@@ -65,7 +65,9 @@ class RiskManagement:
         """Adatta trailing stop e il capitale usando dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
         required_keys = ["volume", "price_change", "rsi", "bollinger_width"]
-        if not market_data or any(key not in market_data for key in required_keys):
+        if not market_data or any(
+            key not in market_data for key in required_keys
+        ):
             logging.warning(f"⚠️ Dati incompleti X {symbol}, resto invariato")
             return  # Non modifica il rischio se i dati non sono completi
 
@@ -95,11 +97,15 @@ class RiskManagement:
         market_data = data_handler.get_normalized_market_data(symbol)
 
         if balance <= 0:
-            logging.warning(f"⚠️ Saldo non valido ({balance}) per {symbol}, imposta 0.")
+            logging.warning(
+                f"⚠️ Saldo non valido ({balance}) per {symbol}, imposta 0."
+            )
             return 0
 
         if not market_data or "momentum" not in market_data:
-            logging.warning(f"⚠️ Momentum non disponibile per {symbol}, uso valore base.")
+            logging.warning(
+                f"⚠️ Momentum non disponibile per {symbol}, uso valore base."
+            )
             momentum_factor = 1  # Default
         else:
             momentum_factor = 1 + market_data["momentum"]
