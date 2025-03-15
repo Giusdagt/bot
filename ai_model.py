@@ -1,175 +1,151 @@
-# ai_model.py - Modello AI per il trading automatico con ottimizzazione del portafoglio
 import os
-import pandas as pd
-import numpy as np
 import logging
-import xgboost as xgb
 from datetime import datetime
 from pathlib import Path
+import polars as pl
+import numpy as np
+import xgboost as xgb
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
 from indicators import TradingIndicators
-from data_handler import load_data
+from data_handler import (
+    get_normalized_market_data, process_historical_data, fetch_mt5_data
+)
 from drl_agent import DRLAgent
 from gym_trading_env import TradingEnv
-from risk_management import RiskManagement
+from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 
 # 📌 Configurazione logging avanzata
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 # 📌 Percorsi per il salvataggio dei modelli
 MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path(
-    "/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+    "/mnt/usb_trading_data"
+).exists() else Path("D:/trading_data/models")
 CLOUD_MODEL_DIR = Path("/mnt/google_drive/trading_models")
+MODEL_FILE = MODEL_DIR / "trading_model.h5"
+XGB_MODEL_FILE = MODEL_DIR / "xgb_trading_model.json"
 
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 CLOUD_MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-MODEL_FILE = MODEL_DIR / "trading_model.h5"
-XGB_MODEL_FILE = MODEL_DIR / "xgb_trading_model.json"
 
-# ===========================
-# 🔹 Preprocessing Dati
-# ===========================
-def preprocess_data(data):
-    """Preprocessa i dati per il modello AI."""
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    return scaler.fit_transform(data), scaler
+class AIModel:
+    """
+    Classe AI per il trading automatico. Utilizza modelli di deep learning e 
+    machine learning per analizzare i mercati e decidere le operazioni.
+    """
 
-def prepare_lstm_data(data, look_back=60):
-    """Prepara i dati per l'input nel modello LSTM."""
-    X, y = [], []
-    for i in range(look_back, len(data)):
-        X.append(data[i-look_back:i, 0])
-        y.append(data[i, 0])
-    return np.array(X).reshape(-1, look_back, 1), np.array(y)
+    def __init__(self):
+        self.volatility_predictor = VolatilityPredictor()
+        self.risk_manager = RiskManagement()
 
-def prepare_xgboost_data(data, look_back=60):
-    """Prepara i dati per l'input nel modello XGBoost."""
-    X, y = [], []
-    for i in range(look_back, len(data)):
-        X.append(data[i-look_back:i, 0])
-        y.append(data[i, 0])
-    return np.array(X), np.array(y)
+    def decide_trade(self, symbol: str) -> bool:
+        """
+        Decide se eseguire un'operazione di trading basandosi sul rischio e
+        sulla previsione di volatilità.
 
-# ===========================
-# 🔹 Creazione e Addestramento dei Modelli AI
-# ===========================
-def create_lstm_model(input_shape):
-    """Crea un modello LSTM compilato."""
-    model = Sequential([
-        LSTM(50, return_sequences=True, input_shape=input_shape),
-        Dropout(0.2),
-        LSTM(50, return_sequences=False),
-        Dropout(0.2),
-        Dense(25),
-        Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    return model
+        Args:
+            symbol (str): Simbolo dell'asset da analizzare.
 
-def train_lstm_model(X_train, y_train, X_val, y_val):
-    """Allena il modello LSTM."""
-    model = create_lstm_model((X_train.shape[1], 1))
-    early_stop = EarlyStopping(monitor='val_loss', patience=5,
-                               restore_best_weights=True)
-    model.fit(X_train, y_train, batch_size=32, epochs=50,
-              validation_data=(X_val, y_val), callbacks=[early_stop])
-    model.save(MODEL_FILE)
-    logging.info(f"✅ Modello LSTM salvato in {MODEL_FILE}")
-    return model
+        Returns:
+            bool: True se il trade è consentito, False altrimenti.
+        """
+        market_data = get_best_market_data(symbol)
+        
+        if market_data is None or market_data.is_empty():
+            logging.warning(f"⚠️ Nessun dato valido per {symbol}.")
+            return False
+        
+        self.risk_manager.adjust_risk(symbol)
+        risk = self.risk_manager.risk_settings["trailing_stop_pct"]
 
-def create_xgboost_model():
-    """Crea un modello XGBoost."""
-    return xgb.XGBRegressor(objective='reg:squarederror', n_estimators=100,
-                            learning_rate=0.1)
+        if risk < 0.3:
+            logging.info(f"🚀 AI: Esegui trade su {symbol} (Rischio: {risk:.2f})")
+            return True
+        else:
+            logging.warning(f"⚠️ AI: Rischio troppo alto ({risk:.2f}) per {symbol}")
+            return False
 
-def train_xgboost_model(X_train, y_train, X_val, y_val):
-    """Allena il modello XGBoost."""
-    model = create_xgboost_model()
-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)],
-              early_stopping_rounds=10, verbose=True)
-    model.save_model(XGB_MODEL_FILE)
-    logging.info(f"✅ Modello XGBoost salvato in {XGB_MODEL_FILE}")
-    return model
 
-# ===========================
-# 🔹 Ottimizzazione del Portafoglio
-# ===========================
-def optimize_trading_portfolio(data):
-    """Ottimizza il portafoglio utilizzando la classe PortfolioOptimizer."""
+def get_best_market_data(symbol: str) -> pl.DataFrame:
+    """
+    Recupera i migliori dati di mercato disponibili per un asset, scegliendo
+    tra scalping e storico.
+
+    Args:
+        symbol (str): Simbolo dell'asset.
+
+    Returns:
+        pl.DataFrame: Dati di mercato ottimizzati.
+    """
+    data = fetch_mt5_data(symbol)
+    if data is None or data.is_empty():
+        logging.info(f"📡 Nessun dato di scalping per {symbol}. Uso storico.")
+        data = get_normalized_market_data(symbol)
+    
+    if data is None or data.is_empty():
+        logging.warning(f"⚠️ Nessun dato valido per {symbol}, provo con storico.")
+        process_historical_data()
+        data = get_normalized_market_data(symbol)
+    
+    return data
+
+
+def example_prediction(symbol: str):
+    """
+    Esegue una previsione AI adattiva con dati storici o di scalping.
+
+    Args:
+        symbol (str): Simbolo dell'asset su cui eseguire la previsione.
+    """
+    logging.info(f"📡 Recupero dati per {symbol}")
+    data = get_best_market_data(symbol)
+    
+    if data is None or data.is_empty():
+        logging.error(f"❌ Nessun dato disponibile per {symbol}")
+        return
+    
+    if "close" not in data.columns or data["close"].null_count() > 0:
+        logging.warning("⚠️ Dati di chiusura incompleti o nulli, impossibile predire.")
+        return
+    
+    scaled_data = MinMaxScaler(feature_range=(0, 1)).fit_transform(
+        data["close"].to_numpy().reshape(-1, 1)
+    )
+    X_lstm = np.array([scaled_data[-60:]]).reshape(-1, 60, 1)
+    X_xgb = np.array([scaled_data[-60:]])
+    
+    lstm_model = load_model(MODEL_FILE) if MODEL_FILE.exists() else train_lstm_model()
+    xgb_model = xgb.XGBRegressor()
+    
+    if XGB_MODEL_FILE.exists():
+        xgb_model.load_model(XGB_MODEL_FILE)
+    else:
+        xgb_model = train_xgboost_model()
+    
+    ai_model = AIModel()
+    
+    if not ai_model.decide_trade(symbol):
+        logging.warning(f"⚠️ Nessuna operazione su {symbol} a causa del rischio elevato.")
+        return
+    
+    lstm_predictions = lstm_model.predict(X_lstm) if lstm_model else [None]
+    xgb_predictions = xgb_model.predict(X_xgb) if xgb_model else [None]
+    
+    logging.info(f"📊 Previsione LSTM: {lstm_predictions[-1]}")
+    logging.info(f"📊 Previsione XGBoost: {xgb_predictions[-1]}")
+    
     optimizer = PortfolioOptimizer(data)
     optimized_allocation = optimizer.optimize()
-    logging.info(f"📈 Allocazione ottimizzata: {optimized_allocation}")
-    return optimized_allocation
+    logging.info(f"💰 Portafoglio ottimizzato per {symbol}: {optimized_allocation}")
 
-# ===========================
-# 🔹 Funzioni per le Previsioni
-# ===========================
-def load_lstm_model():
-    """Carica il modello LSTM."""
-    if MODEL_FILE.exists():
-        model = load_model(MODEL_FILE)
-        logging.info(f"✅ Modello LSTM caricato da {MODEL_FILE}")
-        return model
-    logging.error(f"❌ Il file del modello LSTM {MODEL_FILE} non esiste.")
-    return None
-
-def load_xgboost_model():
-    """Carica il modello XGBoost."""
-    if XGB_MODEL_FILE.exists():
-        model = xgb.XGBRegressor()
-        model.load_model(XGB_MODEL_FILE)
-        logging.info(f"✅ Modello XGBoost caricato da {XGB_MODEL_FILE}")
-        return model
-    logging.error(f"❌ Il file del modello XGBoost {XGB_MODEL_FILE} non esiste.")
-    return None
-
-# ===========================
-# 🔹 Esecuzione del Modello AI
-# ===========================
-def example_prediction():
-    """Esegue una previsione di esempio con i modelli AI."""
-    data = load_data()
-    scaled_data, _ = preprocess_data(data['close'].values.reshape(-1, 1))
-
-    X_lstm, _ = prepare_lstm_data(scaled_data)
-    X_xgb, _ = prepare_xgboost_data(scaled_data)
-
-    lstm_model = load_lstm_model()
-    xgb_model = load_xgboost_model()
-
-    if lstm_model:
-        lstm_predictions = lstm_model.predict(X_lstm)
-        logging.info(f"📊 Previsione LSTM: {lstm_predictions[-1]}")
-
-    if xgb_model:
-        xgb_predictions = xgb_model.predict(X_xgb)
-        logging.info(f"📊 Previsione XGBoost: {xgb_predictions[-1]}")
-
-    # 🔥 Utilizzo di `os` per ottenere la directory corrente
-    current_dir = os.getcwd()
-    logging.info(f"📂 Directory corrente: {current_dir}")
-
-    # 🔥 Utilizzo di `pd` per creare un DataFrame di esempio
-    df_example = pd.DataFrame({'date': [datetime.now()], 
-                               'prediction': [lstm_predictions[-1]]})
-    logging.info(f"📋 DataFrame di esempio creato: {df_example}")
-
-    # 🔥 Utilizzo di `RandomForestRegressor` per creare un modello di esempio
-    rf_model = RandomForestRegressor(n_estimators=10)
-    rf_model.fit(np.array([[0]]), np.array([0]))
-    logging.info(f"🌲 Modello RandomForestRegressor creato: {rf_model}")
-
-    optimized_portfolio = optimize_trading_portfolio(data)
-    logging.info(f"💰 Portafoglio ottimizzato: {optimized_portfolio}")
 
 if __name__ == "__main__":
-    logging.info("🚀 Avvio del modello AI per il trading automatico con ottimizzazione del portafoglio.")
-    example_prediction()
+    logging.info("🚀 Avvio del modello AI per il trading automatico.")
+    example_prediction("EURUSD")
