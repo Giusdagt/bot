@@ -108,17 +108,20 @@ def example_prediction(symbol: str):
     )
     X_lstm = np.array([scaled_data[-60:]]).reshape(-1, 60, 1)
     X_xgb = np.array([scaled_data[-60:]])
-    lstm_model = load_model(MODEL_FILE) if MODEL_FILE.exists() else train_lstm_model()
-    xgb_model = xgb.XGBRegressor()  
+    lstm_model = (
+    load_model(MODEL_FILE) if MODEL_FILE.exists() else train_lstm_model()
+    )
+    xgb_model = xgb.XGBRegressor()
     if XGB_MODEL_FILE.exists():
         xgb_model.load_model(XGB_MODEL_FILE)
     else:
         xgb_model = train_xgboost_model()
-    ai_model = AIModel()    
+    ai_model = AIModel()
     if not ai_model.decide_trade(symbol):
-        logging.warning(f"⚠️ Nessuna operazione su {symbol} a causa del rischio elevato.")
+        logging.warning(
+            f"⚠️ Nessuna operazione su {symbol} a causa del rischio elevato."
+        )
         return
-    
     lstm_predictions = lstm_model.predict(X_lstm) if lstm_model else [None]
     xgb_predictions = xgb_model.predict(X_xgb) if xgb_model else [None]
     logging.info(f"📊 Previsione LSTM: {lstm_predictions[-1]}")
