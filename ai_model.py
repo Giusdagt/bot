@@ -85,7 +85,7 @@ def get_best_market_data(symbol: str) -> pl.DataFrame:
     if data is None or data.is_empty():
         logging.warning(f"⚠️Nessun dato valido X {symbol}, provo con storico.")
         process_historical_data()
-        data = get_normalized_market_data(symbol)   
+        data = get_normalized_market_data(symbol)
     return data
 
 
@@ -96,22 +96,18 @@ def example_prediction(symbol: str):
         symbol (str): Simbolo dell'asset su cui eseguire la previsione.
     """
     logging.info(f"📡 Recupero dati per {symbol}")
-    data = get_best_market_data(symbol)
-    
+    data = get_best_market_data(symbol)    
     if data is None or data.is_empty():
         logging.error(f"❌ Nessun dato disponibile per {symbol}")
-        return
-    
+        return    
     if "close" not in data.columns or data["close"].null_count() > 0:
         logging.warning("⚠️ Dati di chiusura incompleti o nulli, impossibile predire.")
         return
-    
     scaled_data = MinMaxScaler(feature_range=(0, 1)).fit_transform(
         data["close"].to_numpy().reshape(-1, 1)
     )
     X_lstm = np.array([scaled_data[-60:]]).reshape(-1, 60, 1)
     X_xgb = np.array([scaled_data[-60:]])
-    
     lstm_model = load_model(MODEL_FILE) if MODEL_FILE.exists() else train_lstm_model()
     xgb_model = xgb.XGBRegressor()
     
