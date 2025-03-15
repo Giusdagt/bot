@@ -49,25 +49,23 @@ class AIModel:
         """
         Decide se eseguire un'operazione di trading basandosi sul rischio e
         sulla previsione di volatilità.
-
         Args:
             symbol (str): Simbolo dell'asset da analizzare.
-
         Returns:
             bool: True se il trade è consentito, False altrimenti.
         """
         market_data = get_best_market_data(symbol)
         if market_data is None or market_data.is_empty():
             logging.warning(f"⚠️ Nessun dato valido per {symbol}.")
-            return False        
+            return False
         self.risk_manager.adjust_risk(symbol)
         risk = self.risk_manager.risk_settings["trailing_stop_pct"]
 
         if risk < 0.3:
-            logging.info(f"🚀 AI: Esegui trade su {symbol} (Rischio: {risk:.2f})")
+            logging.info(f"AI:Esegui trade su {symbol} (Rischio: {risk:.2f})")
             return True
         else:
-            logging.warning(f"⚠️ AI: Rischio troppo alto ({risk:.2f}) per {symbol}")
+            logging.warning(f"⚠️ AI: Rischio alto ({risk:.2f}) per {symbol}")
             return False
 
 
@@ -75,10 +73,8 @@ def get_best_market_data(symbol: str) -> pl.DataFrame:
     """
     Recupera i migliori dati di mercato disponibili per un asset, scegliendo
     tra scalping e storico.
-
     Args:
         symbol (str): Simbolo dell'asset.
-
     Returns:
         pl.DataFrame: Dati di mercato ottimizzati.
     """
@@ -86,19 +82,16 @@ def get_best_market_data(symbol: str) -> pl.DataFrame:
     if data is None or data.is_empty():
         logging.info(f"📡 Nessun dato di scalping per {symbol}. Uso storico.")
         data = get_normalized_market_data(symbol)
-    
     if data is None or data.is_empty():
-        logging.warning(f"⚠️ Nessun dato valido per {symbol}, provo con storico.")
+        logging.warning(f"⚠️Nessun dato valido X {symbol}, provo con storico.")
         process_historical_data()
-        data = get_normalized_market_data(symbol)
-    
+        data = get_normalized_market_data(symbol)   
     return data
 
 
 def example_prediction(symbol: str):
     """
     Esegue una previsione AI adattiva con dati storici o di scalping.
-
     Args:
         symbol (str): Simbolo dell'asset su cui eseguire la previsione.
     """
