@@ -96,12 +96,12 @@ def example_prediction(symbol: str):
         symbol (str): Simbolo dell'asset su cui eseguire la previsione.
     """
     logging.info(f"📡 Recupero dati per {symbol}")
-    data = get_best_market_data(symbol)    
+    data = get_best_market_data(symbol)
     if data is None or data.is_empty():
         logging.error(f"❌ Nessun dato disponibile per {symbol}")
-        return    
+        return
     if "close" not in data.columns or data["close"].null_count() > 0:
-        logging.warning("⚠️ Dati di chiusura incompleti o nulli, impossibile predire.")
+        logging.warning("⚠️ Dati di incompleti o nulli, impossibile predire.")
         return
     scaled_data = MinMaxScaler(feature_range=(0, 1)).fit_transform(
         data["close"].to_numpy().reshape(-1, 1)
@@ -109,21 +109,18 @@ def example_prediction(symbol: str):
     X_lstm = np.array([scaled_data[-60:]]).reshape(-1, 60, 1)
     X_xgb = np.array([scaled_data[-60:]])
     lstm_model = load_model(MODEL_FILE) if MODEL_FILE.exists() else train_lstm_model()
-    xgb_model = xgb.XGBRegressor()
-    
+    xgb_model = xgb.XGBRegressor()  
     if XGB_MODEL_FILE.exists():
         xgb_model.load_model(XGB_MODEL_FILE)
     else:
         xgb_model = train_xgboost_model()
-    
-    ai_model = AIModel()
-    
+    ai_model = AIModel()    
     if not ai_model.decide_trade(symbol):
         logging.warning(f"⚠️ Nessuna operazione su {symbol} a causa del rischio elevato.")
         return
     
     lstm_predictions = lstm_model.predict(X_lstm) if lstm_model else [None]
-    xgb_predictions = xgb_model.predict(X_xgb) if xgb_model else [None] 
+    xgb_predictions = xgb_model.predict(X_xgb) if xgb_model else [None]
     logging.info(f"📊 Previsione LSTM: {lstm_predictions[-1]}")
     logging.info(f"📊 Previsione XGBoost: {xgb_predictions[-1]}")
     optimizer = PortfolioOptimizer(data)
