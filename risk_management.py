@@ -54,9 +54,8 @@ class RiskManagement:
         """Calcola stop-loss e trailing-stop basati su dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
         if not market_data or "volatility" not in market_data:
-            logging.warning(f"⚠️ Dati non disponibili per {symbol}, uso default")
-            return entry_price * 0.95, entry_price * 0.98
-        
+            logging.warning(f"⚠️ Dati non disponibili X {symbol}, uso default")
+            return entry_price * 0.95, entry_price * 0.98        
         volatility = market_data["volatility"]
         stop_loss = entry_price * (1 - (volatility * 1.5))
         trailing_stop = entry_price * (1 - (volatility * 0.8))
@@ -65,11 +64,10 @@ class RiskManagement:
     def adjust_risk(self, symbol):
         """Adatta trailing stop e il capitale usando dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
-    
         required_keys = ["volume", "price_change", "rsi", "bollinger_width"]
         if not market_data or any(key not in market_data for key in required_keys):
-            logging.warning(f"⚠️ Dati incompleti per {symbol}, mantengo invariato")
-            return  # Evita di modificare il rischio se i dati non sono completi
+            logging.warning(f"⚠️ Dati incompleti X {symbol}, resto invariato")
+            return  # Non modifica il rischio se i dati non sono completi
 
         future_volatility = self.volatility_predictor.predict_volatility(
             np.array([
