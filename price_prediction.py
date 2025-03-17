@@ -106,7 +106,6 @@ class PricePredictionModel:
         early_stop = tf.keras.callbacks.EarlyStopping(
             monitor="loss", patience=3, restore_best_weights=True
         )
-        
         self.model.fit(
             X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
         )
