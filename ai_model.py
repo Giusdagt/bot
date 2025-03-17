@@ -8,7 +8,11 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
-from indicators import TradingIndicators
+from indicators import (
+    calculate_scalping_indicators,
+    calculate_swing_indicators,
+    calculate_sentiment_indicator
+)
 from data_handler import (
     get_normalized_market_data, process_historical_data, fetch_mt5_data
 )
@@ -30,14 +34,14 @@ def fetch_account_balances():
     🔥 Recupera i saldi attuali degli account.
     Se non esiste un database esterno, assegna valori predefiniti.
     """
-    return {"Danny": 1000, "Giuseppe": 1500}  # Valori iniziali
+    return {"Danny": 1000, "Giuseppe": 1500}
 
 def get_market_condition():
     """
     🔥 Determina se il mercato è in modalità scalping o normale.
     Se non implementato, restituisce "normal".
     """
-    return "normal"  # Modificare in base alle condizioni reali
+    return "normal"
 
 class AIModel:
     """
@@ -48,9 +52,10 @@ class AIModel:
         self.volatility_predictor = VolatilityPredictor()
         self.risk_manager = RiskManagement()
         self.memory = self.load_memory()
-        self.strategy_representation = 0  # Valore che rappresenta infinite strategie
-        self.model_representation = 1  # Rappresentazione compressa dei modelli
-        self.optimization_representation = 2  # Ottimizzazioni compresse
+        self.strategy_representation = 0
+        self.model_representation = 1
+        self.optimization_representation = 2
+        self.indicator_set = self.select_best_indicators(market_condition)
 
         # 🔥 INTEGRAZIONE DEL PORTAFOGLIO
         self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, market_condition == "scalping")
@@ -88,7 +93,16 @@ class AIModel:
 
     def _compress_data(self, data):
         """Converti dati complessi in una rappresentazione vettoriale ultra-compressa."""
-        return 0  # Rappresentazione simbolica per infinite strategie e modelli
+        return 0  
+
+    def select_best_indicators(self, market_condition):
+        """Seleziona automaticamente gli indicatori migliori per il contesto di mercato."""
+        if market_condition == "scalping":
+            return calculate_scalping_indicators
+        elif market_condition == "swing":
+            return calculate_swing_indicators
+        else:
+            return calculate_sentiment_indicator
 
     def decide_trade(self, symbol):
         """L'IA prende decisioni basate su memoria, previsioni, rischio ottimizzato e portafoglio."""
@@ -128,9 +142,9 @@ if __name__ == "__main__":
     logging.info("🚀 Avvio del modello AI con memoria ottimizzata.")
 
     # 🔥 Dati reali del mercato e degli account
-    market_data = get_normalized_market_data()  
-    balances = fetch_account_balances()  # 🔥 FIX: Nome della funzione corretto
-    market_condition = get_market_condition()  
+    market_data = get_normalized_market_data()
+    balances = fetch_account_balances()
+    market_condition = get_market_condition()
 
     ai_model = AIModel(market_data, balances, market_condition)
-    ai_model.decide_trade("EURUSD")  # 🔥 Ora il bot è 100% autonomo!
+    ai_model.decide_trade("EURUSD") 
