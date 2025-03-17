@@ -1,3 +1,4 @@
+
 import logging
 from pathlib import Path
 import numpy as np
@@ -96,13 +97,21 @@ class PricePredictionModel:
             y.append(data[i+SEQUENCE_LENGTH])
         X, y = np.array(X), np.array(y)
 
-        # Allenamento con salvataggio adattivo
-        early_stop = EarlyStopping(
-            monitor="loss", patience=3, restore_best_weights=True)
-        self.model.fit(
-            X, y, epochs=3,
-            batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+        # 🔥 Se il modello esiste già, carica i pesi per evitare perdita di dati
+        if MODEL_FILE.exists():
+            logging.info("📥 Caricamento pesi esistenti nel modello LSTM...")
+            self.model.load_weights(MODEL_FILE)
+
+        # 🔥 Allenamento con salvataggio adattivo
+        early_stop = tf.keras.callbacks.EarlyStopping(
+            monitor="loss", patience=3, restore_best_weights=True
         )
+        
+        self.model.fit(
+            X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+        )
+
+        # 🔥 Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
         self.model.save_weights(MODEL_FILE, overwrite=True)
         self.save_memory(new_data)
 
@@ -125,9 +134,6 @@ class PricePredictionModel:
 
 if __name__ == "__main__":
     predictor = PricePredictionModel()
-    # Allenamento continuo con dati di mercato
-    market_data = get_normalized_market_data(
-        predictor.asset)["close"].to_numpy()
+    market_data = get_normalized_market_data(predictor.asset)["close"].to_numpy()
     predictor.train_model(market_data)
-    # Previsione del prezzo futuro
     future_price = predictor.predict_price()
