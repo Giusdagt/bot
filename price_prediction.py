@@ -1,88 +1,123 @@
 import logging
+from pathlib import Path
 import numpy as np
 import polars as pl
-from pathlib import Path
+import tensorflow as tf
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
+from data_handler import get_normalized_market_data
 
 # Configurazione logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
+    format="%(asctime)s | %(levelname)s | %(module)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-# Percorsi per il modello e i dati
-MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
-MODEL_FILE = MODEL_DIR / "lstm_price_prediction.h5"
-DATA_FILE = MODEL_DIR / "price_history.parquet"
+# Percorsi dei modelli e dei dati
+MODEL_DIR = Path("D:/trading_data/models")
+MODEL_FILE = MODEL_DIR / "lstm_model.h5"
+MEMORY_FILE = MODEL_DIR / "lstm_memory.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-# Normalizzatore per i dati di input
-scaler = MinMaxScaler(feature_range=(0, 1))
+# Configurazione avanzata dell'LSTM
+SEQUENCE_LENGTH = 50
+BATCH_SIZE = 32
 
-def load_price_data():
-    """Carica i dati storici dei prezzi con compressione avanzata."""
-    if DATA_FILE.exists():
-        logging.info("📥 Caricamento storico prezzi da Parquet...")
-        return pl.read_parquet(DATA_FILE)
-    logging.warning("⚠️ Nessun dato storico trovato. Fornire dati validi.")
-    return None
+class PricePredictionModel:
+    """
+    Modello LSTM per la previsione dei prezzi con ottimizzazione avanzata.
+    - Compressione ultra-efficiente della memoria.
+    - Allenamento continuo senza accumulo di dati inutili.
+    - Salvataggio adattivo per evitare spreco di risorse.
+    """
 
-def save_price_data(price_data):
-    """Salva i dati di prezzo in formato Parquet compresso."""
-    pl.DataFrame(price_data).write_parquet(DATA_FILE, compression="zstd")
-    logging.info("💾 Dati di prezzo salvati con compressione avanzata.")
+    def __init__(self, asset="EURUSD"):
+        self.asset = asset
+        self.scaler = MinMaxScaler(feature_range=(0, 1))
+        self.memory = self.load_memory()
+        self.model = self.load_or_create_model()
 
-def create_lstm_model(input_shape):
-    """Crea e restituisce un modello LSTM ottimizzato."""
-    model = Sequential([
-        LSTM(64, return_sequences=True, input_shape=input_shape),
-        Dropout(0.2),
-        LSTM(32, return_sequences=False),
-        Dropout(0.2),
-        Dense(16, activation='relu'),
-        Dense(1, activation='linear')
-    ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    return model
+    def load_memory(self):
+        """Carica o inizializza la memoria compressa per l'allenamento continuo."""
+        if MEMORY_FILE.exists():
+            logging.info("📥 Caricamento memoria LSTM da Parquet...")
+            return pl.read_parquet(MEMORY_FILE)["compressed_memory"].to_numpy()
+        else:
+            logging.info("🔄 Creazione nuova memoria LSTM...")
+            return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
 
-def train_lstm_model(price_data):
-    """Allena il modello LSTM sulla serie storica dei prezzi."""
-    logging.info("🔄 Avvio dell'addestramento LSTM...")
-    
-    price_series = np.array(price_data["close"]).reshape(-1, 1)
-    price_series = scaler.fit_transform(price_series)
-    X, y = [], []
-    for i in range(60, len(price_series)):
-        X.append(price_series[i-60:i])
-        y.append(price_series[i])
-    
-    X, y = np.array(X), np.array(y)
-    model = create_lstm_model((X.shape[1], 1))
-    early_stopping = EarlyStopping(monitor='loss', patience=5, restore_best_weights=True)
-    model.fit(X, y, epochs=50, batch_size=32, verbose=1, callbacks=[early_stopping])
-    model.save(MODEL_FILE)
-    logging.info("✅ Modello LSTM addestrato e salvato con successo.")
+    def save_memory(self, new_data):
+        """Aggiorna la memoria senza accumulare dati inutili."""
+        compressed_memory = np.mean(new_data, axis=0, keepdims=True)
+        df = pl.DataFrame({"compressed_memory": compressed_memory.flatten()})
+        df.write_parquet(MEMORY_FILE, compression="zstd")
+        logging.info("💾 Memoria LSTM aggiornata e compressa con Zstd.")
 
-def predict_future_prices(recent_prices):
-    """Prevede i prezzi futuri utilizzando il modello LSTM."""
-    if not MODEL_FILE.exists():
-        logging.error("⚠️ Nessun modello trovato. Addestrare prima il modello.")
-        return None
-    
-    model = load_model(MODEL_FILE)
-    scaled_input = scaler.transform(np.array(recent_prices).reshape(-1, 1))
-    X_pred = np.array([scaled_input[-60:]])
-    prediction = model.predict(X_pred)
-    return scaler.inverse_transform(prediction)[0][0]  # Restituisce il valore predetto
+    def load_or_create_model(self):
+        """Carica il modello LSTM esistente o ne crea uno nuovo."""
+        if MODEL_FILE.exists():
+            logging.info("📥 Caricamento modello LSTM esistente...")
+            return load_model(MODEL_FILE)
+        else:
+            logging.info("🔧 Creazione nuovo modello LSTM...")
+            return self.build_lstm_model()
+
+    def build_lstm_model(self):
+        """Costruisce un modello LSTM ottimizzato."""
+        model = Sequential([
+            LSTM(64, activation="tanh", return_sequences=True, dtype="float16"),
+            Dropout(0.2),
+            LSTM(32, activation="tanh", return_sequences=False, dtype="float16"),
+            Dense(1, activation="linear", dtype="float16")
+        ])
+        model.compile(optimizer="adam", loss="mean_squared_error")
+        return model
+
+    def preprocess_data(self, raw_data):
+        """Pre-elabora i dati e normalizza per il training."""
+        raw_data = np.array(raw_data).reshape(-1, 1)
+        scaled_data = self.scaler.fit_transform(raw_data)
+        return scaled_data
+
+    def train_model(self, new_data):
+        """Allena il modello senza creare nuovi file enormi."""
+        data = self.preprocess_data(new_data)
+        X, y = [], []
+        for i in range(len(data) - SEQUENCE_LENGTH):
+            X.append(data[i:i+SEQUENCE_LENGTH])
+            y.append(data[i+SEQUENCE_LENGTH])
+        X, y = np.array(X), np.array(y)
+
+        # Allenamento con salvataggio adattivo
+        early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
+        self.model.fit(X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
+        self.model.save_weights(MODEL_FILE, overwrite=True)
+        self.save_memory(new_data)
+
+        logging.info("✅ Modello LSTM aggiornato con nuove informazioni.")
+
+    def predict_price(self):
+        """Prevede il prezzo futuro basandosi sugli ultimi dati di mercato."""
+        raw_data = get_normalized_market_data(self.asset)["close"].to_numpy()
+        data = self.preprocess_data(raw_data)
+        last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+
+        prediction = self.model.predict(last_sequence)[0][0]
+        predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
+
+        logging.info(f"📊 Prezzo previsto per {self.asset}: {predicted_price:.5f}")
+        return predicted_price
+
 
 if __name__ == "__main__":
-    historical_prices = load_price_data()
-    if historical_prices is not None:
-        train_lstm_model(historical_prices)
-        last_60_prices = historical_prices["close"][-60:].to_list()
-        predicted_price = predict_future_prices(last_60_prices)
-        logging.info(f"📈 Prezzo futuro previsto: {predicted_price:.5f}")
+    predictor = PricePredictionModel()
+    
+    # Allenamento continuo con dati di mercato
+    market_data = get_normalized_market_data(predictor.asset)["close"].to_numpy()
+    predictor.train_model(market_data)
+    
+    # Previsione del prezzo futuro
+    future_price = predictor.predict_price()
