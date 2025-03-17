@@ -88,7 +88,7 @@ class PricePredictionModel:
         return scaled_data
 
     def train_model(self, new_data):
-    """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
+        """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
     data = self.preprocess_data(new_data)
     X, y = [], []
 
