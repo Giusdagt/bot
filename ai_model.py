@@ -26,7 +26,7 @@ from portfolio_optimization import PortfolioOptimizer
 # Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(module)s | %(message)s",
+    format="%(asctime)s | %(asctime)s | %(module)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
@@ -34,6 +34,7 @@ logging.basicConfig(
 MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
 DATA_FILE = MODEL_DIR / "ai_memory.parquet"
 DB_FILE = MODEL_DIR / "trades.db"
+PERFORMANCE_FILE = MODEL_DIR / "performance.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 # Creazione del database SQLite per il salvataggio delle operazioni
@@ -91,7 +92,7 @@ class AIModel:
         self.balances = balances
         self.indicator_set = self.select_best_indicators(market_condition)
         self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, market_condition == "scalping")
-        self.drl_agent = DRLAgent()  # 🔥 Deep Reinforcement Learning attivo
+        self.drl_agent = DRLAgent()
 
     def load_memory(self):
         if DATA_FILE.exists():
@@ -109,6 +110,13 @@ class AIModel:
         }
         pl.DataFrame(memory_data).write_parquet(DATA_FILE, compression="zstd")
         logging.info("💾 Memoria IA aggiornata e ottimizzata con Zstd.")
+
+    def update_performance(self, account, profit):
+        performance_data = {"timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
+                            "account": [account], "profit": [profit]}
+        df = pl.DataFrame(performance_data)
+        df.write_parquet(PERFORMANCE_FILE, compression="zstd", append=True)
+        logging.info(f"📊 Performance aggiornata per {account}: Profit {profit}")
 
     def adapt_lot_size(self, balance, success_probability):
         base_lot = 0.02
@@ -128,21 +136,15 @@ class AIModel:
         }
         result = mt5.order_send(order)
         status = "executed" if result.retcode == mt5.TRADE_RETCODE_DONE else "failed"
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute("INSERT INTO trades (timestamp, account, symbol, action, lot_size, risk, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                  (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), account, symbol, action, lot_size, risk, status))
-        conn.commit()
-        conn.close()
+        self.update_performance(account, result.profit if status == "executed" else 0)
         logging.info(f"✅ Trade {status} per {account} su {symbol}: {action} {lot_size} lotto")
 
     def backtest(self, symbol, historical_data):
         """Esegue un backtest utilizzando dati storici per migliorare il modello."""
         logging.info(f"🔄 Inizio del backtest su {symbol}...")
-        # Simulazione del backtest
         for data in historical_data:
             success_probability = self.drl_agent.predict(symbol, data)
-            lot_size = self.adapt_lot_size(self.balances["Danny"], success_probability)  # Esempio con un solo account
+            lot_size = self.adapt_lot_size(self.balances["Danny"], success_probability)
             action = "buy" if success_probability > 0.5 else "sell"
             self.execute_trade("Backtest", symbol, action, lot_size, success_probability)
         logging.info(f"✅ Backtest completato su {symbol}.")
@@ -151,10 +153,9 @@ class AIModel:
         """Esegue una simulazione di trading per testare strategie senza rischiare fondi reali."""
         logging.info(f"🔄 Inizio della demo su {symbol}...")
         success_probability = self.drl_agent.predict(symbol, market_data)
-        lot_size = self.adapt_lot_size(self.balances["Danny"], success_probability)  # Esempio con un solo account
+        lot_size = self.adapt_lot_size(self.balances["Danny"], success_probability)
         action = "buy" if success_probability > 0.5 else "sell"
         logging.info(f"🧪 Demo trade per {symbol}: {action} {lot_size} lotto (Probabilità di successo: {success_probability:.2f})")
-        # Non esegue realmente il trade, solo log per simulare
         logging.info(f"✅ Demo trade completato su {symbol}.")
 
     async def decide_trade(self, symbol):
@@ -163,7 +164,7 @@ class AIModel:
             logging.warning(f"⚠️ Nessun dato per {symbol}. Nessuna decisione di trading.")
             return False
         for account in self.balances:
-            success_probability = self.drl_agent.predict(symbol, market_data)  # 🔥 DRL in azione
+            success_probability = self.drl_agent.predict(symbol, market_data)
             lot_size = self.adapt_lot_size(self.balances[account], success_probability)
             action = "buy" if success_probability > 0.5 else "sell"
             self.execute_trade(account, symbol, action, lot_size, success_probability)
@@ -171,7 +172,6 @@ class AIModel:
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances(), get_market_condition())
     asyncio.run(ai_model.decide_trade("EURUSD"))
-    # Esempio di esecuzione del backtest e demo trade
-    historical_data = [get_normalized_market_data()]  # Dati storici di esempio
+    historical_data = [get_normalized_market_data()]
     ai_model.backtest("EURUSD", historical_data)
     ai_model.demo_trade("EURUSD", get_normalized_market_data())
