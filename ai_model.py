@@ -157,7 +157,7 @@ class AIModel:
         logging.info(f"✅ Demo trade completato su {symbol}.")
 
     async def decide_trade(self, symbol):
-    """Analizza il mercato, prevede il prezzo futuro e decide il trade."""
+        """Analizza il mercato, prevede il prezzo futuro e decide il trade."""
     market_data = get_best_market_data(symbol)
     
     if market_data is None or market_data.height == 0:
