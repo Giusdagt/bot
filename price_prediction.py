@@ -1,4 +1,3 @@
-
 import logging
 from pathlib import Path
 import numpy as np
@@ -43,7 +42,7 @@ class PricePredictionModel:
         self.model = self.load_or_create_model()
 
     def load_memory(self):
-        """Carica/inizializza/memoria compressa per l'allenamento continuo."""
+        """Carica/inizializza memoria compressa per l'allenamento continuo."""
         if MEMORY_FILE.exists():
             logging.info("📥 Caricamento memoria LSTM da Parquet...")
             return pl.read_parquet(MEMORY_FILE)["compressed_memory"].to_numpy()
@@ -89,38 +88,38 @@ class PricePredictionModel:
         return scaled_data
 
     def train_model(self, new_data):
-    """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
-    data = self.preprocess_data(new_data)
-    X, y = [], []
+        """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
+        data = self.preprocess_data(new_data)
+        X, y = [], []
 
-    for i in range(len(data) - SEQUENCE_LENGTH):
-        X.append(data[i:i+SEQUENCE_LENGTH])
-        y.append(data[i+SEQUENCE_LENGTH])
+        for i in range(len(data) - SEQUENCE_LENGTH):
+            X.append(data[i:i+SEQUENCE_LENGTH])
+            y.append(data[i+SEQUENCE_LENGTH])
 
-    X, y = np.array(X), np.array(y)
+        X, y = np.array(X), np.array(y)
 
-    # 🔥 Se il modello esiste già, carica i pesi per NON perdere dati precedenti
-    if MODEL_FILE.exists():
-        logging.info("📥 Caricamento pesi esistenti nel modello LSTM...")
-        self.model.load_weights(MODEL_FILE)
+        # 🔥 Se il modello esiste già, carica i pesi per NON perdere dati precedenti
+        if MODEL_FILE.exists():
+            logging.info("📥 Caricamento pesi esistenti nel modello LSTM...")
+            self.model.load_weights(MODEL_FILE)
 
-    # ✅ Configurazione `EarlyStopping` per un allenamento ultra-efficiente
-    early_stop = tf.keras.callbacks.EarlyStopping(
-        monitor="loss", patience=3, restore_best_weights=True
-    )
+        # ✅ Configurazione `EarlyStopping` per un allenamento ultra-efficiente
+        early_stop = tf.keras.callbacks.EarlyStopping(
+            monitor="loss", patience=3, restore_best_weights=True
+        )
 
-    # 🔥 Allenamento ottimizzato
-    self.model.fit(
-        X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
-    )
+        # 🔥 Allenamento ottimizzato
+        self.model.fit(
+            X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+        )
 
-    # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
-    self.model.save_weights(MODEL_FILE, overwrite=True)
+        # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
+        self.model.save_weights(MODEL_FILE, overwrite=True)
 
-    # ✅ Aggiorna la memoria compressa senza accumulo
-    self.save_memory(new_data)
+        # ✅ Aggiorna la memoria compressa senza accumulo
+        self.save_memory(new_data)
 
-    logging.info("✅ Modello LSTM allenato e ottimizzato con `EarlyStopping`.")
+        logging.info("✅ Modello LSTM allenato e ottimizzato con `EarlyStopping`.")
 
     def predict_price(self):
         """Prevede il prezzo futuro basandosi sugli ultimi dati di mercato."""
