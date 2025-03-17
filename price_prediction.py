@@ -26,6 +26,7 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 SEQUENCE_LENGTH = 50
 BATCH_SIZE = 32
 
+
 class PricePredictionModel:
     """
     Modello LSTM per la previsione dei prezzi con ottimizzazione avanzata.
@@ -41,7 +42,7 @@ class PricePredictionModel:
         self.model = self.load_or_create_model()
 
     def load_memory(self):
-        """Carica o inizializza la memoria compressa per l'allenamento continuo."""
+        """Carica/inizializza/memoria compressa per l'allenamento continuo."""
         if MEMORY_FILE.exists():
             logging.info("📥 Caricamento memoria LSTM da Parquet...")
             return pl.read_parquet(MEMORY_FILE)["compressed_memory"].to_numpy()
@@ -68,9 +69,13 @@ class PricePredictionModel:
     def build_lstm_model(self):
         """Costruisce un modello LSTM ottimizzato."""
         model = Sequential([
-            LSTM(64, activation="tanh", return_sequences=True, dtype="float16"),
+            LSTM(
+                64, activation="tanh", return_sequences=True, dtype="float16"
+            ),
             Dropout(0.2),
-            LSTM(32, activation="tanh", return_sequences=False, dtype="float16"),
+            LSTM(
+                32, activation="tanh", return_sequences=False, dtype="float16"
+            ),
             Dense(1, activation="linear", dtype="float16")
         ])
         model.compile(optimizer="adam", loss="mean_squared_error")
@@ -93,7 +98,9 @@ class PricePredictionModel:
 
         # Allenamento con salvataggio adattivo
         early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
-        self.model.fit(X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
+        self.model.fit(
+            X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+        )
         self.model.save_weights(MODEL_FILE, overwrite=True)
         self.save_memory(new_data)
 
@@ -108,16 +115,16 @@ class PricePredictionModel:
         prediction = self.model.predict(last_sequence)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
-        logging.info(f"📊 Prezzo previsto per {self.asset}: {predicted_price:.5f}")
+        logging.info(
+            f"📊 Prezzo previsto per {self.asset}: {predicted_price:.5f}"
+        )
         return predicted_price
 
 
 if __name__ == "__main__":
     predictor = PricePredictionModel()
-    
     # Allenamento continuo con dati di mercato
     market_data = get_normalized_market_data(predictor.asset)["close"].to_numpy()
     predictor.train_model(market_data)
-    
     # Previsione del prezzo futuro
     future_price = predictor.predict_price()
