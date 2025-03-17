@@ -6,10 +6,6 @@ import numpy as np
 import asyncio
 import MetaTrader5 as mt5
 import sqlite3
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping
-from sklearn.preprocessing import MinMaxScaler
 from indicators import (
     calculate_scalping_indicators,
     calculate_swing_indicators,
