@@ -21,9 +21,10 @@ def main():
     balances = fetch_account_balances()
     market_condition = config.get("market_condition", "normal")
     # Inizializzazione AI Model
-    ai_model = AIModel(market_data, balances, market_condition) 
+    ai_model = AIModel(market_data, balances, market_condition)
     # Avvio del trading
     asyncio.run(ai_model.decide_trade("EURUSD"))
+
 
 if __name__ == "__main__":
     main()
