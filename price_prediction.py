@@ -88,15 +88,15 @@ class PricePredictionModel:
         scaled_data = self.scaler.fit_transform(raw_data)
         return scaled_data
 
-   def train_model(self, new_data):
+    def train_model(self, new_data):
     """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
     data = self.preprocess_data(new_data)
     X, y = [], []
-    
+
     for i in range(len(data) - SEQUENCE_LENGTH):
         X.append(data[i:i+SEQUENCE_LENGTH])
         y.append(data[i+SEQUENCE_LENGTH])
-    
+
     X, y = np.array(X), np.array(y)
 
     # 🔥 Se il modello esiste già, carica i pesi per NON perdere dati precedenti
@@ -121,7 +121,6 @@ class PricePredictionModel:
     self.save_memory(new_data)
 
     logging.info("✅ Modello LSTM allenato e ottimizzato con `EarlyStopping`.")
-
 
     def predict_price(self):
         """Prevede il prezzo futuro basandosi sugli ultimi dati di mercato."""
