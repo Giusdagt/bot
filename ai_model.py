@@ -1,3 +1,4 @@
+from price_prediction import PricePredictor
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -88,6 +89,7 @@ class AIModel:
         self.balances = balances
         self.indicator_set = self.select_best_indicators(market_condition)
         self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, market_condition == "scalping")
+        self.price_predictor = PricePredictor()
         self.drl_agent = DRLAgent()
 
     def load_memory(self):
@@ -155,15 +157,27 @@ class AIModel:
         logging.info(f"✅ Demo trade completato su {symbol}.")
 
     async def decide_trade(self, symbol):
-        market_data = get_best_market_data(symbol)
-        if market_data is None or market_data.height == 0:
-            logging.warning(f"⚠️ Nessun dato per {symbol}. Nessuna decisione di trading.")
-            return False
-        for account in self.balances:
-            success_probability = self.drl_agent.predict(symbol, market_data)
-            lot_size = self.adapt_lot_size(self.balances[account], success_probability)
-            action = "buy" if success_probability > 0.5 else "sell"
+    """Analizza il mercato, prevede il prezzo futuro e decide il trade."""
+    market_data = get_best_market_data(symbol)
+    
+    if market_data is None or market_data.height == 0:
+        logging.warning(f"⚠️ Nessun dato per {symbol}. Nessuna decisione di trading.")
+        return False
+
+    # 🔥 Previsione del prezzo con il modello LSTM
+    predicted_price = self.price_predictor.predict(symbol)
+
+    for account in self.balances:
+        success_probability = self.drl_agent.predict(symbol, market_data)  # 🔥 IA DRL in azione
+        lot_size = self.adapt_lot_size(self.balances[account], success_probability)
+        action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
+
+        # 🔥 Controllo aggiuntivo con probabilità di successo
+        if success_probability > 0.5:
             self.execute_trade(account, symbol, action, lot_size, success_probability)
+        else:
+            logging.info(f"🚫 Nessun trade su {symbol} per {account}: probabilità troppo bassa.")
+
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances(), get_market_condition())
