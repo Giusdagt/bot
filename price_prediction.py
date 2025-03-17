@@ -97,9 +97,11 @@ class PricePredictionModel:
         X, y = np.array(X), np.array(y)
 
         # Allenamento con salvataggio adattivo
-        early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
+        early_stop = EarlyStopping(
+            monitor="loss", patience=3, restore_best_weights=True)
         self.model.fit(
-            X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+            X, y, epochs=3,
+            batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
         )
         self.model.save_weights(MODEL_FILE, overwrite=True)
         self.save_memory(new_data)
@@ -124,7 +126,8 @@ class PricePredictionModel:
 if __name__ == "__main__":
     predictor = PricePredictionModel()
     # Allenamento continuo con dati di mercato
-    market_data = get_normalized_market_data(predictor.asset)["close"].to_numpy()
+    market_data = get_normalized_market_data(
+        predictor.asset)["close"].to_numpy()
     predictor.train_model(market_data)
     # Previsione del prezzo futuro
     future_price = predictor.predict_price()
