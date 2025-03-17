@@ -109,9 +109,7 @@ class PricePredictionModel:
         )
 
         # 🔥 Allenamento ottimizzato
-        self.model.fit(
-            X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
-        )
+        self.model.fit(X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
 
         # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
         self.model.save_weights(MODEL_FILE, overwrite=True)
