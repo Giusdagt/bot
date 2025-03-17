@@ -107,10 +107,11 @@ class PricePredictionModel:
             monitor="loss", patience=3, restore_best_weights=True
         )
         self.model.fit(
-            X, y, epochs=3, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+            X, y, epochs=3, batch_size=BATCH_SIZE,
+            verbose=1, callbacks=[early_stop]
         )
 
-        # 🔥 Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
+        # Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
         self.model.save_weights(MODEL_FILE, overwrite=True)
         self.save_memory(new_data)
 
