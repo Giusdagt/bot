@@ -57,7 +57,7 @@ class PricePredictionModel:
 
         # Evita di salvare se i dati sono identici
         if np.array_equal(compressed_memory, self.memory):
-            logging.info("⚠️ Nessuna variazione nei dati, memoria non aggiornata.")
+            logging.info("⚠️ Nessuna variazione dati, memoria non aggiornata.")
             return
 
         df = pl.DataFrame({"compressed_memory": compressed_memory.flatten()})
@@ -77,9 +77,11 @@ class PricePredictionModel:
     def build_lstm_model(self):
         """Costruisce un modello LSTM ottimizzato."""
         model = Sequential([
-            LSTM(64, activation="tanh", return_sequences=True, dtype="float16"),
+            LSTM(64, activation="tanh",
+                 return_sequences=True, dtype="float16"),
             Dropout(0.2),
-            LSTM(32, activation="tanh", return_sequences=False, dtype="float16"),
+            LSTM(32, activation="tanh",
+                 return_sequences=False, dtype="float16"),
             Dense(1, activation="linear", dtype="float16")
         ])
         model.compile(optimizer="adam", loss="mean_squared_error")
@@ -107,10 +109,14 @@ class PricePredictionModel:
             logging.info("📥 Caricamento pesi nel modello...")
             self.model.load_weights(MODEL_FILE)
 
-        early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
+        early_stop = EarlyStopping(
+            monitor="loss", patience=3,
+            restore_best_weights=True
+        )
 
         self.model.fit(
-            X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+            X, y, epochs=10, batch_size=BATCH_SIZE,
+            verbose=1, callbacks=[early_stop]
         )
 
         self.model.save_weights(MODEL_FILE, overwrite=True)
@@ -128,12 +134,17 @@ class PricePredictionModel:
         last_close = raw_data[-1]
         variation = ((predicted_price - last_close) / last_close) * 100
 
-        logging.info(f"📊 Prezzo previsto per {self.asset}: {predicted_price:.5f} ({variation:.2f}%)")
+        logging.info(
+            f"📊 Prezzo previsto per {self.asset}:
+            {predicted_price:.5f} ({variation:.2f}%)"
+        )
         return predicted_price
 
 
 if __name__ == "__main__":
     predictor = PricePredictionModel()
-    market_data = get_normalized_market_data(predictor.asset)["close"].to_numpy()
+    market_data = (
+    get_normalized_market_data(predictor.asset)["close"].to_numpy()
+    )
     predictor.train_model(market_data)
     future_price = predictor.predict_price()
