@@ -104,7 +104,7 @@ class PricePredictionModel:
             self.model.load_weights(MODEL_FILE)
 
         # ✅ Configurazione `EarlyStopping` per un allenamento ultra-efficiente
-        early_stop = tf.keras.callbacks.EarlyStopping(
+        early_stop = EarlyStopping(
             monitor="loss", patience=3, restore_best_weights=True
         )
 
