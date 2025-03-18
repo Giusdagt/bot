@@ -69,13 +69,9 @@ class PricePredictionModel:
     def build_lstm_model(self):
         """Costruisce un modello LSTM ottimizzato."""
         model = Sequential([
-            LSTM(
-                64, activation="tanh", return_sequences=True, dtype="float16"
-            ),
+            LSTM(64, activation="tanh", return_sequences=True, dtype="float16"),
             Dropout(0.2),
-            LSTM(
-                32, activation="tanh", return_sequences=False, dtype="float16"
-            ),
+            LSTM(32, activation="tanh", return_sequences=False, dtype="float16"),
             Dense(1, activation="linear", dtype="float16")
         ])
         model.compile(optimizer="adam", loss="mean_squared_error")
@@ -84,42 +80,35 @@ class PricePredictionModel:
     def preprocess_data(self, raw_data):
         """Pre-elabora i dati e normalizza per il training."""
         raw_data = np.array(raw_data).reshape(-1, 1)
-        scaled_data = self.scaler.fit_transform(raw_data)
-        return scaled_data
+        return self.scaler.fit_transform(raw_data)
 
     def train_model(self, new_data):
         """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
-    data = self.preprocess_data(new_data)
-    X, y = [], []
+        data = self.preprocess_data(new_data)
+        X, y = [], []
+        for i in range(len(data) - SEQUENCE_LENGTH):
+            X.append(data[i:i+SEQUENCE_LENGTH])
+            y.append(data[i+SEQUENCE_LENGTH])
+        X, y = np.array(X), np.array(y)
 
-    for i in range(len(data) - SEQUENCE_LENGTH):
-        X.append(data[i:i+SEQUENCE_LENGTH])
-        y.append(data[i+SEQUENCE_LENGTH])
+        # 🔥 Se il modello esiste già, carica i pesi per NON perdere dati precedenti
+        if MODEL_FILE.exists():
+            logging.info("📥 Caricamento pesi esistenti nel modello LSTM...")
+            self.model.load_weights(MODEL_FILE)
 
-    X, y = np.array(X), np.array(y)
+        # ✅ Configurazione `EarlyStopping` per un allenamento ultra-efficiente
+        early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
 
-    # 🔥 Se il modello esiste già, carica i pesi per NON perdere dati precedenti
-    if MODEL_FILE.exists():
-        logging.info("📥 Caricamento pesi esistenti nel modello LSTM...")
-        self.model.load_weights(MODEL_FILE)
+        # 🔥 Allenamento ottimizzato con `EarlyStopping`
+        self.model.fit(X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
 
-    # ✅ Configurazione `EarlyStopping` per un allenamento ultra-efficiente
-    early_stop = EarlyStopping(
-        monitor="loss", patience=3, restore_best_weights=True
-    )
+        # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
+        self.model.save_weights(MODEL_FILE, overwrite=True)
 
-    # 🔥 Allenamento ottimizzato con `EarlyStopping`
-    self.model.fit(
-        X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
-    )
+        # ✅ Aggiorna la memoria compressa senza accumulo
+        self.save_memory(new_data)
 
-    # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
-    self.model.save_weights(MODEL_FILE, overwrite=True)
-
-    # ✅ Aggiorna la memoria compressa senza accumulo
-    self.save_memory(new_data)
-
-    logging.info("✅ Modello LSTM allenato e ottimizzato con `EarlyStopping`.")
+        logging.info("✅ Modello LSTM allenato e ottimizzato con `EarlyStopping`.")
 
     def predict_price(self):
         """Prevede il prezzo futuro basandosi sugli ultimi dati di mercato."""
@@ -130,9 +119,7 @@ class PricePredictionModel:
         prediction = self.model.predict(last_sequence)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
-        logging.info(
-            f"📊 Prezzo previsto per {self.asset}: {predicted_price:.5f}"
-        )
+        logging.info(f"📊 Prezzo previsto per {self.asset}: {predicted_price:.5f}")
         return predicted_price
 
 
