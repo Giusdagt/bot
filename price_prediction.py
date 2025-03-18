@@ -141,7 +141,7 @@ if __name__ == "__main__":
     logging.info(f"TensorFlow version: {tf_version}")
     predictor = PricePredictionModel()
     market_data = (
-    get_normalized_market_data(predictor.asset)["close"].to_numpy()
+        get_normalized_market_data(predictor.asset)["close"].to_numpy()
     )
     predictor.train_model(market_data)
     future_price = predictor.predict_price()
