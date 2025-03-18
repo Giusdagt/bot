@@ -26,24 +26,8 @@ DB_FILE = MODEL_DIR / "trades.db"
 PERFORMANCE_FILE = MODEL_DIR / "performance.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-# Creazione database SQLite per il salvataggio delle operazioni
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS trades (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT,
-                    account TEXT,
-                    symbol TEXT,
-                    action TEXT,
-                    lot_size REAL,
-                    risk REAL,
-                    strategy TEXT,
-                    status TEXT
-                )''')
-    conn.commit()
-    conn.close()
-init_db()
+# Creazione database per il salvataggio delle operazioni
+TRADE_FILE = MODEL_DIR / "trades.parquet"
 
 # Connessione sicura a MetaTrader 5
 def initialize_mt5():
@@ -92,12 +76,33 @@ class AIModel:
         df.write_parquet(DATA_FILE, compression="zstd", mode="overwrite")
         logging.info("💾 Memoria IA aggiornata.")
 
-    def update_performance(self, account, profit, strategy):
-        performance_data = {"timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                            "account": [account], "profit": [profit], "strategy": [strategy]}
-        df = pl.DataFrame(performance_data)
-        df.write_parquet(PERFORMANCE_FILE, compression="zstd", append=True)
-        logging.info(f"📊 Performance aggiornata per {account}: Profit {profit} | Strategia: {strategy}")
+    def update_performance(self, account, symbol, action, lot_size, profit, strategy):
+    # Carica i dati esistenti
+    if TRADE_FILE.exists():
+        df = pl.read_parquet(TRADE_FILE)
+    else:
+        df = pl.DataFrame({"account": [], "symbol": [], "action": [],
+                           "lot_size": [], "profit": [], "strategy": []})
+
+    # Cerca se esiste già un trade per questo account e simbolo
+    existing_trade = df.filter((df["account"] == account) & (df["symbol"] == symbol))
+
+    if len(existing_trade) > 0:
+        # Aggiorna il valore invece di creare una nuova riga
+        df = df.with_columns([
+            pl.when((df["account"] == account) & (df["symbol"] == symbol))
+            .then(pl.lit(profit)).otherwise(df["profit"]).alias("profit")
+        ])
+    else:
+        # Se non esiste, aggiunge una nuova entry
+        new_entry = pl.DataFrame({"account": [account], "symbol": [symbol],
+                                  "action": [action],"lot_size": [lot_size],
+                                  "profit": [profit], "strategy": [strategy]})
+        df = pl.concat([df, new_entry])
+
+    df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
+    logging.info(f"📊 Trade aggiornato per {account} su {symbol}: Profit {profit} | Strategia: {strategy}")
+
 
     def adapt_lot_size(self, balance, success_probability):
         max_lot_size = balance / 50  # 🔥 Adatta il lot size in base al saldo disponibile
@@ -117,7 +122,8 @@ class AIModel:
         }
         result = mt5.order_send(order)
         status = "executed" if result.retcode == mt5.TRADE_RETCODE_DONE else "failed"
-        self.update_performance(account, result.profit if status == "executed" else 0, strategy)
+        self.update_performance(account, symbol, action, lot_size,
+                                result.profit if status == "executed" else 0, strategy)
         self.save_memory(self.strategy_strength)  # 🔥 Aggiornamento della memoria dopo ogni trade
         logging.info(f"✅ Trade {status} per {account} su {symbol}: {action} {lot_size} lotto | Strategia: {strategy}")
 
@@ -144,7 +150,7 @@ class AIModel:
             action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
 
             # 🔥 Selezione della strategia migliore
-            strategy = "Scalping" if market_data["volatility"].iloc[-1] > 1.5 else "Swing"
+            strategy = 0.8 if market_data["volatility"].iloc[-1] > 1.5 else 0.5
 
             if success_probability > 0.5:
                 self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
@@ -156,5 +162,7 @@ if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
 
     # 🔥 Loop di miglioramento continuo
-    for asset in ai_model.active_assets:
-        asyncio.run(ai_model.decide_trade(asset))
+    while True:
+        for asset in ai_model.active_assets:
+            asyncio.run(ai_model.decide_trade(asset))
+        asyncio.sleep(10)  # 🔄 Aspetta 10 secondi prima di ripetere il ciclo
