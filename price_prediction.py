@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 import numpy as np
 import polars as pl
-import tensorflow as tf
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
