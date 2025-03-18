@@ -88,7 +88,7 @@ class PricePredictionModel:
         return scaled_data
 
     def train_model(self, new_data):
-        """Allena il modello LSTM in modo intelligente senza accumulo di dati inutili."""
+        """Allena il modello LSTM in modo intelligente senza dati inutili."""
         data = self.preprocess_data(new_data)
         X, y = [], []
 
@@ -98,7 +98,6 @@ class PricePredictionModel:
 
         X, y = np.array(X), np.array(y)
 
-        # 🔥 Se il modello esiste già, carica i pesi per NON perdere dati precedenti
         if MODEL_FILE.exists():
             logging.info("📥 Caricamento pesi esistenti nel modello LSTM...")
             self.model.load_weights(MODEL_FILE)
@@ -110,16 +109,17 @@ class PricePredictionModel:
 
         # 🔥 Allenamento ottimizzato
         self.model.fit(
-            X, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+            X, y, epochs=10, batch_size=BATCH_SIZE,
+            verbose=1, callbacks=[early_stop]
         )
 
-        # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere tutto il modello)
+        # ✅ Salvataggio ottimizzato dei pesi (senza riscrivere il modello)
         self.model.save_weights(MODEL_FILE, overwrite=True)
 
         # ✅ Aggiorna la memoria compressa senza accumulo
         self.save_memory(new_data)
 
-        logging.info("✅ Modello LSTM allenato e ottimizzato con `EarlyStopping`.")
+        logging.info("✅ Modello LSTM allenato e ottimizzato con EarlyStopping")
 
     def predict_price(self):
         """Prevede il prezzo futuro basandosi sugli ultimi dati di mercato."""
@@ -140,6 +140,8 @@ if __name__ == "__main__":
     tf_version = tf.__version__  # Utilizzo esplicito di tensorflow
     logging.info(f"TensorFlow version: {tf_version}")
     predictor = PricePredictionModel()
-    market_data = get_normalized_market_data(predictor.asset)["close"].to_numpy()
+    market_data = (
+    get_normalized_market_data(predictor.asset)["close"].to_numpy()
+    )
     predictor.train_model(market_data)
     future_price = predictor.predict_price()
