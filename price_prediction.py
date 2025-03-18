@@ -144,7 +144,7 @@ class PricePredictionModel:
 if __name__ == "__main__":
     predictor = PricePredictionModel()
     market_data = (
-    get_normalized_market_data(predictor.asset)["close"].to_numpy()
+        get_normalized_market_data(predictor.asset)["close"].to_numpy()
     )
     predictor.train_model(market_data)
     future_price = predictor.predict_price()
