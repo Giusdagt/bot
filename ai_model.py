@@ -1,4 +1,4 @@
-from price_prediction import PricePredictor
+from price_prediction import PricePredictionModel
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -7,34 +7,26 @@ import numpy as np
 import asyncio
 import MetaTrader5 as mt5
 import sqlite3
-from indicators import (
-    calculate_scalping_indicators,
-    calculate_swing_indicators,
-    calculate_sentiment_indicator
-)
-from data_handler import (
-    get_normalized_market_data, process_historical_data, fetch_mt5_data
-)
-from drl_agent import DRLAgent  # 🔥 Deep Reinforcement Learning
-from gym_trading_env import TradingEnv
+from data_handler import get_normalized_market_data
+from drl_agent import DRLAgent  # Deep Reinforcement Learning
 from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 
 # Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s | %(asctime)s | %(module)s | %(message)s",
+    format="%(asctime)s | %(levelname)s | %(module)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-# Percorsi per il salvataggio dei modelli e dei dati
+# Percorsi dei modelli e dei dati
 MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
 DATA_FILE = MODEL_DIR / "ai_memory.parquet"
 DB_FILE = MODEL_DIR / "trades.db"
 PERFORMANCE_FILE = MODEL_DIR / "performance.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-# Creazione del database SQLite per il salvataggio delle operazioni
+# Creazione database SQLite per il salvataggio delle operazioni
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -46,6 +38,7 @@ def init_db():
                     action TEXT,
                     lot_size REAL,
                     risk REAL,
+                    strategy TEXT,
                     status TEXT
                 )''')
     conn.commit()
@@ -75,52 +68,42 @@ def fetch_account_balances():
         "Giuseppe": get_metatrader_balance()
     }
 
-def get_market_condition():
-    return "normal"
-
 class AIModel:
-    def __init__(self, market_data, balances, market_condition):
+    def __init__(self, market_data, balances):
         self.volatility_predictor = VolatilityPredictor()
         self.risk_manager = {acc: RiskManagement() for acc in balances}
         self.memory = self.load_memory()
-        self.strategy_representation = np.array([0], dtype=np.float32)
-        self.model_representation = np.array([1], dtype=np.float32)
-        self.optimization_representation = np.array([2], dtype=np.float32)
+        self.strategy_strength = np.mean(self.memory) + 1  # 🔥 Valore infinito per migliorare strategia
         self.balances = balances
-        self.indicator_set = self.select_best_indicators(market_condition)
-        self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, market_condition == "scalping")
-        self.price_predictor = PricePredictor()
+        self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, True)
+        self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
+        self.active_assets = self.select_best_assets(market_data)  # Selezione automatica degli asset migliori
 
     def load_memory(self):
         if DATA_FILE.exists():
-            logging.info("📥 Caricamento memoria IA da Parquet...")
-            loaded_memory = pl.read_parquet(DATA_FILE)
-            self.strategy_representation = loaded_memory["strategy"][0]
-            self.model_representation = loaded_memory["model"][0]
-            self.optimization_representation = loaded_memory["optimization"][0]
+            logging.info("📥 Caricamento memoria compressa...")
+            loaded_memory = pl.read_parquet(DATA_FILE)["memory"].to_numpy()
+            return np.mean(loaded_memory, axis=0, keepdims=True)
+        return np.zeros(1, dtype=np.float32)
 
-    def save_memory(self):
-        memory_data = {
-            "strategy": [self.strategy_representation],
-            "model": [self.model_representation],
-            "optimization": [self.optimization_representation]
-        }
-        pl.DataFrame(memory_data).write_parquet(DATA_FILE, compression="zstd")
-        logging.info("💾 Memoria IA aggiornata e ottimizzata con Zstd.")
+    def save_memory(self, new_value):
+        df = pl.DataFrame({"memory": [new_value]})
+        df.write_parquet(DATA_FILE, compression="zstd", mode="overwrite")
+        logging.info("💾 Memoria IA aggiornata.")
 
-    def update_performance(self, account, profit):
+    def update_performance(self, account, profit, strategy):
         performance_data = {"timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-                            "account": [account], "profit": [profit]}
+                            "account": [account], "profit": [profit], "strategy": [strategy]}
         df = pl.DataFrame(performance_data)
         df.write_parquet(PERFORMANCE_FILE, compression="zstd", append=True)
-        logging.info(f"📊 Performance aggiornata per {account}: Profit {profit}")
+        logging.info(f"📊 Performance aggiornata per {account}: Profit {profit} | Strategia: {strategy}")
 
     def adapt_lot_size(self, balance, success_probability):
-        base_lot = 0.02
-        return min(balance * success_probability / 10, 1.0) if success_probability > 0.9 else base_lot * (balance / 100)
+        max_lot_size = balance / 50  # 🔥 Adatta il lot size in base al saldo disponibile
+        return min(balance * (success_probability * self.strategy_strength) / 10, max_lot_size)
 
-    def execute_trade(self, account, symbol, action, lot_size, risk):
+    def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
         order = {
             "symbol": symbol,
             "volume": lot_size,
@@ -128,60 +111,50 @@ class AIModel:
             "price": mt5.symbol_info_tick(symbol).ask,
             "deviation": 10,
             "magic": 0,
-            "comment": "AI Trade",
+            "comment": f"AI Trade ({strategy})",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC
         }
         result = mt5.order_send(order)
         status = "executed" if result.retcode == mt5.TRADE_RETCODE_DONE else "failed"
-        self.update_performance(account, result.profit if status == "executed" else 0)
-        logging.info(f"✅ Trade {status} per {account} su {symbol}: {action} {lot_size} lotto")
+        self.update_performance(account, result.profit if status == "executed" else 0, strategy)
+        self.save_memory(self.strategy_strength)  # 🔥 Aggiornamento della memoria dopo ogni trade
+        logging.info(f"✅ Trade {status} per {account} su {symbol}: {action} {lot_size} lotto | Strategia: {strategy}")
 
-    def backtest(self, symbol, historical_data):
-        """Esegue un backtest utilizzando dati storici per migliorare il modello."""
-        logging.info(f"🔄 Inizio del backtest su {symbol}...")
-        for data in historical_data:
-            success_probability = self.drl_agent.predict(symbol, data)
-            lot_size = self.adapt_lot_size(self.balances["Danny"], success_probability)
-            action = "buy" if success_probability > 0.5 else "sell"
-            self.execute_trade("Backtest", symbol, action, lot_size, success_probability)
-        logging.info(f"✅ Backtest completato su {symbol}.")
-
-    def demo_trade(self, symbol, market_data):
-        """Esegue una simulazione di trading per testare strategie senza rischiare fondi reali."""
-        logging.info(f"🔄 Inizio della demo su {symbol}...")
-        success_probability = self.drl_agent.predict(symbol, market_data)
-        lot_size = self.adapt_lot_size(self.balances["Danny"], success_probability)
-        action = "buy" if success_probability > 0.5 else "sell"
-        logging.info(f"🧪 Demo trade per {symbol}: {action} {lot_size} lotto (Probabilità di successo: {success_probability:.2f})")
-        logging.info(f"✅ Demo trade completato su {symbol}.")
+    def select_best_assets(self, market_data):
+        """Seleziona automaticamente gli asset con il miglior rendimento storico."""
+        assets_performance = {asset: market_data[asset]["close"].pct_change().mean() for asset in market_data.keys()}
+        sorted_assets = sorted(assets_performance, key=assets_performance.get, reverse=True)
+        logging.info(f"📈 Asset selezionati per il trading: {sorted_assets[:5]}")
+        return sorted_assets[:5]  # Seleziona i 5 asset migliori
 
     async def decide_trade(self, symbol):
-        """Analizza il mercato, prevede il prezzo futuro e decide il trade."""
-    market_data = get_best_market_data(symbol)
-    
-    if market_data is None or market_data.height == 0:
-        logging.warning(f"⚠️ Nessun dato per {symbol}. Nessuna decisione di trading.")
-        return False
+        market_data = get_normalized_market_data(symbol)
 
-    # 🔥 Previsione del prezzo con il modello LSTM
-    predicted_price = self.price_predictor.predict(symbol)
+        if market_data is None or market_data.height == 0:
+            logging.warning(f"⚠️ Nessun dato per {symbol}. Avvio Backtest per auto-miglioramento.")
+            self.backtest(symbol, [market_data])
+            return False
 
-    for account in self.balances:
-        success_probability = self.drl_agent.predict(symbol, market_data)  # 🔥 IA DRL in azione
-        lot_size = self.adapt_lot_size(self.balances[account], success_probability)
-        action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
+        predicted_price = self.price_predictor.predict_price()
 
-        # 🔥 Controllo aggiuntivo con probabilità di successo
-        if success_probability > 0.5:
-            self.execute_trade(account, symbol, action, lot_size, success_probability)
-        else:
-            logging.info(f"🚫 Nessun trade su {symbol} per {account}: probabilità troppo bassa.")
+        for account in self.balances:
+            success_probability = self.drl_agent.predict(symbol, market_data)
+            lot_size = self.adapt_lot_size(self.balances[account], success_probability)
+            action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
 
+            # 🔥 Selezione della strategia migliore
+            strategy = "Scalping" if market_data["volatility"].iloc[-1] > 1.5 else "Swing"
+
+            if success_probability > 0.5:
+                self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
+            else:
+                logging.info(f"🚫 Nessun trade su {symbol} per {account}. Avvio Demo Trade per miglioramento.")
+                self.demo_trade(symbol, market_data)
 
 if __name__ == "__main__":
-    ai_model = AIModel(get_normalized_market_data(), fetch_account_balances(), get_market_condition())
-    asyncio.run(ai_model.decide_trade("EURUSD"))
-    historical_data = [get_normalized_market_data()]
-    ai_model.backtest("EURUSD", historical_data)
-    ai_model.demo_trade("EURUSD", get_normalized_market_data())
+    ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
+
+    # 🔥 Loop di miglioramento continuo
+    for asset in ai_model.active_assets:
+        asyncio.run(ai_model.decide_trade(asset))
