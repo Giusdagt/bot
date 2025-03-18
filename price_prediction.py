@@ -135,8 +135,8 @@ class PricePredictionModel:
         variation = ((predicted_price - last_close) / last_close) * 100
 
         logging.info(
-            f"📊 Prezzo previsto per {self.asset}:
-            {predicted_price:.5f} ({variation:.2f}%)"
+            f"📊 Prezzo previsto per {self.asset}: "
+            f"{predicted_price:.5f} ({variation:.2f}%)"
         )
         return predicted_price
 
