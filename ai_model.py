@@ -64,7 +64,7 @@ class AIModel:
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)  # Selezione automatica degli asset migliori
-        self.strategy_generator = StrategyGenerator() # generatore di strategie
+        selected_strategy, strategy_weight = self.strategy_generator.select_best_strategy(market_data) # generatore di strategie
 
     def load_memory(self):
         if DATA_FILE.exists():
