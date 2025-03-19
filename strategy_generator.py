@@ -1,10 +1,10 @@
 # strategy_generator.py
 import logging
+import inspect
 from datetime import datetime
 from pathlib import Path
 import polars as pl
 import numpy as np
-import inspect
 from indicators import TradingIndicators  # Importa tutti gli indicatori
 
 # 📂 Percorso del file di strategie
@@ -38,13 +38,21 @@ class StrategyGenerator:
         df.write_parquet(STRATEGY_FILE, compression="zstd", mode="overwrite")
         logging.info("💾 Strategie salvate in formato compresso.")
 
-    def update_strategies(self, strategy_name, performance):
-        """📊 Migliora la strategia in base ai risultati, adattandone il peso"""
+    def update_strategies(self, strategy_name, profit, win_rate, drawdown, volatility):
+        """
+        📊 Migliora il peso della strategia basandosi su più parametri:
+        - Profitto
+        - Win Rate (percentuale di successo)
+        - Drawdown (perdita massima subita)
+        - Volatilità (per evitare rischi eccessivi)
+        """
         if strategy_name in self.strategy_weights:
-            new_weight = np.clip(self.strategy_weights[strategy_name] + (performance / 100), 0, 1)
+            efficiency_score = (profit * 0.5) + (win_rate * 0.3) - (drawdown * 0.1) - (volatility * 0.1)
+            new_weight = np.clip(self.strategy_weights[strategy_name] + (efficiency_score / 100), 0, 1)
+
             self.strategy_weights[strategy_name] = new_weight
             self.save_strategies()
-            logging.info(f"📊 Strategia aggiornata: {strategy_name} → Nuovo peso: {new_weight:.3f}")
+            logging.info(f"📊 Strategia aggiornata: {strategy_name} → Nuovo peso: {new_weight:.3f} | Score: {efficiency_score:.2f}")
         else:
             logging.warning(f"⚠️ Strategia {strategy_name} non trovata!")
 
@@ -53,8 +61,16 @@ class StrategyGenerator:
         🔥 Crea automaticamente strategie combinando **tutti** gli indicatori
         📊 Seleziona la strategia migliore in base ai valori di mercato attuali
         """
-        indicator_values = {name: func(market_data) for name, func in self.all_indicators.items()}
-        
+        indicator_values = {}
+        for name, func in self.all_indicators.items():
+            try:
+                if "period" in inspect.signature(func).parameters:
+                    indicator_values[name] = func(market_data, period=50)  # Se l'indicatore ha un parametro "period", usa 50 di default
+                else:
+                    indicator_values[name] = func(market_data)
+            except Exception as e:
+                logging.warning(f"⚠️ Errore nel calcolo dell'indicatore {name}: {e}")
+
         # 🔄 Strategie dinamiche basate su combinazioni di indicatori
         strategy_conditions = {
             "scalping": (indicator_values["calculate_rsi"] < 30 and 
@@ -65,8 +81,7 @@ class StrategyGenerator:
                                indicator_values["calculate_macd"][0] < indicator_values["calculate_macd"][1] and 
                                indicator_values["calculate_bollinger_bands"]["upper"] > market_data["close"].iloc[-1]),
 
-            "trend_following": (indicator_values["calculate_ema"](market_data, period=50) > 
-                                indicator_values["calculate_ema"](market_data, period=200) and 
+            "trend_following": (indicator_values["calculate_ema"] > indicator_values["calculate_ema"](market_data, period=200) and 
                                 indicator_values["calculate_vwap"] > market_data["close"].iloc[-1]),
 
             "swing": (indicator_values["calculate_stochastic"]["k"] < 20 and 
@@ -76,7 +91,9 @@ class StrategyGenerator:
                          indicator_values["calculate_adx"] > 20),
 
             "breakout": (indicator_values["calculate_donchian_channels"]["upper"] < market_data["high"].iloc[-1] and 
-                         indicator_values["calculate_volatility"] > 1.5)
+                         indicator_values["calculate_volatility"] > 1.5),
+
+            "ai_generated": (indicator_values["calculate_ai_score"] > 0.75)  # 🔥 Usa un punteggio AI per nuove strategie
         }
 
         # 🔥 Sceglie la strategia più forte in base ai dati di mercato
