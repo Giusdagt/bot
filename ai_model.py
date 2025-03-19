@@ -1,3 +1,4 @@
+from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 import logging
 from datetime import datetime
@@ -63,6 +64,7 @@ class AIModel:
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)  # Selezione automatica degli asset migliori
+        self.strategy_generator = StrategyGenerator() # generatore di strategie
 
     def load_memory(self):
         if DATA_FILE.exists():
@@ -77,14 +79,14 @@ class AIModel:
         logging.info("💾 Memoria IA aggiornata.")
 
     def update_performance(self, account, symbol, action, lot_size, profit, strategy):
-    # Carica i dati esistenti
+        # Carica i dati esistenti
     if TRADE_FILE.exists():
         df = pl.read_parquet(TRADE_FILE)
     else:
         df = pl.DataFrame({"account": [], "symbol": [], "action": [],
                            "lot_size": [], "profit": [], "strategy": []})
 
-    # Cerca se esiste già un trade per questo account e simbolo
+        # Cerca se esiste già un trade per questo account e simbolo
     existing_trade = df.filter((df["account"] == account) & (df["symbol"] == symbol))
 
     if len(existing_trade) > 0:
@@ -125,6 +127,7 @@ class AIModel:
         self.update_performance(account, symbol, action, lot_size,
                                 result.profit if status == "executed" else 0, strategy)
         self.save_memory(self.strategy_strength)  # 🔥 Aggiornamento della memoria dopo ogni trade
+        self.strategy_generator.update_strategies(strategy, result.profit if status == "executed" else -10)
         logging.info(f"✅ Trade {status} per {account} su {symbol}: {action} {lot_size} lotto | Strategia: {strategy}")
 
     def select_best_assets(self, market_data):
@@ -150,7 +153,7 @@ class AIModel:
             action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
 
             # 🔥 Selezione della strategia migliore
-            strategy = 0.8 if market_data["volatility"].iloc[-1] > 1.5 else 0.5
+            strategy, strategy_value = self.strategy_generator.select_best_strategy(market_data)
 
             if success_probability > 0.5:
                 self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
