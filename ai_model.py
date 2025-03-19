@@ -153,8 +153,8 @@ class AIModel:
             action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
 
             # 🔥 Selezione della strategia migliore
-            strategy, strategy_value = self.strategy_generator.select_best_strategy(market_data)
-
+            strategy_generator.update_strategies(strategy, trade_profit)
+            
             if success_probability > 0.5:
                 self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
             else:
