@@ -64,6 +64,7 @@ class AIModel:
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)  # Selezione automatica degli asset migliori
+        self.strategy_generator = StrategyGenerator()
         selected_strategy, strategy_weight = self.strategy_generator.select_best_strategy(market_data) # generatore di strategie
 
     def load_memory(self):
@@ -153,7 +154,13 @@ class AIModel:
             action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
 
             # 🔥 Selezione della strategia migliore
-            strategy_generator.update_strategies(strategy, trade_profit)
+           self.strategy_generator.update_knowledge(
+        profit=trade_profit,
+        win_rate=1 if trade_profit > 0 else 0,
+        drawdown=abs(min(0, trade_profit)),
+        volatility=market_data["volatility"].iloc[-1]
+        )
+
             
             if success_probability > 0.5:
                 self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
