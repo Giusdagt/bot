@@ -68,26 +68,27 @@ class StrategyGenerator:
             self.save_compressed_knowledge()
 
     def generate_new_strategies(self, market_data):
-    indicator_values = (
-        {name: func(market_data) for name, func in self.all_indicators.items()}
-    )
-    new_strategies = {
-        "strategy_1": (
-            indicator_values["RSI"] < 30 and
-            indicator_values["MACD"] > indicator_values["MACD_Signal"] and
-            indicator_values["ADX"] > 25
-        ),
-        "strategy_2": (
-            indicator_values["RSI"] > 70 and
-            indicator_values["MACD"] < indicator_values["MACD_Signal"] and
-            indicator_values["BB_Upper"] > market_data["close"].iloc[-1]
-        ),
-        "strategy_3": (
-            indicator_values["EMA_50"] > indicator_values["EMA_200"] and
-            indicator_values["VWAP"] > market_data["close"].iloc[-1]
+        indicator_values = (
+            {name: func(market_data) for name, func in self.all_indicators.items()}
         )
-    }
-    self.generated_strategies.update(new_strategies)
+        new_strategies = {
+            "strategy_1": (
+                indicator_values["RSI"] < 30 and
+                indicator_values["MACD"] > indicator_values["MACD_Signal"] and
+                indicator_values["ADX"] > 25
+            ),
+            "strategy_2": (
+                indicator_values["RSI"] > 70 and
+                indicator_values["MACD"] < indicator_values["MACD_Signal"] and
+                indicator_values["BB_Upper"] > market_data["close"].iloc[-1]
+            ),
+            "strategy_3": (
+                indicator_values["EMA_50"] > indicator_values["EMA_200"] and
+                indicator_values["VWAP"] > market_data["close"].iloc[-1]
+            )
+        }
+        self.generated_strategies.update(new_strategies)
+    
     def select_best_strategy(self, market_data):
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
