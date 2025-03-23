@@ -9,7 +9,8 @@ from pathlib import Path
 from indicators import TradingIndicators
 
 MODEL_DIR = (
-    Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists()
+    Path("/mnt/usb_trading_data/models")
+    if Path("/mnt/usb_trading_data").exists()
     else Path("D:/trading_data/models")
 )
 STRATEGY_FILE = MODEL_DIR / "strategies_compressed.parquet"
@@ -23,7 +24,8 @@ class StrategyGenerator:
         self.compressed_knowledge = self.load_compressed_knowledge()
         self.market_anomalies = []
         self.generated_strategies = {}
-        self.latest_market_data = None  # ✅ Aggiornato dinamicamente    
+        self.latest_market_data = None  # ✅ Aggiornato dinamicamente
+        
     def get_all_indicators(self):
         return (
             {name: method for name, method in inspect.getmembers(
@@ -186,6 +188,7 @@ class StrategyGenerator:
 
 # ✅ Test rapido e avvio
 if __name__ == "__main__":
+
     
     sg = StrategyGenerator()
     threading.Thread(
