@@ -88,7 +88,6 @@ class StrategyGenerator:
         )
     }
     self.generated_strategies.update(new_strategies)
-
     def select_best_strategy(self, market_data):
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
