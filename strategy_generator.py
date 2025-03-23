@@ -127,9 +127,9 @@ class StrategyGenerator:
             "breakout": (
                 indicator_values["Donchian_Upper"] < market_data["high"].iloc[-1] and
                 indicator_values["volatility"] > 1.5 and
-                self.compressed_knowledge.mean() > 0.7
+                self.compressed_knowledge.mean() > 0.7,
             ),
-            "ai_generated": self.compressed_knowledge.mean() > 0.75
+            "ai_generated": self.compressed_knowledge.mean() > 0.75,
         }
 
         for strategy, condition in strategy_conditions.items():
