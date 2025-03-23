@@ -8,9 +8,13 @@ from datetime import datetime
 from pathlib import Path
 from indicators import TradingIndicators
 
-MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_DIR = (
+    Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists()
+    else Path("D:/trading_data/models")
+)
 STRATEGY_FILE = MODEL_DIR / "strategies_compressed.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
 
 class StrategyGenerator:
     def __init__(self):
@@ -19,10 +23,13 @@ class StrategyGenerator:
         self.compressed_knowledge = self.load_compressed_knowledge()
         self.market_anomalies = []
         self.generated_strategies = {}
-        self.latest_market_data = None  # ✅ Aggiornato dinamicamente
-    
+        self.latest_market_data = None  # ✅ Aggiornato dinamicamente    
     def get_all_indicators(self):
-        return {name: method for name, method in inspect.getmembers(self.indicators, predicate=inspect.ismethod)}
+        return (
+            {name: method for name, method in inspect.getmembers(
+                self.indicators, predicate=inspect.ismethod
+            )}
+        )
 
     def load_compressed_knowledge(self):
         if STRATEGY_FILE.exists():
@@ -37,54 +44,91 @@ class StrategyGenerator:
 
     def detect_market_anomalies(self, market_data):
         high_volatility = market_data["volatility"].iloc[-1] > 2.0
-        sudden_volume_spike = market_data["volume"].iloc[-1] > market_data["volume"].mean() * 3
+        sudden_volume_spike =(
+            market_data["volume"].iloc[-1] > market_data ["volume"].mean() * 3
+        )
         if high_volatility or sudden_volume_spike:
             self.market_anomalies.append("Manipolazione Rilevata")
 
     def update_knowledge(self, profit, win_rate, drawdown, volatility):
-        efficiency_score = (profit * 0.5) + (win_rate * 0.3) - (drawdown * 0.1) - (volatility * 0.1)
-        self.compressed_knowledge = np.clip(self.compressed_knowledge + (efficiency_score / 1000), 0, 1)
+        efficiency_score = (
+            (profit * 0.5) + (win_rate * 0.3) -
+            (drawdown * 0.1) - (volatility * 0.1)
+        )
+        self.compressed_knowledge =(
+            np.clip(self.compressed_knowledge + (efficiency_score / 1000), 0, 1)
+        )
         self.save_compressed_knowledge()
 
         # ✅ Compressione incrementale della conoscenza
         if len(self.compressed_knowledge) > 50:
-            self.compressed_knowledge = np.mean(self.compressed_knowledge.reshape(-1, 2), axis=1)
+            self.compressed_knowledge = np.mean(
+                self.compressed_knowledge.reshape(-1, 2), axis=1
+            )
             self.save_compressed_knowledge()
 
     def generate_new_strategies(self, market_data):
-        indicator_values = {name: func(market_data) for name, func in self.all_indicators.items()}
-        new_strategies = {
-            "strategy_1": indicator_values["RSI"] < 30 and indicator_values["MACD"] > indicator_values["MACD_Signal"] and indicator_values["ADX"] > 25,
-            "strategy_2": indicator_values["RSI"] > 70 and indicator_values["MACD"] < indicator_values["MACD_Signal"] and indicator_values["BB_Upper"] > market_data["close"].iloc[-1],
-            "strategy_3": indicator_values["EMA_50"] > indicator_values["EMA_200"] and indicator_values["VWAP"] > market_data["close"].iloc[-1],
-        }
-        self.generated_strategies.update(new_strategies)
+    indicator_values = (
+        {name: func(market_data) for name, func in self.all_indicators.items()}
+    )
+    new_strategies = {
+        "strategy_1": (
+            indicator_values["RSI"] < 30 and
+            indicator_values["MACD"] > indicator_values["MACD_Signal"] and
+            indicator_values["ADX"] > 25
+        ),
+        "strategy_2": (
+            indicator_values["RSI"] > 70 and
+            indicator_values["MACD"] < indicator_values["MACD_Signal"] and
+            indicator_values["BB_Upper"] > market_data["close"].iloc[-1]
+        ),
+        "strategy_3": (
+            indicator_values["EMA_50"] > indicator_values["EMA_200"] and
+            indicator_values["VWAP"] > market_data["close"].iloc[-1]
+        )
+    }
+    self.generated_strategies.update(new_strategies)
 
     def select_best_strategy(self, market_data):
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
-        indicator_values = {name: func(market_data) for name, func in self.all_indicators.items()}
+        indicator_values =(
+            {name: func(market_data) for name, func in
+             self.all_indicators.items()}
+        )
 
         strategy_conditions = {
             **self.generated_strategies,
-            "scalping": indicator_values["RSI"] < 30 and indicator_values["MACD"] > indicator_values["MACD_Signal"] and indicator_values["ADX"] > 25 and self.compressed_knowledge.mean() > 0.6,
-            "mean_reversion": indicator_values["RSI"] > 70 and indicator_values["MACD"] < indicator_values["MACD_Signal"] and indicator_values["BB_Upper"] > market_data["close"].iloc[-1] and self.compressed_knowledge.mean() > 0.5,
-            "trend_following": (indicator_values["EMA_50"] > 
-                                indicator_values["EMA_200"] and 
-                                indicator_values["VWAP"] > market_data["close"].iloc[-1] and 
+            "scalping": (
+                indicator_values["RSI"] < 30 and
+                indicator_values["MACD"] > indicator_values["MACD_Signal"] and
+                indicator_values["ADX"] > 25 and
+                self.compressed_knowledge.mean() > 0.6,
+            ) 
+            "mean_reversion": (
+                indicator_values["RSI"] > 70 and
+                indicator_values["MACD"] < indicator_values["MACD_Signal"] and
+                indicator_values["BB_Upper"] > market_data["close"].iloc[-1] and
+                self.compressed_knowledge.mean() > 0.5,
+            )
+            "trend_following": (indicator_values["EMA_50"] >
+                                indicator_values["EMA_200"] and
+                                indicator_values["VWAP"] > market_data["close"].iloc[-1] and
                                 self.compressed_knowledge.mean() > 0.4),
 
-            "swing": (indicator_values["STOCH_K"] < 20 and 
-                      indicator_values["STOCH_D"] < 20 and 
+            "swing": (indicator_values["STOCH_K"] < 20 and
+                      indicator_values["STOCH_D"] < 20 and
                       self.compressed_knowledge.mean() > 0.3),
 
-            "momentum": (indicator_values["momentum"] > 100 and 
-                         indicator_values["ADX"] > 20 and 
+            "momentum": (indicator_values["momentum"] > 100 and
+                         indicator_values["ADX"] > 20 and
                          self.compressed_knowledge.mean() > 0.2),
 
-            "breakout": (indicator_values["Donchian_Upper"] < market_data["high"].iloc[-1] and 
-                         indicator_values["volatility"] > 1.5 and 
-                         self.compressed_knowledge.mean() > 0.7),
+            "breakout": (
+                indicator_values["Donchian_Upper"] < market_data["high"].iloc[-1] and
+                indicator_values["volatility"] > 1.5 and
+                self.compressed_knowledge.mean() > 0.7
+            ),
             "ai_generated": self.compressed_knowledge.mean() > 0.75
         }
 
@@ -104,7 +148,9 @@ class StrategyGenerator:
         super_strategy = {}
         for _, strategy in sorted_strategies:
             for indicator, condition in strategy.items():
-                super_strategy[indicator] = super_strategy.get(indicator, 0) + condition
+                super_strategy[indicator] = super_strategy.get(
+                    indicator, 0
+                ) + condition
 
         for indicator in super_strategy:
             super_strategy[indicator] /= top_n
@@ -131,11 +177,17 @@ class StrategyGenerator:
                 simulated_win_rate = np.random.uniform(0.5, 0.8)
                 simulated_drawdown = np.random.uniform(0, 0.1)
                 simulated_volatility = np.random.uniform(0.01, 0.05)
-                self.update_knowledge(simulated_profit, simulated_win_rate, simulated_drawdown, simulated_volatility)
+                self.update_knowledge(
+                    simulated_profit, simulated_win_rate, simulated_drawdown,
+                    simulated_volatility
+                )
             time.sleep(interval_seconds)
 
 # ✅ Test rapido e avvio
 if __name__ == "__main__":
+    
     sg = StrategyGenerator()
-    threading.Thread(target=sg.continuous_self_improvement, daemon=True).start()
+    threading.Thread(
+        target=sg.continuous_self_improvement, daemon=True
+    ).start()
     print("📊 Conoscenza strategica caricata:", sg.compressed_knowledge.mean())
