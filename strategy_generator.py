@@ -92,9 +92,8 @@ class StrategyGenerator:
     def select_best_strategy(self, market_data):
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
-        indicator_values =(
-            {name: func(market_data) for name, func in
-             self.all_indicators.items()}
+        indicator_values = (
+            {name: func(market_data) for name, func in self.all_indicators.items()}
         )
 
         strategy_conditions = {
@@ -104,26 +103,28 @@ class StrategyGenerator:
                 indicator_values["MACD"] > indicator_values["MACD_Signal"] and
                 indicator_values["ADX"] > 25 and
                 self.compressed_knowledge.mean() > 0.6,
-            ) 
+            ),
             "mean_reversion": (
                 indicator_values["RSI"] > 70 and
                 indicator_values["MACD"] < indicator_values["MACD_Signal"] and
                 indicator_values["BB_Upper"] > market_data["close"].iloc[-1] and
                 self.compressed_knowledge.mean() > 0.5,
-            )
-            "trend_following": (indicator_values["EMA_50"] >
-                                indicator_values["EMA_200"] and
-                                indicator_values["VWAP"] > market_data["close"].iloc[-1] and
-                                self.compressed_knowledge.mean() > 0.4),
-
-            "swing": (indicator_values["STOCH_K"] < 20 and
-                      indicator_values["STOCH_D"] < 20 and
-                      self.compressed_knowledge.mean() > 0.3),
-
-            "momentum": (indicator_values["momentum"] > 100 and
-                         indicator_values["ADX"] > 20 and
-                         self.compressed_knowledge.mean() > 0.2),
-
+            ),
+            "trend_following": (
+                indicator_values["EMA_50"] > indicator_values["EMA_200"] and
+                indicator_values["VWAP"] > market_data["close"].iloc[-1] and
+                self.compressed_knowledge.mean() > 0.4,
+            ),
+            "swing": (
+                indicator_values["STOCH_K"] < 20 and
+                indicator_values["STOCH_D"] < 20 and
+                self.compressed_knowledge.mean() > 0.3,
+            ),
+            "momentum": (
+                indicator_values["momentum"] > 100 and
+                indicator_values["ADX"] > 20 and
+                self.compressed_knowledge.mean() > 0.2,
+            ),
             "breakout": (
                 indicator_values["Donchian_Upper"] < market_data["high"].iloc[-1] and
                 indicator_values["volatility"] > 1.5 and
@@ -137,7 +138,7 @@ class StrategyGenerator:
                 return strategy, self.compressed_knowledge.mean()
 
         return "default_strategy", self.compressed_knowledge.mean()
-
+        
     def fuse_top_strategies(self, top_n=5):
         sorted_strategies = sorted(
             self.generated_strategies.items(),
