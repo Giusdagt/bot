@@ -16,6 +16,7 @@ MODEL_DIR = (
 STRATEGY_FILE = MODEL_DIR / "strategies_compressed.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
+
 class StrategyGenerator:
     def __init__(self):
         self.indicators = TradingIndicators()
@@ -24,7 +25,7 @@ class StrategyGenerator:
         self.market_anomalies = []
         self.generated_strategies = {}
         self.latest_market_data = None  # ✅ Aggiornato dinamicamente
-        
+
     def get_all_indicators(self):
         return (
             {name: method for name, method in inspect.getmembers(
@@ -45,8 +46,9 @@ class StrategyGenerator:
 
     def detect_market_anomalies(self, market_data):
         high_volatility = market_data["volatility"].iloc[-1] > 2.0
-        sudden_volume_spike =(
-            market_data["volume"].iloc[-1] > market_data ["volume"].mean() * 3
+        sudden_volume_spike = (
+            market_data["volume"].iloc[-1] >
+            market_data["volume"].mean() * 3
         )
         if high_volatility or sudden_volume_spike:
             self.market_anomalies.append("Manipolazione Rilevata")
@@ -56,8 +58,9 @@ class StrategyGenerator:
             (profit * 0.5) + (win_rate * 0.3) -
             (drawdown * 0.1) - (volatility * 0.1)
         )
-        self.compressed_knowledge =(
-            np.clip(self.compressed_knowledge + (efficiency_score / 1000), 0, 1)
+        self.compressed_knowledge = (
+            np.clip(self.compressed_knowledge +
+                    (efficiency_score / 1000), 0, 1)
         )
         self.save_compressed_knowledge()
 
@@ -70,7 +73,8 @@ class StrategyGenerator:
 
     def generate_new_strategies(self, market_data):
         indicator_values = (
-            {name: func(market_data) for name, func in self.all_indicators.items()}
+            {name: func(market_data) for name,
+             func in self.all_indicators.items()}
         )
         new_strategies = {
             "strategy_1": (
@@ -89,12 +93,13 @@ class StrategyGenerator:
             )
         }
         self.generated_strategies.update(new_strategies)
-    
+
     def select_best_strategy(self, market_data):
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
         indicator_values = (
-            {name: func(market_data) for name, func in self.all_indicators.items()}
+            {name: func(market_data) for name,
+             func in self.all_indicators.items()}
         )
 
         strategy_conditions = {
@@ -108,7 +113,8 @@ class StrategyGenerator:
             "mean_reversion": (
                 indicator_values["RSI"] > 70 and
                 indicator_values["MACD"] < indicator_values["MACD_Signal"] and
-                indicator_values["BB_Upper"] > market_data["close"].iloc[-1] and
+                indicator_values["BB_Upper"] >
+                market_data["close"].iloc[-1] and
                 self.compressed_knowledge.mean() > 0.5,
             ),
             "trend_following": (
@@ -127,7 +133,8 @@ class StrategyGenerator:
                 self.compressed_knowledge.mean() > 0.2,
             ),
             "breakout": (
-                indicator_values["Donchian_Upper"] < market_data["high"].iloc[-1] and
+                indicator_values["Donchian_Upper"] <
+                market_data["high"].iloc[-1] and
                 indicator_values["volatility"] > 1.5 and
                 self.compressed_knowledge.mean() > 0.7,
             ),
@@ -139,7 +146,7 @@ class StrategyGenerator:
                 return strategy, self.compressed_knowledge.mean()
 
         return "default_strategy", self.compressed_knowledge.mean()
-        
+
     def fuse_top_strategies(self, top_n=5):
         sorted_strategies = sorted(
             self.generated_strategies.items(),
