@@ -184,8 +184,9 @@ class StrategyGenerator:
                     simulated_volatility
                 )
             time.sleep(interval_seconds)
-            
+
 if __name__ == "__main__":
+
 
     sg = StrategyGenerator()
     threading.Thread(
