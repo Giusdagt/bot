@@ -169,7 +169,7 @@ class StrategyGenerator:
             name = f"exploit_{anomaly.lower().replace(' ', '_')}"
             self.generated_strategies[name] = {"anomaly_detected": True}
 
-    def continuous_self_improvement(self, interval_seconds=1800):
+        def continuous_self_improvement(self, interval_seconds=1800):
         while True:
             if self.latest_market_data is not None:
                 self.generate_new_strategies(self.latest_market_data)
@@ -185,8 +185,9 @@ class StrategyGenerator:
                 )
             time.sleep(interval_seconds)
 
-if __name__ == "__main__":
 
+# ✅ Test rapido e avvio
+if __name__ == "__main__":
 
     sg = StrategyGenerator()
     threading.Thread(
