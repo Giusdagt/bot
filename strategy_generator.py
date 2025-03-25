@@ -185,7 +185,6 @@ class StrategyGenerator:
                 )
             time.sleep(interval_seconds)
             
-
 if __name__ == "__main__":
 
     sg = StrategyGenerator()
