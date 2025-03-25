@@ -16,7 +16,6 @@ MODEL_DIR = (
 STRATEGY_FILE = MODEL_DIR / "strategies_compressed.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-
 class StrategyGenerator:
     def __init__(self):
         self.indicators = TradingIndicators()
@@ -186,9 +185,9 @@ class StrategyGenerator:
                 )
             time.sleep(interval_seconds)
 
-# ✅ Test rapido e avvio
+       # ✅ Test rapido e avvio
 if __name__ == "__main__":
-   
+
     sg = StrategyGenerator()
     threading.Thread(
         target=sg.continuous_self_improvement, daemon=True
