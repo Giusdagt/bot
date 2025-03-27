@@ -82,30 +82,29 @@ class AIModel:
     def update_performance(self, account, symbol, action, lot_size, profit, strategy):
         # Carica i dati esistenti
         if TRADE_FILE.exists():
-        df = pl.read_parquet(TRADE_FILE)
-    else:
-        df = pl.DataFrame({"account": [], "symbol": [], "action": [],
-                           "lot_size": [], "profit": [], "strategy": []})
+            df = pl.read_parquet(TRADE_FILE)
+        else:
+            df = pl.DataFrame({"account": [], "symbol": [], "action": [],
+                               "lot_size": [], "profit": [], "strategy": []})
 
         # Cerca se esiste già un trade per questo account e simbolo
-    existing_trade = df.filter((df["account"] == account) & (df["symbol"] == symbol))
+        existing_trade = df.filter((df["account"] == account) & (df["symbol"] == symbol))
 
         if len(existing_trade) > 0:
-        # Aggiorna il valore invece di creare una nuova riga
-        df = df.with_columns([
-            pl.when((df["account"] == account) & (df["symbol"] == symbol))
-            .then(pl.lit(profit)).otherwise(df["profit"]).alias("profit")
-        ])
-    else:
-        # Se non esiste, aggiunge una nuova entry
-        new_entry = pl.DataFrame({"account": [account], "symbol": [symbol],
-                                  "action": [action],"lot_size": [lot_size],
-                                  "profit": [profit], "strategy": [strategy]})
-        df = pl.concat([df, new_entry])
+            # Aggiorna il valore invece di creare una nuova riga
+            df = df.with_columns([
+                pl.when((df["account"] == account) & (df["symbol"] == symbol))
+                .then(pl.lit(profit)).otherwise(df["profit"]).alias("profit")
+            ])
+        else:
+            # Se non esiste, aggiunge una nuova entry
+            new_entry = pl.DataFrame({"account": [account], "symbol": [symbol],
+                                      "action": [action],"lot_size": [lot_size],
+                                      "profit": [profit], "strategy": [strategy]})
+            df = pl.concat([df, new_entry])
 
-    df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
-    logging.info(f"📊 Trade aggiornato per {account} su {symbol}: Profit {profit} | Strategia: {strategy}")
-
+        df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
+        logging.info(f"📊 Trade aggiornato per {account} su {symbol}: Profit {profit} | Strategia: {strategy}")
 
     def adapt_lot_size(self, balance, success_probability):
         max_lot_size = balance / 50  # 🔥 Adatta il lot size in base al saldo disponibile
@@ -154,14 +153,13 @@ class AIModel:
             action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
 
             # 🔥 Selezione della strategia migliore
-           self.strategy_generator.update_knowledge(
-        profit=trade_profit,
-        win_rate=1 if trade_profit > 0 else 0,
-        drawdown=abs(min(0, trade_profit)),
-        volatility=market_data["volatility"].iloc[-1]
-        )
+            self.strategy_generator.update_knowledge(
+                profit=trade_profit,
+                win_rate=1 if trade_profit > 0 else 0,
+                drawdown=abs(min(0, trade_profit)),
+                volatility=market_data["volatility"].iloc[-1]
+            )
 
-            
             if success_probability > 0.5:
                 self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
             else:
