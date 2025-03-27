@@ -4,9 +4,14 @@ import polars as pl
 import numpy as np
 import inspect
 import time
-from datetime import datetime
 from pathlib import Path
 from indicators import TradingIndicators
+
+# Configura il logging
+logging.basicConfig(
+    level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger()
 
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models")
@@ -25,6 +30,7 @@ class StrategyGenerator:
         self.market_anomalies = []
         self.generated_strategies = {}
         self.latest_market_data = None  # ✅ Aggiornato dinamicamente
+        logger.info("StrategyGenerator initialized")
 
     def get_all_indicators(self):
         return (
@@ -36,13 +42,16 @@ class StrategyGenerator:
     def load_compressed_knowledge(self):
         if STRATEGY_FILE.exists():
             df = pl.read_parquet(STRATEGY_FILE)
+            logging.info("Loaded compressed knowledge from file")
             return np.frombuffer(df["knowledge"][0], dtype=np.float32)
         else:
+            logging.info("No existing knowledge file found, initializing with zeros")
             return np.zeros(100, dtype=np.float32)
 
     def save_compressed_knowledge(self):
         df = pl.DataFrame({"knowledge": [self.compressed_knowledge.tobytes()]})
         df.write_parquet(STRATEGY_FILE, compression="zstd", mode="overwrite")
+        logging.info("Saved compressed knowledge to file")
 
     def detect_market_anomalies(self, market_data):
         high_volatility = market_data["volatility"].iloc[-1] > 2.0
@@ -52,6 +61,9 @@ class StrategyGenerator:
         )
         if high_volatility or sudden_volume_spike:
             self.market_anomalies.append("Manipolazione Rilevata")
+            logging.warning(
+                "Market anomaly detected: High volatility or sudden volume spike"
+            )
 
     def update_knowledge(self, profit, win_rate, drawdown, volatility):
         efficiency_score = (
@@ -62,6 +74,10 @@ class StrategyGenerator:
             np.clip(self.compressed_knowledge +
                     (efficiency_score / 1000), 0, 1)
         )
+        logging.info(
+            f"Knowledge updated: profit={profit}, win_rate={win_rate},
+            drawdown={drawdown}, volatility={volatility}"
+        )
         self.save_compressed_knowledge()
 
         # ✅ Compressione incrementale della conoscenza
@@ -70,6 +86,7 @@ class StrategyGenerator:
                 self.compressed_knowledge.reshape(-1, 2), axis=1
             )
             self.save_compressed_knowledge()
+            logging.info("Compressed knowledge incrementally")
 
     def generate_new_strategies(self, market_data):
         indicator_values = (
@@ -93,6 +110,7 @@ class StrategyGenerator:
             )
         }
         self.generated_strategies.update(new_strategies)
+        logging.info("Generated new strategies")
 
     def select_best_strategy(self, market_data):
         self.detect_market_anomalies(market_data)
@@ -143,8 +161,10 @@ class StrategyGenerator:
 
         for strategy, condition in strategy_conditions.items():
             if condition:
+                logging.info(f"Best strategy selected: {strategy}")
                 return strategy, self.compressed_knowledge.mean()
 
+        logging.info("Default strategy selected")
         return "default_strategy", self.compressed_knowledge.mean()
 
     def fuse_top_strategies(self, top_n=5):
@@ -165,6 +185,7 @@ class StrategyGenerator:
             super_strategy[indicator] /= top_n
 
         self.generated_strategies["super_strategy"] = super_strategy
+        logging.info("Fused top strategies into super strategy")
 
     def exploit_market_anomalies(self, market_data):
         anomalies = []
@@ -175,6 +196,7 @@ class StrategyGenerator:
         for anomaly in anomalies:
             name = f"exploit_{anomaly.lower().replace(' ', '_')}"
             self.generated_strategies[name] = {"anomaly_detected": True}
+            logging.warning(f"Exploiting market anomaly: {anomaly}")
 
     def continuous_self_improvement(self, interval_seconds=1800):
         while True:
@@ -200,4 +222,6 @@ if __name__ == "__main__":
     threading.Thread(
         target=sg.continuous_self_improvement, daemon=True
     ).start()
-    print("📊 Conoscenza strategica caricata:", sg.compressed_knowledge.mean())
+    logger.info(
+        "📊 Conoscenza strategica caricata: %s", sg.compressed_knowledge.mean()
+    )
