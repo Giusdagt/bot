@@ -65,6 +65,7 @@ class StrategyGenerator:
                 "Rilevata anomalia di mercato: elevata volatilità o "
                 "picco improvviso del volume"
             )
+
     def update_knowledge(self, profit, win_rate, drawdown, volatility):
         efficiency_score = (
             (profit * 0.5) + (win_rate * 0.3) -
