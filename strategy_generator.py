@@ -45,7 +45,7 @@ class StrategyGenerator:
             logging.info("Loaded compressed knowledge from file")
             return np.frombuffer(df["knowledge"][0], dtype=np.float32)
         else:
-            logging.info("No existing knowledge file found, initializing with zeros")
+            logging.info("Nessun file di conoscenza esistente trovato")
             return np.zeros(100, dtype=np.float32)
 
     def save_compressed_knowledge(self):
@@ -62,7 +62,8 @@ class StrategyGenerator:
         if high_volatility or sudden_volume_spike:
             self.market_anomalies.append("Manipolazione Rilevata")
             logging.warning(
-                "Market anomaly detected: High volatility or sudden volume spike"
+                "Rilevata anomalia di mercato: elevata volatilità o
+                picco improvviso del volume"
             )
 
     def update_knowledge(self, profit, win_rate, drawdown, volatility):
