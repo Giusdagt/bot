@@ -75,8 +75,8 @@ class StrategyGenerator:
                     (efficiency_score / 1000), 0, 1)
         )
         logging.info(
-            f"Knowledge updated: profit={profit}, win_rate={win_rate},
-            drawdown={drawdown}, volatility={volatility}"
+            f"Knowledge updated: profit={profit}, win_rate={win_rate}, "
+            f"drawdown={drawdown}, volatility={volatility}"
         )
         self.save_compressed_knowledge()
 
