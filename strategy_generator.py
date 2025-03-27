@@ -62,10 +62,9 @@ class StrategyGenerator:
         if high_volatility or sudden_volume_spike:
             self.market_anomalies.append("Manipolazione Rilevata")
             logging.warning(
-                "Rilevata anomalia di mercato: elevata volatilità o
-                picco improvviso del volume"
+                "Rilevata anomalia di mercato: elevata volatilità o "
+                "picco improvviso del volume"
             )
-
     def update_knowledge(self, profit, win_rate, drawdown, volatility):
         efficiency_score = (
             (profit * 0.5) + (win_rate * 0.3) -
