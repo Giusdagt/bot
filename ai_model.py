@@ -81,7 +81,7 @@ class AIModel:
 
     def update_performance(self, account, symbol, action, lot_size, profit, strategy):
         # Carica i dati esistenti
-    if TRADE_FILE.exists():
+        if TRADE_FILE.exists():
         df = pl.read_parquet(TRADE_FILE)
     else:
         df = pl.DataFrame({"account": [], "symbol": [], "action": [],
@@ -90,7 +90,7 @@ class AIModel:
         # Cerca se esiste già un trade per questo account e simbolo
     existing_trade = df.filter((df["account"] == account) & (df["symbol"] == symbol))
 
-    if len(existing_trade) > 0:
+        if len(existing_trade) > 0:
         # Aggiorna il valore invece di creare una nuova riga
         df = df.with_columns([
             pl.when((df["account"] == account) & (df["symbol"] == symbol))
