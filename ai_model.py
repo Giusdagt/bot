@@ -8,7 +8,6 @@ import polars as pl
 import numpy as np
 import asyncio
 import MetaTrader5 as mt5
-import sqlite3
 from data_handler import get_normalized_market_data
 from drl_agent import DRLAgent  # Deep Reinforcement Learning
 from risk_management import RiskManagement, VolatilityPredictor
