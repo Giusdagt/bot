@@ -3,7 +3,6 @@ import gc
 import polars as pl
 import numpy as np
 from pathlib import Path
-from datetime import datetime
 
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models")
@@ -92,7 +91,9 @@ class OptimizerCore:
             return
         df = pl.read_parquet(PERFORMANCE_FILE)
         df = df.tail(100)  # Ultime 100 righe di performance
-        df.write_parquet(PERFORMANCE_FILE, compression="zstd", mode="overwrite")
+        df.write_parquet(
+            PERFORMANCE_FILE, compression="zstd", mode="overwrite"
+        )
         logging.info("📈 Performance ottimizzate.")
 
     def evaluate_evolution(
