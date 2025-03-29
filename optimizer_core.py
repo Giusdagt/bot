@@ -5,7 +5,11 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 
-MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_DIR = (
+    Path("/mnt/usb_trading_data/models") 
+    if Path("/mnt/usb_trading_data").exists() 
+    else Path("D:/trading_data/models")
+)
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 STRATEGY_FILE = MODEL_DIR / "strategies_compressed.parquet"
