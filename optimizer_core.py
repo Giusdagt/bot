@@ -6,8 +6,8 @@ from pathlib import Path
 from datetime import datetime
 
 MODEL_DIR = (
-    Path("/mnt/usb_trading_data/models") 
-    if Path("/mnt/usb_trading_data").exists() 
+    Path("/mnt/usb_trading_data/models")
+    if Path("/mnt/usb_trading_data").exists()
     else Path("D:/trading_data/models")
 )
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -18,6 +18,7 @@ KNOWLEDGE_FILE = MODEL_DIR / "compressed_knowledge.parquet"
 AI_MEMORY_FILE = MODEL_DIR / "ai_memory.parquet"
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 PERFORMANCE_FILE = MODEL_DIR / "performance.parquet"
+
 
 class OptimizerCore:
     def __init__(self, strategy_generator=None, ai_model=None):
@@ -40,10 +41,14 @@ class OptimizerCore:
     def optimize_anomalies(self):
         if not self.sg:
             return
-        limited_anomalies = self.sg.market_anomalies[-50:]  # Mantiene solo le ultime 50
+        limited_anomalies = (
+            self.sg.market_anomalies[-50:]  # Mantiene solo le ultime 50
+        )
         self.sg.market_anomalies = limited_anomalies
         df = pl.DataFrame({"anomalies": [limited_anomalies]})
-        df.write_parquet(ANOMALY_FILE, compression="zstd", mode="overwrite")
+        df.write_parquet(
+            ANOMALY_FILE, compression="zstd", mode="overwrite"
+        )
         logging.info("✅ Anomalie salvate e ottimizzate.")
 
     def optimize_knowledge(self):
@@ -69,14 +74,16 @@ class OptimizerCore:
                 mem = mem[-10:]  # Mantieni solo le ultime 10 entry
             mean_mem = np.mean(mem)
             df = pl.DataFrame({"memory": [mean_mem]})
-            df.write_parquet(AI_MEMORY_FILE, compression="zstd", mode="overwrite")
+            df.write_parquet(
+                AI_MEMORY_FILE, compression="zstd", mode="overwrite"
+            )
             logging.info("🧠 Memoria AI consolidata.")
 
     def optimize_trades(self):
         if not TRADE_FILE.exists():
             return
         df = pl.read_parquet(TRADE_FILE)
-        df = df.sort("profit", descending=True).head(100)  # Mantieni solo i top 100 trade
+        df = df.sort("profit", descending=True).head(100)  # top 100 trade
         df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
         logging.info("📊 Trade compressi e ottimizzati.")
 
@@ -88,7 +95,9 @@ class OptimizerCore:
         df.write_parquet(PERFORMANCE_FILE, compression="zstd", mode="overwrite")
         logging.info("📈 Performance ottimizzate.")
 
-    def evaluate_evolution(self, profit, win_rate, drawdown, volatility, strategy_strength):
+    def evaluate_evolution(
+        self, profit, win_rate, drawdown, volatility, strategy_strength
+    ):
         score = (
             (profit * 0.5) +
             (win_rate * 0.3) -
