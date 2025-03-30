@@ -176,16 +176,23 @@ class AIModel:
 
     def background_optimization_loop(ai_model_instance, interval_seconds=43200):  # ogni 12 ore
         optimizer = (
-            OptimizerCore(strategy_generator=ai_model_instance.strategy_generator,
-                          ai_model=ai_model_instance)
+            OptimizerCore(
+                strategy_generator=ai_model_instance.strategy_generator,
+                ai_model=ai_model_instance
+            )
         )
         while True:
             optimizer.run_full_optimization()
             time.sleep(interval_seconds)
+            
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
     import threading
-    threading.Thread(target=background_optimization_loop, args=(ai_model,), daemon=True).start()
+    thread = threading.Thread(
+        target=background_optimization_loop,
+        args=(ai_model,), daemon=True
+    )
+    thread.start()
 
     # 🔥 Loop di miglioramento continuo
     while True:
