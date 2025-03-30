@@ -42,9 +42,9 @@ def demo_trade(symbol, market_data):
 
 
 # backtest_module.py
-import logging
 import numpy as np
 import random
+import logging
 
 
 def run_backtest(symbol, historical_data):
