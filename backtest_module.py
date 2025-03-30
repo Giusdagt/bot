@@ -62,9 +62,11 @@ def run_backtest(symbol, historical_data):
     win_rate = sum(1 for p in profits if p > 0) / simulated_trades
     avg_profit = np.mean(profits)
 
-    logging.info(
-        f"📊 Backtest completato su {symbol} |
-        Win Rate: {win_rate:.2%} | Avg Profit: {avg_profit:.2f} $"
+     logging.info(
+        (
+            f"📊 Backtest completato su {symbol} | "
+            f"Win Rate: {win_rate:.2%} | Avg Profit: {avg_profit:.2f} $"
+        )
     )
     return {
         "symbol": symbol,
