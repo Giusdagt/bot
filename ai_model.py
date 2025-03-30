@@ -142,6 +142,7 @@ class AIModel:
             f"📊 Trade aggiornato per {account} su {symbol}: "
             f"Profit {profit} | Strategia: {strategy}"
         )
+
     def adapt_lot_size(self, balance, success_probability):
         max_lot_size = balance / 50
         return min(
