@@ -115,8 +115,11 @@ class AIModel:
         logging.info(f"📊 Trade aggiornato per {account} su {symbol}: Profit {profit} | Strategia: {strategy}")
 
     def adapt_lot_size(self, balance, success_probability):
-        max_lot_size = balance / 50  # 🔥 Adatta il lot size in base al saldo disponibile
-        return min(balance * (success_probability * self.strategy_strength) / 10, max_lot_size)
+        max_lot_size = balance / 50
+        return min(
+            balance * (success_probability * self.strategy_strength) / 10,
+            max_lot_size
+        )
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
         order = {
@@ -132,15 +135,28 @@ class AIModel:
         }
         result = mt5.order_send(order)
         status = "executed" if result.retcode == mt5.TRADE_RETCODE_DONE else "failed"
-        self.update_performance(account, symbol, action, lot_size,
-                                result.profit if status == "executed" else 0, strategy)
-        self.save_memory(self.strategy_strength)  # 🔥 Aggiornamento della memoria dopo ogni trade
-        self.strategy_generator.update_strategies(strategy, result.profit if status == "executed" else -10)
-        logging.info(f"✅ Trade {status} per {account} su {symbol}: {action} {lot_size} lotto | Strategia: {strategy}")
+        self.update_performance(
+            account, symbol, action, lot_size, result.profit
+            if status == "executed" else 0, strategy
+        )
+        self.save_memory(self.strategy_strength)
+        self.strategy_generator.update_strategies(
+            strategy,
+            result.profit if status == "executed" else -10
+        )
+        logging.info(
+            f"✅ Trade {status} per {account} su {symbol}: "
+            f"{action} {lot_size} lotto | Strategia: {strategy}"
+        )
 
     def select_best_assets(self, market_data):
-        """Seleziona automaticamente gli asset con il miglior rendimento storico."""
-        assets_performance = {asset: market_data[asset]["close"].pct_change().mean() for asset in market_data.keys()}
+        """
+        Seleziona automaticamente gli asset con il miglior rendimento storico
+        """
+        assets_performance = {
+            asset: market_data[asset]["close"].pct_change().mean()
+            for asset in market_data.keys()
+        }
         sorted_assets = sorted(
             assets_performance, key=assets_performance.get, reverse=True
         )
@@ -154,7 +170,7 @@ class AIModel:
 
         if market_data is None or market_data.height == 0:
             logging.warning(
-                f"⚠️ Nessun dato per {symbol}. Backtest per auto-miglioramento."
+                f"⚠️ Nessun dato per {symbol}. Backtest x auto-miglioramento."
             )
             self.backtest(symbol, [market_data])
             return False
@@ -167,7 +183,8 @@ class AIModel:
                 self.balances[account], success_probability
             )
             action = (
-                "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
+                "buy" if predicted_price > market_data["close"].iloc[-1]
+                else "sell"
             )
 
             # 🔥 Selezione della strategia migliore
