@@ -141,15 +141,21 @@ class AIModel:
     def select_best_assets(self, market_data):
         """Seleziona automaticamente gli asset con il miglior rendimento storico."""
         assets_performance = {asset: market_data[asset]["close"].pct_change().mean() for asset in market_data.keys()}
-        sorted_assets = sorted(assets_performance, key=assets_performance.get, reverse=True)
-        logging.info(f"📈 Asset selezionati per il trading: {sorted_assets[:5]}")
+        sorted_assets = sorted(
+            assets_performance, key=assets_performance.get, reverse=True
+        )
+        logging.info(
+            f"📈 Asset selezionati per il trading: {sorted_assets[:5]}"
+        )
         return sorted_assets[:5]  # Seleziona i 5 asset migliori
 
     async def decide_trade(self, symbol):
         market_data = get_normalized_market_data(symbol)
 
         if market_data is None or market_data.height == 0:
-            logging.warning(f"⚠️ Nessun dato per {symbol}. Avvio Backtest per auto-miglioramento.")
+            logging.warning(
+                f"⚠️ Nessun dato per {symbol}. Backtest per auto-miglioramento."
+            )
             self.backtest(symbol, [market_data])
             return False
 
@@ -157,12 +163,18 @@ class AIModel:
 
         for account in self.balances:
             success_probability = self.drl_agent.predict(symbol, market_data)
-            lot_size = self.adapt_lot_size(self.balances[account], success_probability)
-            action = "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
+            lot_size = self.adapt_lot_size(
+                self.balances[account], success_probability
+            )
+            action = (
+                "buy" if predicted_price > market_data["close"].iloc[-1] else "sell"
+            )
 
             # 🔥 Selezione della strategia migliore
             trade_profit = predicted_price - market_data["close"].iloc[-1]
-            strategy, _ = self.strategy_generator.select_best_strategy(market_data)
+            strategy, _ = self.strategy_generator.select_best_strategy(
+                market_data
+            )
             self.strategy_generator.update_knowledge(
                 profit=trade_profit,
                 win_rate=1 if trade_profit > 0 else 0,
