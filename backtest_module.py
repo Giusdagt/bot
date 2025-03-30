@@ -4,16 +4,21 @@ import random
 import polars as pl
 from pathlib import Path
 
-MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_DIR = (
+    Path("/mnt/usb_trading_data/models")
+    if Path("/mnt/usb_trading_data").exists()
+    else Path("D:/trading_data/models")
+)
 TRADE_FILE = MODEL_DIR / "demo_trades.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 def demo_trade(symbol, market_data):
     """
-    Simula un'operazione senza inviarla realmente. Ideale per training automatico o mancanza di credenziali.
+    Simula un'operazione senza inviarla realmente.
+    Ideale per training automatico o mancanza di credenziali.
     """
     if market_data is None or market_data.height == 0:
-        logging.warning(f"⚠️ Nessun dato disponibile per il demo trade su {symbol}.")
+        logging.warning(f"⚠️ Nessun dato per il demo trade su {symbol}.")
         return
 
     fake_profit = round(random.uniform(-5, 10), 2)
@@ -22,10 +27,13 @@ def demo_trade(symbol, market_data):
         "profit": fake_profit,
         "timestamp": pl.Series([pl.datetime_now()])
     }
-    logging.info(f"🧪 Demo Trade simulato per {symbol} | Profitto: {fake_profit} $")
+    logging.info(f"🧪 Trade simulato per {symbol} | Profitto: {fake_profit} $")
 
     # Salvataggio su disco
-    df = pl.read_parquet(TRADE_FILE) if TRADE_FILE.exists() else pl.DataFrame({"symbol": [], "profit": [], "timestamp": []})
+    df = ( pl.read_parquet(TRADE_FILE)
+          if TRADE_FILE.exists()
+          else pl.DataFrame({"symbol": [], "profit": [], "timestamp": []})
+    )
     new_row = pl.DataFrame(result)
     df = pl.concat([df, new_row])
     df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
@@ -54,7 +62,10 @@ def run_backtest(symbol, historical_data):
     win_rate = sum(1 for p in profits if p > 0) / simulated_trades
     avg_profit = np.mean(profits)
 
-    logging.info(f"📊 Backtest completato su {symbol} | Win Rate: {win_rate:.2%} | Avg Profit: {avg_profit:.2f} $")
+    logging.info(
+        f"📊 Backtest completato su {symbol} |
+        Win Rate: {win_rate:.2%} | Avg Profit: {avg_profit:.2f} $"
+    )
     return {
         "symbol": symbol,
         "win_rate": win_rate,
