@@ -243,6 +243,9 @@ class AIModel:
                 )
                 self.demo_trade(symbol, market_data)
 
+    import threading
+    import time
+
     def background_optimization_loop(
         ai_model_instance, interval_seconds=43200
     ):
@@ -259,7 +262,7 @@ class AIModel:
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
-    import threading
+    
     thread = threading.Thread(
         target=background_optimization_loop,
         args=(ai_model,), daemon=True
