@@ -12,6 +12,7 @@ MODEL_DIR = (
 TRADE_FILE = MODEL_DIR / "demo_trades.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
+
 def demo_trade(symbol, market_data):
     """
     Simula un'operazione senza inviarla realmente.
@@ -30,9 +31,10 @@ def demo_trade(symbol, market_data):
     logging.info(f"🧪 Trade simulato per {symbol} | Profitto: {fake_profit} $")
 
     # Salvataggio su disco
-    df = ( pl.read_parquet(TRADE_FILE)
-          if TRADE_FILE.exists()
-          else pl.DataFrame({"symbol": [], "profit": [], "timestamp": []})
+    df = (
+        pl.read_parquet(TRADE_FILE)
+        if TRADE_FILE.exists()
+        else pl.DataFrame({"symbol": [], "profit": [], "timestamp": []})
     )
     new_row = pl.DataFrame(result)
     df = pl.concat([df, new_row])
@@ -40,10 +42,10 @@ def demo_trade(symbol, market_data):
 
 
 # backtest_module.py
-# backtest_module.py
 import logging
 import numpy as np
 import random
+
 
 def run_backtest(symbol, historical_data):
     """
