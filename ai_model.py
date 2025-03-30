@@ -243,22 +243,18 @@ class AIModel:
                 )
                 self.demo_trade(symbol, market_data)
 
-    import threading
-    import time
+import threading
+import time
 
-    def background_optimization_loop(
-        ai_model_instance, interval_seconds=43200
-    ):
-        optimizer = (
-            OptimizerCore(
-                strategy_generator=ai_model_instance.strategy_generator,
-                ai_model=ai_model_instance
-            )
-        )
-        while True:
-            optimizer.run_full_optimization()
-            time.sleep(interval_seconds)
-
+# Definizione della funzione background_optimization_loop
+def background_optimization_loop(ai_model_instance, interval_seconds=43200):
+    optimizer = OptimizerCore(
+        strategy_generator=ai_model_instance.strategy_generator,
+        ai_model=ai_model_instance
+    )
+    while True:
+        optimizer.run_full_optimization()
+        time.sleep(interval_seconds)
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
@@ -273,4 +269,4 @@ if __name__ == "__main__":
     while True:
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
-        asyncio.sleep(10)
+        time.sleep(10)
