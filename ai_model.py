@@ -1,3 +1,5 @@
+from demo_module import demo_trade
+from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 from optimizer_core import OptimizerCore
@@ -21,7 +23,11 @@ logging.basicConfig(
 )
 
 # Percorsi dei modelli e dei dati
-MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_DIR = (
+    Path("/mnt/usb_trading_data/models")
+    if Path("/mnt/usb_trading_data").exists()
+    else Path("D:/trading_data/models")
+)
 DATA_FILE = MODEL_DIR / "ai_memory.parquet"
 DB_FILE = MODEL_DIR / "trades.db"
 PERFORMANCE_FILE = MODEL_DIR / "performance.parquet"
@@ -169,7 +175,10 @@ class AIModel:
                 self.demo_trade(symbol, market_data)
 
     def background_optimization_loop(ai_model_instance, interval_seconds=43200):  # ogni 12 ore
-        optimizer = OptimizerCore(strategy_generator=ai_model_instance.strategy_generator, ai_model=ai_model_instance)
+        optimizer = (
+            OptimizerCore(strategy_generator=ai_model_instance.strategy_generator,
+                          ai_model=ai_model_instance)
+        )
         while True:
             optimizer.run_full_optimization()
             time.sleep(interval_seconds)
