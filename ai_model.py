@@ -36,14 +36,20 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 # Creazione database per il salvataggio delle operazioni
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 
+
 # Connessione sicura a MetaTrader 5
 def initialize_mt5():
     for _ in range(3):
         if mt5.initialize():
-            logging.info("✅ Connessione a MetaTrader 5 stabilita con successo.")
+            logging.info(
+                "✅ Connessione a MetaTrader 5 stabilita con successo."
+            )
             return True
-        logging.warning("⚠️ Tentativo di connessione a MT5 fallito, riprovo...")
+        logging.warning(
+            "⚠️ Tentativo di connessione a MT5 fallito, riprovo..."
+        )
     return False
+
 
 # Recupero saldo da MetaTrader 5
 def get_metatrader_balance():
@@ -52,12 +58,14 @@ def get_metatrader_balance():
     account_info = mt5.account_info()
     return account_info.balance if account_info else 0
 
+
 # Recupera automaticamente il saldo per ogni utente
 def fetch_account_balances():
     return {
         "Danny": get_metatrader_balance(),
         "Giuseppe": get_metatrader_balance()
     }
+
 
 class AIModel:
     def __init__(self, market_data, balances):
@@ -66,7 +74,9 @@ class AIModel:
         self.memory = self.load_memory()
         self.strategy_strength = np.mean(self.memory) + 1
         self.balances = balances
-        self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, True)
+        self.portfolio_optimizer = PortfolioOptimizer(
+            market_data, balances, True
+        )
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)
@@ -87,16 +97,27 @@ class AIModel:
         df.write_parquet(DATA_FILE, compression="zstd", mode="overwrite")
         logging.info("💾 Memoria IA aggiornata.")
 
-    def update_performance(self, account, symbol, action, lot_size, profit, strategy):
+    def update_performance(
+        self, account, symbol, action,
+        lot_size, profit, strategy
+    ):
         # Carica i dati esistenti
         if TRADE_FILE.exists():
             df = pl.read_parquet(TRADE_FILE)
         else:
-            df = pl.DataFrame({"account": [], "symbol": [], "action": [],
-                               "lot_size": [], "profit": [], "strategy": []})
+            df = pl.DataFrame({
+                "account": [],
+                "symbol": [],
+                "action": [],
+                "lot_size": [],
+                "profit": [],
+                "strategy": []
+            })
 
         # Cerca se esiste già un trade per questo account e simbolo
-        existing_trade = df.filter((df["account"] == account) & (df["symbol"] == symbol))
+        existing_trade = df.filter(
+            (df["account"] == account) & (df["symbol"] == symbol)
+        )
 
         if len(existing_trade) > 0:
             # Aggiorna il valore invece di creare una nuova riga
@@ -106,14 +127,21 @@ class AIModel:
             ])
         else:
             # Se non esiste, aggiunge una nuova entry
-            new_entry = pl.DataFrame({"account": [account], "symbol": [symbol],
-                                      "action": [action],"lot_size": [lot_size],
-                                      "profit": [profit], "strategy": [strategy]})
+            new_entry = pl.DataFrame({
+                "account": [account],
+                "symbol": [symbol],
+                "action": [action],
+                "lot_size": [lot_size],
+                "profit": [profit],
+                "strategy": [strategy]
+            })
             df = pl.concat([df, new_entry])
 
         df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
-        logging.info(f"📊 Trade aggiornato per {account} su {symbol}: Profit {profit} | Strategia: {strategy}")
-
+        logging.info(
+            f"📊 Trade aggiornato per {account} su {symbol}: "
+            f"Profit {profit} | Strategia: {strategy}"
+        )
     def adapt_lot_size(self, balance, success_probability):
         max_lot_size = balance / 50
         return min(
@@ -134,7 +162,10 @@ class AIModel:
             "type_filling": mt5.ORDER_FILLING_IOC
         }
         result = mt5.order_send(order)
-        status = "executed" if result.retcode == mt5.TRADE_RETCODE_DONE else "failed"
+        status = (
+            "executed" if result.retcode == mt5.TRADE_RETCODE_DONE
+            else "failed"
+        )
         self.update_performance(
             account, symbol, action, lot_size, result.profit
             if status == "executed" else 0, strategy
