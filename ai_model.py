@@ -64,14 +64,16 @@ class AIModel:
         self.volatility_predictor = VolatilityPredictor()
         self.risk_manager = {acc: RiskManagement() for acc in balances}
         self.memory = self.load_memory()
-        self.strategy_strength = np.mean(self.memory) + 1  # 🔥 Valore infinito per migliorare strategia
+        self.strategy_strength = np.mean(self.memory) + 1
         self.balances = balances
         self.portfolio_optimizer = PortfolioOptimizer(market_data, balances, True)
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
-        self.active_assets = self.select_best_assets(market_data)  # Selezione automatica degli asset migliori
+        self.active_assets = self.select_best_assets(market_data)
         self.strategy_generator = StrategyGenerator()
-        selected_strategy, strategy_weight = self.strategy_generator.select_best_strategy(market_data) # generatore di strategie
+        selected_strategy, strategy_weight = (
+            self.strategy_generator.select_best_strategy(market_data)
+        )
 
     def load_memory(self):
         if DATA_FILE.exists():
@@ -169,12 +171,20 @@ class AIModel:
             )
 
             if success_probability > 0.5:
-                self.execute_trade(account, symbol, action, lot_size, success_probability, strategy)
+                self.execute_trade(
+                    account, symbol, action, lot_size,
+                    success_probability, strategy
+                )
             else:
-                logging.info(f"🚫 Nessun trade su {symbol} per {account}. Avvio Demo Trade per miglioramento.")
+                logging.info(
+                    f"🚫 Nessun trade su {symbol} per {account}. "
+                    "Avvio Demo Trade per miglioramento."
+                )
                 self.demo_trade(symbol, market_data)
 
-    def background_optimization_loop(ai_model_instance, interval_seconds=43200):  # ogni 12 ore
+    def background_optimization_loop(
+        ai_model_instance, interval_seconds=43200
+    ):
         optimizer = (
             OptimizerCore(
                 strategy_generator=ai_model_instance.strategy_generator,
@@ -184,7 +194,8 @@ class AIModel:
         while True:
             optimizer.run_full_optimization()
             time.sleep(interval_seconds)
-            
+
+
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
     import threading
