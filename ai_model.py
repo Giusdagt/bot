@@ -14,6 +14,8 @@ from data_handler import get_normalized_market_data
 from drl_agent import DRLAgent  # Deep Reinforcement Learning
 from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
+import threading
+import time
 
 # Configurazione logging avanzata
 logging.basicConfig(
@@ -243,22 +245,23 @@ class AIModel:
                 )
                 self.demo_trade(symbol, market_data)
 
-import threading
-import time
+    def background_optimization_loop(
+        ai_model_instance, interval_seconds=43200
+    ):
+        optimizer = (
+            OptimizerCore(
+                strategy_generator=ai_model_instance.strategy_generator,
+                ai_model=ai_model_instance
+            )
+        )
+        while True:
+            optimizer.run_full_optimization()
+            time.sleep(interval_seconds)
 
-# Definizione della funzione background_optimization_loop
-def background_optimization_loop(ai_model_instance, interval_seconds=43200):
-    optimizer = OptimizerCore(
-        strategy_generator=ai_model_instance.strategy_generator,
-        ai_model=ai_model_instance
-    )
-    while True:
-        optimizer.run_full_optimization()
-        time.sleep(interval_seconds)
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
-    
+
     thread = threading.Thread(
         target=background_optimization_loop,
         args=(ai_model,), daemon=True
@@ -269,4 +272,4 @@ if __name__ == "__main__":
     while True:
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
-        time.sleep(10)
+        asyncio.sleep(10)
