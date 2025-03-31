@@ -4,7 +4,6 @@ from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 from optimizer_core import OptimizerCore
 import logging
-from datetime import datetime
 from pathlib import Path
 import polars as pl
 import numpy as np
