@@ -157,7 +157,7 @@ class OptimizerCore:
             (strategy_strength * 0.5)
         )
         evolution_score = max(0, min(100, score * 10))
-        logging.info(f"📊 Evoluzione Strategica: {evolution_score:.2f} / 100")
+        logging.info("📊 Evoluzione Strategica: %.2f / 100", evolution_score)
         return evolution_score
 
     def clean_ram(self):
