@@ -1,20 +1,20 @@
+import threading
+import time
+import asyncio
+import logging
+from pathlib import Path
+import polars as pl
+import numpy as np
+import MetaTrader5 as mt5
 from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 from optimizer_core import OptimizerCore
-import logging
-from pathlib import Path
-import polars as pl
-import numpy as np
-import asyncio
-import MetaTrader5 as mt5
 from data_handler import get_normalized_market_data
 from drl_agent import DRLAgent  # Deep Reinforcement Learning
 from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
-import threading
-import time
 
 # Configurazione logging avanzata
 logging.basicConfig(
@@ -37,7 +37,6 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 # Creazione database per il salvataggio delle operazioni
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 
-
 # Connessione sicura a MetaTrader 5
 def initialize_mt5():
     for _ in range(3):
@@ -51,7 +50,6 @@ def initialize_mt5():
         )
     return False
 
-
 # Recupero saldo da MetaTrader 5
 def get_metatrader_balance():
     if not initialize_mt5():
@@ -59,14 +57,12 @@ def get_metatrader_balance():
     account_info = mt5.account_info()
     return account_info.balance if account_info else 0
 
-
 # Recupera automaticamente il saldo per ogni utente
 def fetch_account_balances():
     return {
         "Danny": get_metatrader_balance(),
         "Giuseppe": get_metatrader_balance()
     }
-
 
 class AIModel:
     def __init__(self, market_data, balances):
@@ -244,19 +240,16 @@ class AIModel:
                 )
                 self.demo_trade(symbol, market_data)
 
-    def background_optimization_loop(
-        ai_model_instance, interval_seconds=43200
-    ):
-        optimizer = (
-            OptimizerCore(
-                strategy_generator=ai_model_instance.strategy_generator,
-                ai_model=ai_model_instance
-            )
-        )
-        while True:
-            optimizer.run_full_optimization()
-            time.sleep(interval_seconds)
-
+def background_optimization_loop(
+    ai_model_instance, interval_seconds=43200
+):
+    optimizer = OptimizerCore(
+        strategy_generator=ai_model_instance.strategy_generator,
+        ai_model=ai_model_instance
+    )
+    while True:
+        optimizer.run_full_optimization()
+        time.sleep(interval_seconds)
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
@@ -271,4 +264,4 @@ if __name__ == "__main__":
     while True:
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
-        asyncio.sleep(10)
+        time.sleep(10)
