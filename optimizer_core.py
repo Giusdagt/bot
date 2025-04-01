@@ -1,8 +1,33 @@
+"""
+optimizer_core.py
+
+Questo modulo contiene la classe OptimizerCore, responsabile dell'ottimizzazione
+delle strategie di trading,
+delle anomalie di mercato, della conoscenza compressa e della memoria AI.
+Include anche funzionalità per
+l'ottimizzazione dei trade e delle performance.
+
+Classi:
+- OptimizerCore: Gestisce le varie ottimizzazioni per migliorare le
+performance del sistema di trading.
+
+Funzioni:
+- optimize_strategies: Ottimizza le strategie di trading.
+- optimize_anomalies: Ottimizza le anomalie di mercato.
+- optimize_knowledge: Comprime e ottimizza la conoscenza.
+- optimize_ai_memory: Ottimizza la memoria AI.
+- optimize_trades: Ottimizza i trade.
+- optimize_performance: Ottimizza le performance.
+- evaluate_evolution: Valuta l'evoluzione strategica.
+- clean_ram: Pulisce la RAM.
+- run_full_optimization: Esegue l'ottimizzazione completa.
+"""
+
 import logging
 import gc
+from pathlib import Path
 import polars as pl
 import numpy as np
-from pathlib import Path
 
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models")
@@ -20,6 +45,10 @@ PERFORMANCE_FILE = MODEL_DIR / "performance.parquet"
 
 
 class OptimizerCore:
+    """
+    Gestisce l'ottimizzazione delle strategie di trading,
+    anomalie di mercato e altri dati.
+    """
     def __init__(self, strategy_generator=None, ai_model=None):
         self.sg = strategy_generator
         self.ai = ai_model
