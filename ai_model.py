@@ -37,7 +37,6 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 # Creazione database per il salvataggio delle operazioni
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 
-
 # Connessione sicura a MetaTrader 5
 def initialize_mt5():
     for _ in range(3):
@@ -51,7 +50,6 @@ def initialize_mt5():
         )
     return False
 
-
 # Recupero saldo da MetaTrader 5
 def get_metatrader_balance():
     if not initialize_mt5():
@@ -59,14 +57,12 @@ def get_metatrader_balance():
     account_info = mt5.account_info()
     return account_info.balance if account_info else 0
 
-
 # Recupera automaticamente il saldo per ogni utente
 def fetch_account_balances():
     return {
         "Danny": get_metatrader_balance(),
         "Giuseppe": get_metatrader_balance()
     }
-
 
 class AIModel:
     def __init__(self, market_data, balances):
@@ -203,9 +199,9 @@ class AIModel:
 
         if market_data is None or market_data.height == 0:
             logging.warning(
-                f"⚠️ Nessun dato per {symbol}. Backtest x auto-miglioramento."
+                f"⚠️ Nessun dato per {symbol}. Eseguo il backtest per miglioramento."
             )
-            self.backtest(symbol, [market_data])
+            run_backtest(symbol, market_data)  # Esegui backtest usando run_backtest
             return False
 
         predicted_price = self.price_predictor.predict_price()
@@ -242,8 +238,7 @@ class AIModel:
                     f"🚫 Nessun trade su {symbol} per {account}. "
                     "Avvio Demo Trade per miglioramento."
                 )
-                self.demo_trade(symbol, market_data)
-
+                demo_trade(symbol, market_data)  # Esegui demo trade usando demo_trade
 
 # Definizione della funzione background_optimization_loop
 def background_optimization_loop(
@@ -256,7 +251,6 @@ def background_optimization_loop(
     while True:
         optimizer.run_full_optimization()
         time.sleep(interval_seconds)
-
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
