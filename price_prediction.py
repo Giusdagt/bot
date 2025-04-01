@@ -1,4 +1,8 @@
-# price_prediction.py
+"""
+Modulo per la previsione dei prezzi.
+Questo modulo contiene funzioni e classi per prevedere i prezzi 
+utilizzando vari modelli di machine learning.
+"""
 import logging
 from pathlib import Path
 import numpy as np
@@ -134,8 +138,8 @@ class PricePredictionModel:
         variation = ((predicted_price - last_close) / last_close) * 100
 
         logging.info(
-            f"📊 Prezzo previsto per {self.asset}: "
-            f"{predicted_price:.5f} ({variation:.2f}%)"
+            "📊 Prezzo previsto per %s: %.5f (%.2f%%)",
+            self.asset, predicted_price, variation
         )
         return predicted_price
 
