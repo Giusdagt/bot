@@ -1,6 +1,6 @@
 """
 Modulo per la previsione dei prezzi.
-Questo modulo contiene funzioni e classi per prevedere i prezzi 
+Questo modulo contiene funzioni e classi per prevedere i prezzi
 utilizzando vari modelli di machine learning.
 """
 import logging
