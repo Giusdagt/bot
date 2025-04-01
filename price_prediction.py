@@ -69,7 +69,7 @@ class PricePredictionModel:
         self.memory = compressed_memory
 
     def load_or_create_model(self):
-         """Carica il modello LSTM esistente o ne crea uno nuovo."""
+        """Carica il modello LSTM esistente o ne crea uno nuovo."""
         if MODEL_FILE.exists():
             logging.info("📥 Caricamento modello esistente...")
             return load_model(MODEL_FILE)
