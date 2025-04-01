@@ -50,9 +50,9 @@ class PricePredictionModel:
         if MEMORY_FILE.exists():
             logging.info("📥 Caricamento memoria compressa...")
             return pl.read_parquet(MEMORY_FILE)["compressed_memory"].to_numpy()
-
-            logging.info("🔄 Creazione nuova memoria...")
-            return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
+    
+        logging.info("🔄 Creazione nuova memoria...")
+        return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
 
     def save_memory(self, new_data):
         """Sovrascrive la memoria compressa solo se ci sono nuovi dati."""
@@ -69,14 +69,14 @@ class PricePredictionModel:
         self.memory = compressed_memory
 
     def load_or_create_model(self):
-        """Carica il modello LSTM esistente o ne crea uno nuovo."""
+         """Carica il modello LSTM esistente o ne crea uno nuovo."""
         if MODEL_FILE.exists():
             logging.info("📥 Caricamento modello esistente...")
             return load_model(MODEL_FILE)
-
-            logging.info("🔧 Creazione nuovo modello...")
-            return self.build_lstm_model()
-
+    
+        logging.info("🔧 Creazione nuovo modello...")
+        return self.build_lstm_model()
+    
     def build_lstm_model(self):
         """Costruisce un modello LSTM ottimizzato."""
         model = Sequential([
