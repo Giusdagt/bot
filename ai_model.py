@@ -37,6 +37,7 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 # Creazione database per il salvataggio delle operazioni
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 
+
 # Connessione sicura a MetaTrader 5
 def initialize_mt5():
     for _ in range(3):
@@ -50,6 +51,7 @@ def initialize_mt5():
         )
     return False
 
+
 # Recupero saldo da MetaTrader 5
 def get_metatrader_balance():
     if not initialize_mt5():
@@ -57,12 +59,14 @@ def get_metatrader_balance():
     account_info = mt5.account_info()
     return account_info.balance if account_info else 0
 
+
 # Recupera automaticamente il saldo per ogni utente
 def fetch_account_balances():
     return {
         "Danny": get_metatrader_balance(),
         "Giuseppe": get_metatrader_balance()
     }
+
 
 class AIModel:
     def __init__(self, market_data, balances):
@@ -240,6 +244,7 @@ class AIModel:
                 )
                 self.demo_trade(symbol, market_data)
 
+
 # Definizione della funzione background_optimization_loop
 def background_optimization_loop(
     ai_model_instance, interval_seconds=43200
@@ -251,6 +256,7 @@ def background_optimization_loop(
     while True:
         optimizer.run_full_optimization()
         time.sleep(interval_seconds)
+
 
 if __name__ == "__main__":
     ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
