@@ -54,6 +54,9 @@ class OptimizerCore:
         self.ai = ai_model
 
     def optimize_strategies(self):
+        """
+        Ottimizza le strategie di trading e le salva su file.
+        """
         if not self.sg:
             logging.warning("⚠️ Nessun strategy_generator collegato.")
             return
@@ -67,6 +70,9 @@ class OptimizerCore:
         logging.info("✅ Strategie ottimizzate e salvate.")
 
     def optimize_anomalies(self):
+        """
+        Ottimizza le anomalie di mercato mantenendo solo le ultime 50.
+        """
         if not self.sg:
             return
         limited_anomalies = (
@@ -80,6 +86,9 @@ class OptimizerCore:
         logging.info("✅ Anomalie salvate e ottimizzate.")
 
     def optimize_knowledge(self):
+        """
+        Comprime e ottimizza la conoscenza accumulata nel sistema.
+        """
         if not self.sg:
             return
 
@@ -93,6 +102,9 @@ class OptimizerCore:
         logging.info("🧠 Conoscenza compressa e salvata.")
 
     def optimize_ai_memory(self):
+        """
+        Ottimizza la memoria AI consolidando le ultime 10 entry.
+        """
         if not self.ai:
             return
 
@@ -108,6 +120,9 @@ class OptimizerCore:
             logging.info("🧠 Memoria AI consolidata.")
 
     def optimize_trades(self):
+        """
+        Ottimizza i trade ordinandoli per profitto e mantenendo i migliori 100.
+        """
         if not TRADE_FILE.exists():
             return
         df = pl.read_parquet(TRADE_FILE)
@@ -116,6 +131,9 @@ class OptimizerCore:
         logging.info("📊 Trade compressi e ottimizzati.")
 
     def optimize_performance(self):
+        """
+        Ottimizza le performance mantenendo le ultime 100 righe di dati.
+        """
         if not PERFORMANCE_FILE.exists():
             return
         df = pl.read_parquet(PERFORMANCE_FILE)
@@ -128,6 +146,9 @@ class OptimizerCore:
     def evaluate_evolution(
         self, profit, win_rate, drawdown, volatility, strategy_strength
     ):
+        """
+        Valuta l'evoluzione strategica basata su vari parametri di performance.
+        """
         score = (
             (profit * 0.5) +
             (win_rate * 0.3) -
@@ -140,10 +161,17 @@ class OptimizerCore:
         return evolution_score
 
     def clean_ram(self):
+        """
+        Libera la memoria RAM eseguendo il garbage collection.
+        """
         gc.collect()
         logging.info("🧹 RAM pulita.")
 
     def run_full_optimization(self):
+        """
+        Esegue l'ottimizzazione completa delle strategie, anomalie, conoscenza,
+        memoria AI, trade e performance.
+        """
         self.optimize_strategies()
         self.optimize_anomalies()
         self.optimize_knowledge()
