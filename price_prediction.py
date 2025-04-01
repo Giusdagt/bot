@@ -102,11 +102,11 @@ class PricePredictionModel:
             return
 
         data = self.preprocess_data(new_data)
-        X, y = [], []
+        x, y = [], []
         for i in range(len(data) - SEQUENCE_LENGTH):
             X.append(data[i:i+SEQUENCE_LENGTH])
             y.append(data[i+SEQUENCE_LENGTH])
-        X, y = np.array(X), np.array(y)
+        x, y = np.array(X), np.array(y)
 
         if MODEL_FILE.exists():
             logging.info("📥 Caricamento pesi nel modello...")
@@ -118,7 +118,7 @@ class PricePredictionModel:
         )
 
         self.model.fit(
-            X, y, epochs=10, batch_size=BATCH_SIZE,
+            x, y, epochs=10, batch_size=BATCH_SIZE,
             verbose=1, callbacks=[early_stop]
         )
 
