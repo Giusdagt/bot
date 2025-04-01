@@ -104,7 +104,7 @@ class PricePredictionModel:
         data = self.preprocess_data(new_data)
         x, y = [], []
         for i in range(len(data) - SEQUENCE_LENGTH):
-            X.append(data[i:i+SEQUENCE_LENGTH])
+            x.append(data[i:i+SEQUENCE_LENGTH])
             y.append(data[i+SEQUENCE_LENGTH])
         x, y = np.array(X), np.array(y)
 
