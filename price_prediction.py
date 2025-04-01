@@ -106,7 +106,7 @@ class PricePredictionModel:
         for i in range(len(data) - SEQUENCE_LENGTH):
             x.append(data[i:i+SEQUENCE_LENGTH])
             y.append(data[i+SEQUENCE_LENGTH])
-        x, y = np.array(X), np.array(y)
+        x, y = np.array(x), np.array(y)
 
         if MODEL_FILE.exists():
             logging.info("📥 Caricamento pesi nel modello...")
