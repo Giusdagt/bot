@@ -1,6 +1,16 @@
-""
+"""
 backtest_module.py
-""
+
+Questo modulo contiene funzioni per eseguire backtest
+sui dati storici di vari simboli di trading.
+Include la funzione principale `run_backtest`
+che simula operazioni di trading
+e calcola metriche di performance come il tasso di successo e il profitto medio.
+
+Funzioni:
+- run_backtest(symbol: str, historical_data: DataFrame) -> dict: Esegue
+un backtest simulato sui dati storici del simbolo indicato.
+"""
 
 import random
 import logging
