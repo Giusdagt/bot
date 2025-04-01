@@ -1,15 +1,17 @@
-# backtest_module.py
-import numpy as np
+""
+backtest_module.py
+""
+
 import random
 import logging
-
+import numpy as np
 
 def run_backtest(symbol, historical_data):
     """
     Esegue un backtest simulato sui dati storici del simbolo indicato.
     """
     if historical_data is None or historical_data.height < 50:
-        logging.warning(f"⚠️ Dati insufficienti per il backtest di {symbol}.")
+        logging.warning("⚠️ Dati insufficienti per il backtest di %s.", symbol)
         return {
             "symbol": symbol,
             "win_rate": 0.0,
@@ -23,10 +25,8 @@ def run_backtest(symbol, historical_data):
     avg_profit = np.mean(profits)
 
     logging.info(
-        (
-            f"📊 Backtest completato su {symbol} | "
-            f"Win Rate: {win_rate:.2%} | Avg Profit: {avg_profit:.2f} $"
-        )
+        "📊 Backtest completato su %s | Win Rate: %.2f%% | Avg Profit: %.2f $",
+        symbol, win_rate * 100, avg_profit
     )
     return {
         "symbol": symbol,
