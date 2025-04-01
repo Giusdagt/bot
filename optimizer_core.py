@@ -1,7 +1,7 @@
 """
 optimizer_core.py
 
-Questo modulo contiene la classe OptimizerCore, responsabile dell'ottimizzazione
+Questo modulo contiene la classe OptimizerCore responsabile dell'ottimizzazione
 delle strategie di trading,
 delle anomalie di mercato, della conoscenza compressa e della memoria AI.
 Include anche funzionalità per
