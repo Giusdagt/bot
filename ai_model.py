@@ -240,6 +240,7 @@ class AIModel:
                 )
                 self.demo_trade(symbol, market_data)
 
+# Definizione della funzione background_optimization_loop
 def background_optimization_loop(
     ai_model_instance, interval_seconds=43200
 ):
