@@ -210,5 +210,5 @@ if __name__ == "__main__":
     for asset in all_assets:
         market_data = get_normalized_market_data(asset)["close"].to_numpy()
         if len(raw_data) > SEQUENCE_LENGTH:
-        model.train_model(asset, market_data)
-        model.predict_price(asset)
+            model.train_model(asset, market_data)
+            model.predict_price(asset)
