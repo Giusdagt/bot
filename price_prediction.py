@@ -82,7 +82,7 @@ class PricePredictionModel:
         - Scrive in un file Parquet ultra compresso.
         """
 
-        compressed =(
+        compressed = (
             np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
         )
         existing = self.memory_df.filter(pl.col("asset") == asset)
