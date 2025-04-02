@@ -1,6 +1,6 @@
 """
 Modulo per la previsione dei prezzi tramite LSTM.
-- Utilizza data_handler.py per recuperare gli storici normalizzati con indicatori
+- Utilizza data_handler.py per recuperare storici normalizzati con indicatori
 - Supporta più di 300 asset contemporaneamente.
 - Gli asset possono essere caricati da preset_asset.json
 (se attivo in `data_loader.py`)
@@ -24,6 +24,7 @@ MEMORY_FILE = MODEL_DIR / "lstm_memory.parquet"
 SEQUENCE_LENGTH = 50
 BATCH_SIZE = 32
 
+
 class PricePredictionModel:
     """
     Modello LSTM ultra-ottimizzato per previsioni di prezzo:
@@ -31,7 +32,7 @@ class PricePredictionModel:
     - Compressione avanzata della memoria.
     - Salvataggio intelligente (non cresce su disco nel tempo).
     """
-  
+
     def __init__(self):
         """
         Inizializza il modello di previsione dei prezzi:
@@ -80,7 +81,9 @@ class PricePredictionModel:
         rispetto alla memoria esistente.
         - Scrive in un file Parquet ultra compresso.
         """
-        compressed = np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
+        compressed =(
+            np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
+        )
         existing = self.memory_df.filter(pl.col("asset") == asset)
 
         if not existing.is_empty():
