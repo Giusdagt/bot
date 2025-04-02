@@ -81,7 +81,7 @@ class PricePredictionModel:
         rispetto alla memoria esistente.
         - Scrive in un file Parquet ultra compresso.
         """
-        
+
         compressed =(
             np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
         )
@@ -166,7 +166,8 @@ class PricePredictionModel:
             monitor="loss", patience=3, restore_best_weights=True
         )
         model.fit(
-            x, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+            x, y, epochs=10, batch_size=BATCH_SIZE,
+            verbose=1, callbacks=[early_stop]
         )
         model.save(self.get_model_file(asset))
         self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
