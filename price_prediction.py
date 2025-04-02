@@ -81,6 +81,7 @@ class PricePredictionModel:
         rispetto alla memoria esistente.
         - Scrive in un file Parquet ultra compresso.
         """
+        
         compressed =(
             np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
         )
@@ -88,7 +89,9 @@ class PricePredictionModel:
 
         if not existing.is_empty():
             if np.array_equal(
-                np.frombuffer(existing["compressed_memory"][0],dtype=np.float32),
+                np.frombuffer(
+                    existing["compressed_memory"][0], dtype=np.float32
+                ),
                 compressed
             ):
                 return
@@ -109,9 +112,13 @@ class PricePredictionModel:
         - Compilato con ottimizzatore 'adam' e perdita 'mean_squared_error'.
         """
         model = Sequential([
-            LSTM(64, activation="tanh", return_sequences=True, dtype="float16"),
+            LSTM(
+                64, activation="tanh", return_sequences=True, dtype="float16"
+            ),
             Dropout(0.2),
-            LSTM(32, activation="tanh", return_sequences=False, dtype="float16"),
+            LSTM(
+                32, activation="tanh", return_sequences=False, dtype="float16"
+            ),
             Dense(1, activation="linear", dtype="float16")
         ])
         model.compile(optimizer="adam", loss="mean_squared_error")
@@ -155,8 +162,12 @@ class PricePredictionModel:
             y.append(data[i+SEQUENCE_LENGTH])
         x, y = np.array(x), np.array(y)
 
-        early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
-        model.fit(x, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
+        early_stop = EarlyStopping(
+            monitor="loss", patience=3, restore_best_weights=True
+        )
+        model.fit(
+            x, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop]
+        )
         model.save(self.get_model_file(asset))
         self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
 
