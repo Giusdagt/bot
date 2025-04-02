@@ -162,13 +162,15 @@ class PricePredictionModel:
             y.append(data[i+SEQUENCE_LENGTH])
         x, y = np.array(x), np.array(y)
 
-        x_with_memory = np.concatenate([x, np.tile(memory, (len(x), 1, 1))], axis=2)
+        x_with_memory = np.concatenate(
+            [x, np.tile(memory, (len(x), 1, 1))], axis=2
+        )
 
         early_stop = EarlyStopping(
             monitor="loss", patience=3, restore_best_weights=True
         )
         model.fit(
-            x_with_memory, y,  # 
+            x_with_memory, y,  # memoria
             epochs=10, batch_size=BATCH_SIZE,
             verbose=1, callbacks=[early_stop]
         )
