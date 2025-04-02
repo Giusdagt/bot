@@ -211,6 +211,6 @@ if __name__ == "__main__":
     all_assets = get_available_assets()  # Utilizza gli asset disponibili
     for asset in all_assets:
         market_data = get_normalized_market_data(asset)["close"].to_numpy()
-        if len(raw_data) > SEQUENCE_LENGTH:
+        if len(market_data) > SEQUENCE_LENGTH:
             model.train_model(asset, market_data)
             model.predict_price(asset)
