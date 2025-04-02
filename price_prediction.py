@@ -1,10 +1,12 @@
 """
 Modulo per la previsione dei prezzi tramite LSTM.
-- Utilizza `data_handler.py` per recuperare dati storici normalizzati con indicatori.
+- Utilizza data_handler.py per recuperare gli storici normalizzati con indicatori
 - Supporta più di 300 asset contemporaneamente.
-- Gli asset possono essere caricati da `preset_asset.json` (se attivo in `data_loader.py`)
-  oppure selezionati dinamicamente.
+- Gli asset possono essere caricati da preset_asset.json
+(se attivo in `data_loader.py`)
+oppure selezionati dinamicamente.
 """
+
 
 import logging
 from pathlib import Path
@@ -29,7 +31,7 @@ class PricePredictionModel:
     - Compressione avanzata della memoria.
     - Salvataggio intelligente (non cresce su disco nel tempo).
     """
-    
+  
     def __init__(self):
         """
         Inizializza il modello di previsione dei prezzi:
@@ -63,7 +65,10 @@ class PricePredictionModel:
             row = self.memory_df.filter(pl.col("asset") == asset)
             if row.is_empty():
                 return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
-            return np.frombuffer(row["compressed_memory"][0], dtype=np.float32).reshape(SEQUENCE_LENGTH, 1)
+            return np.frombuffer(
+                row["compressed_memory"][0],
+                dtype=np.float32
+            ).reshape(SEQUENCE_LENGTH, 1)
         except Exception:
             return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
 
@@ -71,14 +76,18 @@ class PricePredictionModel:
         """
         Salva i nuovi dati compressi per un asset:
         - Comprimi i dati come media.
-        - Aggiorna solo se ci sono variazioni effettive rispetto alla memoria esistente.
+        - Aggiorna solo se ci sono variazioni effettive
+        rispetto alla memoria esistente.
         - Scrive in un file Parquet ultra compresso.
         """
         compressed = np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
         existing = self.memory_df.filter(pl.col("asset") == asset)
 
         if not existing.is_empty():
-            if np.array_equal(np.frombuffer(existing["compressed_memory"][0], dtype=np.float32), compressed):
+            if np.array_equal(
+                np.frombuffer(existing["compressed_memory"][0],dtype=np.float32),
+                compressed
+            ):
                 return
             self.memory_df = self.memory_df.filter(pl.col("asset") != asset)
 
