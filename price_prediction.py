@@ -162,11 +162,14 @@ class PricePredictionModel:
             y.append(data[i+SEQUENCE_LENGTH])
         x, y = np.array(x), np.array(y)
 
+        x_with_memory = np.concatenate([x, np.tile(memory, (len(x), 1, 1))], axis=2)
+
         early_stop = EarlyStopping(
             monitor="loss", patience=3, restore_best_weights=True
         )
         model.fit(
-            x, y, epochs=10, batch_size=BATCH_SIZE,
+            x_with_memory, y,  # 
+            epochs=10, batch_size=BATCH_SIZE,
             verbose=1, callbacks=[early_stop]
         )
         model.save(self.get_model_file(asset))
@@ -206,5 +209,6 @@ if __name__ == "__main__":
     all_assets = get_available_assets()  # Utilizza gli asset disponibili
     for asset in all_assets:
         market_data = get_normalized_market_data(asset)["close"].to_numpy()
+        if len(raw_data) > SEQUENCE_LENGTH:
         model.train_model(asset, market_data)
         model.predict_price(asset)
