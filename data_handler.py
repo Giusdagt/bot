@@ -28,6 +28,7 @@ from data_loader import (
     load_preset_assets
 )
 from data_api_module import main as fetch_new_data
+from smart_features import apply_all_advanced_features
 
 logging.basicConfig(
     level=logging.INFO,
