@@ -15,6 +15,7 @@ from data_handler import get_normalized_market_data
 from drl_agent import DRLAgent  # Deep Reinforcement Learning
 from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
+from smart_features import apply_all_market_structure_signals
 
 # Configurazione logging avanzata
 logging.basicConfig(
@@ -208,6 +209,14 @@ class AIModel:
             run_backtest(symbol, market_data)
             return False
 
+        market_data = apply_all_market_structure_signals(market_data)
+
+        # 🔢 Calcola punteggio cumulativo (signal_score)
+        last_row = market_data[-1]  # Ultima candela
+        signal_score = int(last_row["ILQ_Zone"]) + int(last_row["fakeout_up"]) + \
+                        int(last_row["fakeout_down"]) + int(last_row["volatility_squeeze"]) + \
+                        int(last_row["micro_pattern_hft"])
+
         predicted_price = self.price_predictor.predict_price()
 
         for account in self.balances:
@@ -215,10 +224,15 @@ class AIModel:
             lot_size = self.adapt_lot_size(
                 self.balances[account], success_probability
             )
-            action = (
-                "buy" if predicted_price > market_data["close"].iloc[-1]
-                else "sell"
-            )
+            last_close = market_data["close"][-1]
+            if predicted_price > last_close and signal_score >= 2:
+               action = "buy"
+            elif predicted_price < last_close and signal_score >= 2:
+                 action = "sell"
+            else:                
+                logging.info(f"⚠️ Nessun segnale forte su {symbol}, niente operazione.")
+                return
+
 
             # 🔥 Selezione della strategia migliore
             trade_profit = predicted_price - market_data["close"].iloc[-1]
