@@ -117,6 +117,7 @@ def normalize_data(df):
         [pl.Series(col, scaled_data[:, idx]) for idx, col in enumerate(
             numeric_cols)]
     )
+    df = apply_all_advanced_features(df)
     return df
 
 
@@ -131,6 +132,7 @@ async def process_historical_data():
             logging.warning("⚠️ Dati grezzi vuoto, nessun dato da processare.")
             return
         df = calculate_historical_indicators(df)
+        df = apply_all_advanced_features(df)
         df = ensure_all_columns(df)
         df = normalize_data(df)
         save_and_sync(df)
@@ -149,6 +151,7 @@ def fetch_mt5_data(symbol):
 
         df = pl.DataFrame(rates)
         df = calculate_scalping_indicators(df)
+        df = apply_all_advanced_features(df)
         df = ensure_all_columns(df)
         df = normalize_data(df)
 
