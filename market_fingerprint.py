@@ -4,9 +4,14 @@ import numpy as np
 import hashlib
 
 # Percorso del file principale di data_handler
-MODEL_DIR = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_DIR = (
+    Path("/mnt/usb_trading_data/models") if
+    Path("/mnt/usb_trading_data").exists() else
+    Path("D:/trading_data/models")
+)
 PROCESSED_DATA_PATH = MODEL_DIR / "processed_data.zstd.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
     """
@@ -19,7 +24,9 @@ def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
     norm = np.linalg.norm(raw_vector)
     return raw_vector / norm if norm > 0 else raw_vector
 
-def update_embedding_in_processed_file(symbol: str, new_df: pl.DataFrame, length: int = 32):
+
+def update_embedding_in_processed_file(
+    symbol: str, new_df: pl.DataFrame, length: int = 32):
     """
     Aggiorna il file 'processed_data.zstd.parquet' con una colonna embedding.
     Salva 1 sola riga per simbolo → leggero e potente.
@@ -38,7 +45,9 @@ def update_embedding_in_processed_file(symbol: str, new_df: pl.DataFrame, length
         ])
 
         updated_df = pl.concat([df, latest_row])
-        updated_df.write_parquet(PROCESSED_DATA_PATH, compression="zstd", mode="overwrite")
+        updated_df.write_parquet(
+            PROCESSED_DATA_PATH, compression="zstd", mode="overwrite"
+        )
         print(f"✅ Embedding aggiornato per {symbol} nel file processato.")
     except Exception as e:
         print(f"❌ Errore durante aggiornamento embedding: {e}")
