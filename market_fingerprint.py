@@ -26,7 +26,8 @@ def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
 
 
 def update_embedding_in_processed_file(
-    symbol: str, new_df: pl.DataFrame, length: int = 32):
+    symbol: str, new_df: pl.DataFrame, length: int = 32
+):
     """
     Aggiorna il file 'processed_data.zstd.parquet' con una colonna embedding.
     Salva 1 sola riga per simbolo → leggero e potente.
