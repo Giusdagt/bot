@@ -29,6 +29,7 @@ from data_loader import (
 )
 from data_api_module import main as fetch_new_data
 from smart_features import apply_all_advanced_features
+from market_fingerprint import update_embedding_in_processed_file
 
 logging.basicConfig(
     level=logging.INFO,
@@ -168,6 +169,7 @@ async def get_realtime_data(symbols):
         for symbol in symbols:
             logging.info("📡 Recupero dati realtime per %s", symbol)
             df = fetch_mt5_data(symbol)
+            update_embedding_in_processed_file(symbol, df)
             if df is None:
                 continue
 
