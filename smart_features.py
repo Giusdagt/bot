@@ -114,6 +114,14 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
     df = add_ilq_zone(df)
     df = apply_all_market_structure_signals(df)
 
+    try:
+        vector = extract_multi_timeframe_vector(df)
+        df = df.with_columns([
+            pl.Series("mtf_vector", [vector.tobytes()])
+        ])
+    except Exception as e:
+        print("⚠️ Errore durante estrazione MTF:", e)
+
     signal_score = (
         df["ILQ_Zone"] +
         df["fakeout_up"] +
@@ -123,3 +131,28 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
     ).alias("signal_score")
 
     return df.with_columns([signal_score])
+
+
+def extract_multi_timeframe_vector(
+    df: pl.DataFrame, timeframes=("1m", "5m", "15m", "30m", "1h", "4h", "1d")
+) -> np.ndarray:
+    """
+    Comprime in un unico vettore le statistiche multi-timeframe.
+    Ritorna un array di 9 valori [mean, std, range] per ogni timeframe.
+    """
+    vectors = []
+
+    for tf in timeframes:
+        tf_df = df.filter(pl.col("timeframe") == tf)
+        if tf_df.is_empty():
+            vectors.extend([0, 0, 0])
+            continue
+
+        closes = tf_df["close"].to_numpy()
+        mean = np.mean(closes)
+        std = np.std(closes)
+        value_range = closes.max() - closes.min()
+
+        vectors.extend([mean, std, value_range])
+
+    return np.array(vectors, dtype=np.float32)
