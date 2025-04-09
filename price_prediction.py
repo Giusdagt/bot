@@ -17,6 +17,8 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
 from data_handler import get_normalized_market_data, get_available_assets
+from market_fingerprint import get_embedding_for_symbol
+from smart_features import apply_all_market_structure_signals
 
 MODEL_DIR = Path("D:/trading_data/models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -143,61 +145,93 @@ class PricePredictionModel:
         return self.scaler.fit_transform(raw_data)
 
     def train_model(self, asset, raw_data):
-        """
-        Allena il modello per un asset specifico:
-        - Prepara i dati di input (sequenze e target).
-        - Applica early stopping per evitare overfitting.
-        - Salva il modello e la memoria compressa.
-        """
-        if len(raw_data) <= SEQUENCE_LENGTH:
-            return
+    """
+    Allena il modello per un asset specifico:
+    Include signal_score + embedding da più timeframe nel training.
+    """
+    if len(raw_data) <= SEQUENCE_LENGTH:
+        return
 
-        model = self.load_or_create_model(asset)
-        memory = self.load_memory(asset)
-        data = self.preprocess_data(raw_data)
+    model = self.load_or_create_model(asset)
+    memory = self.load_memory(asset)
 
-        x, y = [], []
-        for i in range(len(data) - SEQUENCE_LENGTH):
-            x.append(data[i:i+SEQUENCE_LENGTH])
-            y.append(data[i+SEQUENCE_LENGTH])
-        x, y = np.array(x), np.array(y)
+    # Normalizza + segnali extra
+    df = pl.DataFrame({"close": raw_data})
+    df = apply_all_market_structure_signals(df)
 
-        x_with_memory = np.concatenate(
-            [x, np.tile(memory, (len(x), 1, 1))], axis=2
-        )
+    # SIGNAL SCORE (1 colonna)
+    last_row = df[-1]
+    signal_score = int(last_row["ILQ_Zone"]) + \
+                   int(last_row["fakeout_up"]) + \
+                   int(last_row["fakeout_down"]) + \
+                   int(last_row["volatility_squeeze"]) + \
+                   int(last_row["micro_pattern_hft"])
 
-        early_stop = EarlyStopping(
-            monitor="loss", patience=3, restore_best_weights=True
-        )
-        model.fit(
-            x_with_memory, y,  # memoria
-            epochs=10, batch_size=BATCH_SIZE,
-            verbose=1, callbacks=[early_stop]
-        )
-        model.save(self.get_model_file(asset))
-        self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
+    # EMBEDDING da più timeframe
+    emb_m1 = get_embedding_for_symbol(asset, "1m")
+    emb_m5 = get_embedding_for_symbol(asset, "5m")
+    emb_m15 = get_embedding_for_symbol(asset, "15m")
+    emb_m30 = get_embedding_for_symbol(asset, "30m")
+    emb_1h = get_embedding_for_symbol(asset, "1h")
+    emb_4h = get_embedding_for_symbol(asset, "4h")
+    emb_1d = get_embedding_for_symbol(asset, "1d")
 
-    def predict_price(self, asset):
-        """
-        Prevede il prossimo prezzo per un asset:
-        - Preleva gli ultimi dati normalizzati.
-        - Calcola la previsione usando il modello LSTM.
-        - Inverte la normalizzazione e restituisce il prezzo stimato.
-        """
-        model = self.load_or_create_model(asset)
-        raw_data = get_normalized_market_data(asset)["close"].to_numpy()
+    extra_features = np.concatenate(
+        [[signal_score], emb_m1, emb_m5, emb_m15, emb_m30, emb_1h, emb_4h, emb_1d]
+    )
 
-        if len(raw_data) < SEQUENCE_LENGTH:
-            logging.warning(f"⚠️ Dati insufficienti per {asset}")
-            return None
+    # Preprocessing
+    data = self.preprocess_data(raw_data)
+    x, y = [], []
+    for i in range(len(data) - SEQUENCE_LENGTH):
+        seq = data[i:i+SEQUENCE_LENGTH]
+        x.append(seq)
+        y.append(data[i+SEQUENCE_LENGTH])
 
-        data = self.preprocess_data(raw_data)
-        last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
-        prediction = model.predict(last_sequence)[0][0]
-        predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
+    x = np.array(x)
+    y = np.array(y)
 
-        logging.info(f"📊 Prezzo previsto per {asset}: {predicted_price:.5f}")
-        return predicted_price
+    # ➕ CONCATENA memoria + embedding + signal
+    memory_tiled = np.tile(memory, (len(x), 1, 1))
+    context_tiled = np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
+    full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
+
+    # Training
+    early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
+    model.fit(full_input, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
+
+    # Salvataggio
+    model.save(self.get_model_file(asset))
+    self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
+
+
+    def predict_price(self, asset, full_state=None):
+    """
+    Prevede il prossimo prezzo per un asset:
+    - Se disponibile, usa `full_state` come input.
+    - Altrimenti, preleva i dati storici e genera la previsione classica.
+    """
+    model = self.load_or_create_model(asset)
+
+    if full_state is not None:
+        full_state = np.array(full_state).reshape(1, -1, 1)
+        prediction = model.predict(full_state)[0][0]
+        return float(prediction)
+
+    # Metodo classico con dati storici
+    raw_data = get_normalized_market_data(asset)["close"].to_numpy()
+
+    if len(raw_data) < SEQUENCE_LENGTH:
+        logging.warning(f"⚠️ Dati insufficienti per {asset}")
+        return None
+
+    data = self.preprocess_data(raw_data)
+    last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+    prediction = model.predict(last_sequence)[0][0]
+    predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
+
+    logging.info(f"📊 Prezzo previsto per {asset}: {predicted_price:.5f}")
+    return float(predicted_price)
 
 
 if __name__ == "__main__":
