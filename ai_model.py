@@ -243,7 +243,7 @@ class AIModel:
         ])
 
         """
-        ✅ Protezione contro outlier 
+        ✅ Protezione contro outlier
         """
         full_state = np.clip(full_state, -1, 1)
 
