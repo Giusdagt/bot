@@ -161,11 +161,13 @@ class PricePredictionModel:
 
         # SIGNAL SCORE (1 colonna)
         last_row = df[-1]
-        signal_score = int(last_row["ILQ_Zone"]) + \
-                       int(last_row["fakeout_up"]) + \
-                       int(last_row["fakeout_down"]) + \
-                       int(last_row["volatility_squeeze"]) + \
-                       int(last_row["micro_pattern_hft"])
+        signal_score = (
+            int(last_row["ILQ_Zone"]) +
+            int(last_row["fakeout_up"]) +
+            int(last_row["fakeout_down"]) +
+            int(last_row["volatility_squeeze"]) +
+            int(last_row["micro_pattern_hft"])
+        )
 
         # EMBEDDING da più timeframe
         emb_m1 = get_embedding_for_symbol(asset, "1m")
@@ -177,7 +179,9 @@ class PricePredictionModel:
         emb_1d = get_embedding_for_symbol(asset, "1d")
 
         extra_features = np.concatenate(
-            [[signal_score], emb_m1, emb_m5, emb_m15, emb_m30, emb_1h, emb_4h, emb_1d]
+            [[signal_score],
+             emb_m1, emb_m5, emb_m15, emb_m30,
+             emb_1h, emb_4h, emb_1d]
         )
 
         # Preprocessing
@@ -193,17 +197,26 @@ class PricePredictionModel:
 
         # ➕ CONCATENA memoria + embedding + signal
         memory_tiled = np.tile(memory, (len(x), 1, 1))
-        context_tiled = np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
+        context_tiled = np.tile(
+            extra_features, (len(x), 1)
+        ).reshape(len(x), 1, -1)
         full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
 
         # Training
-        early_stop = EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
-        model.fit(full_input, y, epochs=10, batch_size=BATCH_SIZE, verbose=1, callbacks=[early_stop])
+        early_stop = EarlyStopping(
+            monitor="loss",
+            patience=3,
+            restore_best_weights=True
+        )
+        model.fit(
+            full_input, y, epochs=10,
+            batch_size=BATCH_SIZE, verbose=1,
+            callbacks=[early_stop]
+        )
 
         # Salvataggio
         model.save(self.get_model_file(asset))
         self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
-
 
     def predict_price(self, asset, full_state=None):
         """
@@ -232,7 +245,7 @@ class PricePredictionModel:
 
         logging.info(f"📊 Prezzo previsto per {asset}: {predicted_price:.5f}")
         return float(predicted_price)
-    
+
 
 if __name__ == "__main__":
     """
