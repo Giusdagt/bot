@@ -182,7 +182,7 @@ async def get_realtime_data(symbols):
                     continue
                 update_embedding_in_processed_file(symbol, df)
                 save_and_sync(df)
-                
+
             logging.info("✅ Dati realtime per %s aggiornati.", symbol)
     except (OSError, IOError, ValueError) as e:
         logging.error("❌ Errore nel recupero dei dati realtime: %s", e)
