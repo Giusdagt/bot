@@ -247,7 +247,7 @@ class AIModel:
         """
         full_state = np.clip(full_state, -1, 1)
 
-        predicted_price = self.price_predictor.predict_price()
+        predicted_price = self.price_predictor.predict_price(symbol, full_state)
 
         for account in self.balances:
             success_probability = self.drl_agent.predict(symbol, full_state)
