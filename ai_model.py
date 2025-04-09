@@ -228,6 +228,8 @@ class AIModel:
             embedding_1h, embedding_4h, embedding_1d
         ])
 
+        last_row = market_data[-1]
+        
         signal_score = int(last_row["ILQ_Zone"]) + \
                        int(last_row["fakeout_up"]) + \
                        int(last_row["fakeout_down"]) + \
