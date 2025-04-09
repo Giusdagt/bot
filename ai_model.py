@@ -222,7 +222,7 @@ class AIModel:
         embedding_1d = get_embedding_for_symbol(symbol, "1d")
 
         last_row = market_data[-1]
-        
+
         signal_score = int(last_row["ILQ_Zone"]) + \
                        int(last_row["fakeout_up"]) + \
                        int(last_row["fakeout_down"]) + \
@@ -239,7 +239,6 @@ class AIModel:
             embedding_m1, embedding_m5, embedding_m15, embedding_m30,
             embedding_1h, embedding_4h, embedding_1d
         ])
-
 
         predicted_price = self.price_predictor.predict_price()
 
