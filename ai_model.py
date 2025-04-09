@@ -210,42 +210,43 @@ class AIModel:
             run_backtest(symbol, market_data)
             return False
 
-       market_data = apply_all_market_structure_signals(market_data)
+        market_data = apply_all_market_structure_signals(market_data)
 
-       # 🔢 Calcola punteggio cumulativo (signal_score)
-embedding_m1 = get_embedding_for_symbol(symbol, "1m")
-embedding_m5 = get_embedding_for_symbol(symbol, "5m")
-embedding_m15 = get_embedding_for_symbol(symbol, "15m")
-embedding_m30 = get_embedding_for_symbol(symbol, "30m")
-embedding_1h = get_embedding_for_symbol(symbol, "1h")
-embedding_4h = get_embedding_for_symbol(symbol, "4h")
-embedding_1d = get_embedding_for_symbol(symbol, "1d")
+        # 🔢 Calcola punteggio cumulativo (signal_score)
+        embedding_m1 = get_embedding_for_symbol(symbol, "1m")
+        embedding_m5 = get_embedding_for_symbol(symbol, "5m")
+        embedding_m15 = get_embedding_for_symbol(symbol, "15m")
+        embedding_m30 = get_embedding_for_symbol(symbol, "30m")
+        embedding_1h = get_embedding_for_symbol(symbol, "1h")
+        embedding_4h = get_embedding_for_symbol(symbol, "4h")
+        embedding_1d = get_embedding_for_symbol(symbol, "1d")
 
-market_data_array = market_data.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
-full_state = np.concatenate([
-    market_data_array,
-    embedding_m1, embedding_m5, embedding_m15, embedding_m30,
-    embedding_1h, embedding_4h, embedding_1d
-])
+        market_data_array = market_data.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        full_state = np.concatenate([
+            market_data_array,
+            embedding_m1, embedding_m5, embedding_m15, embedding_m30,
+            embedding_1h, embedding_4h, embedding_1d
+        ])
 
-
-        signal_score = int(last_row["ILQ_Zone"]) + int(last_row["fakeout_up"]) + \
-                        int(last_row["fakeout_down"]) + int(last_row["volatility_squeeze"]) + \
-                        int(last_row["micro_pattern_hft"])
+        signal_score = int(last_row["ILQ_Zone"]) +
+                       int(last_row["fakeout_up"]) + \
+                       int(last_row["fakeout_down"]) +
+                       int(last_row["volatility_squeeze"]) + \
+                       int(last_row["micro_pattern_hft"])
 
         predicted_price = self.price_predictor.predict_price()
 
         for account in self.balances:
-            success_probability = self.drl_agent.predict(symbol, market_data)
+            success_probability = self.drl_agent.predict(symbol, full_state)
             lot_size = self.adapt_lot_size(
                 self.balances[account], success_probability
             )
             last_close = market_data["close"][-1]
             if predicted_price > last_close and signal_score >= 2:
-               action = "buy"
+                action = "buy"
             elif predicted_price < last_close and signal_score >= 2:
-                 action = "sell"
-            else:   
+                action = "sell"
+            else:
                 logging.info(
                     f"⚠️ Nessun segnale forte su {symbol}, niente operazione."
                 )
