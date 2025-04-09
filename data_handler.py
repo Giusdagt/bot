@@ -141,21 +141,29 @@ async def process_historical_data():
         logging.error("❌ Errore elaborazione dati storici: %s", e)
 
 
-def fetch_mt5_data(symbol):
-    """Recupera dati di scalping in tempo reale da MetaTrader5."""
+def fetch_mt5_data(symbol, timeframe="1m"):
     try:
+        tf_map = {
+            "1m": mt5.TIMEFRAME_M1,
+            "5m": mt5.TIMEFRAME_M5,
+            "15m": mt5.TIMEFRAME_M15,
+            "30m": mt5.TIMEFRAME_M30,
+            "1h": mt5.TIMEFRAME_H1,
+            "4h": mt5.TIMEFRAME_H4,
+            "1d": mt5.TIMEFRAME_D1,
+        }
 
-        rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 1)
+        tf_mt5 = tf_map[timeframe]
+        rates = mt5.copy_rates_from_pos(symbol, tf_mt5, 0, 1)
         if rates is None or len(rates) == 0:
-            logging.warning("⚠️Nessun dato realtime disponibile x %s", symbol)
             return None
 
         df = pl.DataFrame(rates)
+        df = df.with_columns(pl.lit(timeframe).alias("timeframe"))
         df = calculate_scalping_indicators(df)
         df = apply_all_advanced_features(df)
         df = ensure_all_columns(df)
         df = normalize_data(df)
-
         return df
 
     except (OSError, IOError, ValueError) as e:
@@ -167,13 +175,14 @@ async def get_realtime_data(symbols):
     """Ottiene dati in tempo reale da MT5 e aggiorna il database."""
     try:
         for symbol in symbols:
-            logging.info("📡 Recupero dati realtime per %s", symbol)
-            df = fetch_mt5_data(symbol)
-            update_embedding_in_processed_file(symbol, df)
-            if df is None:
-                continue
-
-            save_and_sync(df)
+            for tf in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]:
+                logging.info(f"📡 Dati realtime {symbol} | TF {tf}")
+                df = fetch_mt5_data(symbol, timeframe=tf)
+                if df is None:
+                    continue
+                update_embedding_in_processed_file(symbol, df)
+                save_and_sync(df)
+                
             logging.info("✅ Dati realtime per %s aggiornati.", symbol)
     except (OSError, IOError, ValueError) as e:
         logging.error("❌ Errore nel recupero dei dati realtime: %s", e)
