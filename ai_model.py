@@ -221,13 +221,6 @@ class AIModel:
         embedding_4h = get_embedding_for_symbol(symbol, "4h")
         embedding_1d = get_embedding_for_symbol(symbol, "1d")
 
-        market_data_array = market_data.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
-        full_state = np.concatenate([
-            market_data_array,
-            embedding_m1, embedding_m5, embedding_m15, embedding_m30,
-            embedding_1h, embedding_4h, embedding_1d
-        ])
-
         last_row = market_data[-1]
         
         signal_score = int(last_row["ILQ_Zone"]) + \
@@ -235,6 +228,18 @@ class AIModel:
                        int(last_row["fakeout_down"]) + \
                        int(last_row["volatility_squeeze"]) + \
                        int(last_row["micro_pattern_hft"])
+
+        market_data_array = (
+            market_data.select(
+                pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        )
+        full_state = np.concatenate([
+            market_data_array,
+            [signal_score],
+            embedding_m1, embedding_m5, embedding_m15, embedding_m30,
+            embedding_1h, embedding_4h, embedding_1d
+        ])
+
 
         predicted_price = self.price_predictor.predict_price()
 
