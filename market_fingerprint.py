@@ -11,6 +11,7 @@ MODEL_DIR = (
 )
 PROCESSED_DATA_PATH = MODEL_DIR / "processed_data.zstd.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
+EMBEDDING_FILE = MODEL_DIR / "processed_data.zstd.parquet"
 
 
 def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
