@@ -14,7 +14,9 @@ EMBEDDING_FILE = PROCESSED_DATA_PATH
 
 
 def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
-    """Comprimi un DataFrame di candele in un vettore numerico rappresentativo."""
+    """
+    Comprimi un DataFrame di candele in un vettore numerico rappresentativo.
+    """
     numeric_cols = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy()
     flattened = numeric_cols.flatten()
     hash_digest = hashlib.sha256(flattened.tobytes()).digest()
@@ -40,7 +42,10 @@ def update_embedding_in_processed_file(
 
         # Rimuove righe duplicate (stesso symbol + timeframe)
         df = df.filter(
-            ~((pl.col("symbol") == symbol) & (pl.col("timeframe") == timeframe))
+            ~(
+                (pl.col("symbol") == symbol) &
+                (pl.col("timeframe") == timeframe)
+            )
         )
 
         latest_row = new_df[-1].with_columns([
