@@ -242,7 +242,10 @@ class AIModel:
             embedding_1h, embedding_4h, embedding_1d
         ])
 
-        full_state = np.clip(full_state, -1, 1) #  Protezione per outlier
+        """
+        ✅ Protezione contro outlier 
+        """
+        full_state = np.clip(full_state, -1, 1)
 
         predicted_price = self.price_predictor.predict_price()
 
