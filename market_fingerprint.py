@@ -52,3 +52,34 @@ def update_embedding_in_processed_file(
         print(f"✅ Embedding aggiornato per {symbol} nel file processato.")
     except Exception as e:
         print(f"❌ Errore durante aggiornamento embedding: {e}")
+
+
+def get_embedding_for_symbol(
+    symbol: str, timeframe: str = "1m", length: int = 32
+) -> np.ndarray:
+    """
+    Recupera l'embedding vettoriale salvato per un dato
+    simbolo e timeframe.
+    Restituisce un array numpy normalizzato (32 valori).
+    """
+    try:
+        if not EMBEDDING_FILE.exists():
+            return np.zeros(length, dtype=np.float32)
+
+        df = pl.read_parquet(EMBEDDING_FILE)
+        row = df.filter(
+            (pl.col("symbol") == symbol) &
+            (pl.col("timeframe") == timeframe)
+        )
+
+        if row.is_empty():
+            return np.zeros(length, dtype=np.float32)
+
+        raw = row[0]["embedding"]
+        vector = np.frombuffer(raw, dtype=np.float32)
+        norm = np.linalg.norm(vector)
+        return vector / norm if norm > 0 else vector
+
+    except Exception as e:
+        print(f"❌ Errore durante il recupero dell'embedding: {e}")
+        return np.zeros(length, dtype=np.float32)
