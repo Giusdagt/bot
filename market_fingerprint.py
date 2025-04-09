@@ -3,7 +3,6 @@ import polars as pl
 import numpy as np
 import hashlib
 
-# Percorso del file principale di data_handler
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models") if
     Path("/mnt/usb_trading_data").exists() else
@@ -11,13 +10,11 @@ MODEL_DIR = (
 )
 PROCESSED_DATA_PATH = MODEL_DIR / "processed_data.zstd.parquet"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
-EMBEDDING_FILE = MODEL_DIR / "processed_data.zstd.parquet"
+EMBEDDING_FILE = PROCESSED_DATA_PATH
 
 
 def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
-    """
-    Comprimi un DataFrame di candele in un vettore numerico rappresentativo.
-    """
+    """Comprimi un DataFrame di candele in un vettore numerico rappresentativo."""
     numeric_cols = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy()
     flattened = numeric_cols.flatten()
     hash_digest = hashlib.sha256(flattened.tobytes()).digest()
@@ -27,11 +24,11 @@ def compress_to_vector(df: pl.DataFrame, length: int = 32) -> np.ndarray:
 
 
 def update_embedding_in_processed_file(
-    symbol: str, new_df: pl.DataFrame, length: int = 32
+    symbol: str, new_df: pl.DataFrame, timeframe: str = "1m", length: int = 32
 ):
     """
     Aggiorna il file 'processed_data.zstd.parquet' con una colonna embedding.
-    Salva 1 sola riga per simbolo → leggero e potente.
+    Salva 1 sola riga per simbolo + timeframe → ultra leggero e preciso.
     """
     if not PROCESSED_DATA_PATH.exists():
         print("❌ File processed_data.zstd.parquet non trovato.")
@@ -41,8 +38,14 @@ def update_embedding_in_processed_file(
         df = pl.read_parquet(PROCESSED_DATA_PATH)
         compressed_vector = compress_to_vector(new_df, length=length)
 
-        df = df.filter(pl.col("symbol") != symbol)
+        # Rimuove righe duplicate (stesso symbol + timeframe)
+        df = df.filter(
+            ~((pl.col("symbol") == symbol) & (pl.col("timeframe") == timeframe))
+        )
+
         latest_row = new_df[-1].with_columns([
+            pl.Series(name="symbol", values=[symbol]),
+            pl.Series(name="timeframe", values=[timeframe]),
             pl.Series(name="embedding", values=[compressed_vector.tobytes()])
         ])
 
@@ -50,7 +53,8 @@ def update_embedding_in_processed_file(
         updated_df.write_parquet(
             PROCESSED_DATA_PATH, compression="zstd", mode="overwrite"
         )
-        print(f"✅ Embedding aggiornato per {symbol} nel file processato.")
+        print(f"✅ Embedding aggiornato per {symbol} [{timeframe}]")
+
     except Exception as e:
         print(f"❌ Errore durante aggiornamento embedding: {e}")
 
@@ -59,8 +63,7 @@ def get_embedding_for_symbol(
     symbol: str, timeframe: str = "1m", length: int = 32
 ) -> np.ndarray:
     """
-    Recupera l'embedding vettoriale salvato per un dato
-    simbolo e timeframe.
+    Recupera l'embedding vettoriale salvato per un dato simbolo e timeframe.
     Restituisce un array numpy normalizzato (32 valori).
     """
     try:
@@ -69,8 +72,7 @@ def get_embedding_for_symbol(
 
         df = pl.read_parquet(EMBEDDING_FILE)
         row = df.filter(
-            (pl.col("symbol") == symbol) &
-            (pl.col("timeframe") == timeframe)
+            (pl.col("symbol") == symbol) & (pl.col("timeframe") == timeframe)
         )
 
         if row.is_empty():
