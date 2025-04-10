@@ -277,7 +277,9 @@ if __name__ == "__main__":
         emb_1d = get_embedding_for_symbol(current_asset, "1d")
 
         # Array dati recenti
-        market_data_array = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        market_data_array = (
+            df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        )
 
         # Costruzione full_state
         full_state = np.concatenate([
