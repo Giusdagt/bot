@@ -61,7 +61,9 @@ class PricePredictionModel:
         existing = self.memory_df.filter(pl.col("asset") == asset)
         if not existing.is_empty():
             if np.array_equal(
-                np.frombuffer(existing[0]["compressed_memory"], dtype=np.float32),
+                np.frombuffer(
+                    existing[0]["compressed_memory"], dtype=np.float32
+                ),
                 compressed
             ):
                 return
