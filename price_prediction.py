@@ -90,18 +90,22 @@ class PricePredictionModel:
                     compressed
                 ):
                     return
-                self.memory_df = self.memory_df.filter(pl.col("asset") != asset)
-
-            new_row = (
-                pl.DataFrame(
-                    {"asset": [asset], "compressed_memory": [compressed.tobytes()]}
+                self.memory_df = self.memory_df.filter(
+                    pl.col("asset") != asset
                 )
+
+            new_row = pl.DataFrame(
+                {
+                    "asset": [asset],
+                    "compressed_memory":[compressed.tobytes()]
+                }
             )
+                
             self.memory_df = pl.concat([self.memory_df, new_row])
             self.memory_df.write_parquet(MEMORY_FILE, compression="zstd")
         except Exception as e:
             logging.error(
-                "❌ durante il salvataggio della memoria per %s: %s", asset, str(e)
+                "❌ per il salvataggio della memoria per %s: %s", asset, str(e)
             )
 
     def build_lstm_model(self):
@@ -111,7 +115,8 @@ class PricePredictionModel:
         try:
             model = Sequential([
                 LSTM(
-                    64, activation="tanh", return_sequences=True, dtype="float16"
+                    64, activation="tanh", return_sequences=True,
+                    dtype="float16"
                 ),
                 Dropout(0.2),
                 LSTM(
@@ -123,7 +128,9 @@ class PricePredictionModel:
             model.compile(optimizer="adam", loss="mean_squared_error")
             return model
         except Exception as e:
-            logging.error("❌ Errore durante la costruzione del modello LSTM: %s", str(e))
+            logging.error(
+                "❌ durante la costruzione del modello LSTM: %s", str(e)
+            )
             raise
 
     def load_or_create_model(self, asset):
@@ -137,7 +144,7 @@ class PricePredictionModel:
             return self.build_lstm_model()
         except Exception as e:
             logging.error(
-                "❌ durante caricamento o creazione modello per %s: %s", asset, str(e)
+                "❌ caricamento o creazione modello x %s: %s", asset, str(e)
             )
             raise
 
@@ -149,7 +156,9 @@ class PricePredictionModel:
             raw_data = np.array(raw_data).reshape(-1, 1)
             return self.scaler.fit_transform(raw_data)
         except Exception as e:
-            logging.error("❌ Errore durante la normalizzazione dei dati: %s", str(e))
+            logging.error(
+                "❌ durante la normalizzazione dei dati: %s", str(e)
+            )
             raise
 
     def train_model(self, asset, raw_data):
@@ -157,7 +166,9 @@ class PricePredictionModel:
         Addestra il modello LSTM per un asset specifico.
         """
         if len(raw_data) <= SEQUENCE_LENGTH:
-            logging.warning("⚠️ Dati insufficienti per l'addestramento di %s", asset)
+            logging.warning(
+                "⚠️ Dati insufficienti per l'addestramento di %s", asset
+            )
             return
 
         try:
@@ -201,7 +212,9 @@ class PricePredictionModel:
             context_tiled = (
                 np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
             )
-            full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
+            full_input = (
+                np.concatenate([x, memory_tiled, context_tiled], axis=2)
+            )
 
             early_stop = EarlyStopping(
                 monitor="loss", patience=3, restore_best_weights=True
@@ -216,10 +229,12 @@ class PricePredictionModel:
             self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
         except Exception as e:
             logging.error(
-                "❌ durante l'addestramento del modello per %s: %s", asset, str(e)
+                "❌ per addestramento del modello per %s: %s", asset, str(e)
             )
 
-    def predict_price(self, asset: str, full_state: np.ndarray = None) -> float:
+    def predict_price(
+        self, asset: str, full_state: np.ndarray = None
+    ) -> float:
         """
         Prevede il prezzo futuro per un asset specifico.
         """
@@ -227,8 +242,12 @@ class PricePredictionModel:
 
         if full_state is not None:
             try:
-                reshaped_state = np.array(full_state, dtype=np.float32).reshape(1, -1, 1)
-                prediction = local_model.predict(reshaped_state, verbose=0)[0][0]
+                reshaped_state = (
+                    np.array(full_state, dtype=np.float32).reshape(1, -1, 1)
+                )
+                prediction = (
+                    local_model.predict(reshaped_state, verbose=0)[0][0]
+                )
                 return float(prediction)
             except Exception as e:
                 logging.error(
@@ -243,11 +262,17 @@ class PricePredictionModel:
                 return None
 
             data = self.preprocess_data(raw_data)
-            last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+            last_sequence = (
+                data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+            )
             prediction = local_model.predict(last_sequence, verbose=0)[0][0]
-            predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
+            predicted_price = (
+                self.scaler.inverse_transform([[prediction]])[0][0]
+            )
 
-            logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
+            logging.info(
+                "📊 Prezzo previsto per %s: %.5f", asset, predicted_price
+            )
             return float(predicted_price)
         except Exception as e:
             logging.error(
