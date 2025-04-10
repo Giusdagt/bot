@@ -195,14 +195,18 @@ class PricePredictionModel:
             return float(predicted_price)
 
         except (ValueError, TypeError) as e:
-            logging.error("❌ Errore durante la previsione per %s: %s", asset, str(e))
+            logging.error(
+                "❌ Errore durante la previsione per %s: %s", asset, str(e)
+            )
             return None
 
     def build_full_state(self, asset) -> np.ndarray:
         """
         Crea lo stato completo (full_state) per un asset specifico.
-        Lo stato completo combina i dati di mercato normalizzati, i segnali strutturali
-        e gli embedding multi-timeframe in un unico array, con un limite nei valori
+        Lo stato completo combina i dati di mercato normalizzati,
+        i segnali strutturali
+        e gli embedding multi-timeframe in un unico array,
+        con un limite nei valori
         tra -1 e 1.
         """
         try:
@@ -242,7 +246,9 @@ class PricePredictionModel:
 
             return np.clip(full_state, -1, 1)
         except Exception as e:
-            logging.error("❌ Errore durante la creazione dello stato per %s: %s", asset, str(e))
+            logging.error(
+                "❌ durante la creazione dello stato per %s: %s", asset, str(e)
+            )
             return None
 
 
@@ -256,11 +262,13 @@ if __name__ == "__main__":
             if state is None:
                 continue
 
-            raw_close = (
-                pl.DataFrame(get_normalized_market_data(asset))["close"].to_numpy()
-            )
+            raw_close = pl.DataFrame(
+                get_normalized_market_data(asset)
+            )["close"].to_numpy()
             if len(raw_close) > SEQUENCE_LENGTH:
                 model.train_model(asset, raw_close)
                 model.predict_price(asset=asset, full_state=state)
         except Exception as e:
-            logging.error("❌ Errore durante l'elaborazione dell'asset %s: %s", asset, str(e))
+            logging.error(
+                "❌ Errore durante l'elaborazione dell'asset %s: %s", asset, str(e)
+            )
