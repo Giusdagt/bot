@@ -257,7 +257,9 @@ if __name__ == "__main__":
     model = PricePredictionModel()
     all_assets = get_available_assets()  # Utilizza gli asset disponibili
     for current_asset in all_assets:
-        market_data = get_normalized_market_data(current_asset)["close"].to_numpy()
+        market_data = (
+            get_normalized_market_data(current_asset)["close"].to_numpy()
+        )
         if len(market_data) > SEQUENCE_LENGTH:
             model.train_model(current_asset, market_data)
             model.predict_price(current_asset)
