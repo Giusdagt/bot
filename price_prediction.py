@@ -55,7 +55,9 @@ class PricePredictionModel:
             return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
 
     def save_memory(self, asset, new_data):
-        compressed = np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
+        compressed = (
+            np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
+        )
         existing = self.memory_df.filter(pl.col("asset") == asset)
         if not existing.is_empty():
             if np.array_equal(
@@ -73,12 +75,18 @@ class PricePredictionModel:
 
     def build_lstm_model(self):
         model = Sequential([
-            LSTM(64, activation="tanh", return_sequences=True, dtype="float16"),
+            LSTM(
+                64, activation="tanh", return_sequences=True, dtype="float16"
+            ),
             Dropout(0.2),
-            LSTM(32, activation="tanh", return_sequences=False, dtype="float16"),
+            LSTM(
+                32, activation="tanh", return_sequences=False, dtype="float16"
+            ),
             Dense(1, activation="linear", dtype="float16")
         ])
-        model.compile(optimizer="adam", loss="mean_squared_error")
+        model.compile(
+            optimizer="adam", loss="mean_squared_error"
+        )
         return model
 
     def load_or_create_model(self, asset):
@@ -132,7 +140,9 @@ class PricePredictionModel:
         x = np.array(x)
         y = np.array(y)
         memory_tiled = np.tile(memory, (len(x), 1, 1))
-        context_tiled = np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
+        context_tiled = (
+            np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
+        )
         full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
 
         early_stop = EarlyStopping(
@@ -148,17 +158,21 @@ class PricePredictionModel:
         local_model.save(self.get_model_file(asset))
         self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
 
-    def predict_price(self, asset: str, full_state: np.ndarray = None) -> float:
+    def predict_price(
+        self, asset: str, full_state: np.ndarray = None
+    ) -> float:
         local_model = self.load_or_create_model(asset)
 
         if full_state is not None:
             try:
-                full_state = np.array(full_state, dtype=np.float32).reshape(1, -1, 1)
+                full_state = (
+                    np.array(full_state, dtype=np.float32).reshape(1, -1, 1)
+                )
                 prediction = local_model.predict(full_state, verbose=0)[0][0]
                 return float(prediction)
             except Exception as e:
                 logging.error(
-                    f"❌ Errore durante la previsione con full_state per {asset}: {e}"
+                    f"❌ Errore della previsione con full_state x {asset}: {e}"
                 )
                 return None
 
@@ -169,11 +183,17 @@ class PricePredictionModel:
                 return None
 
             data = self.preprocess_data(raw_data)
-            last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+            last_sequence = (
+                data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+            )
             prediction = local_model.predict(last_sequence, verbose=0)[0][0]
-            predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
+            predicted_price = (
+                self.scaler.inverse_transform([[prediction]])[0][0]
+            )
 
-            logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
+            logging.info(
+                "📊 Prezzo previsto per %s: %.5f", asset, predicted_price
+            )
             return float(predicted_price)
 
         except Exception as e:
