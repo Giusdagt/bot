@@ -72,7 +72,7 @@ class PricePredictionModel:
                 row["compressed_memory"][0],
                 dtype=np.float32
             ).reshape(SEQUENCE_LENGTH, 1)
-        except Exception:
+        except (KeyError, ValueError, TypeError):
             return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
 
     def save_memory(self, asset, new_data):
@@ -113,7 +113,7 @@ class PricePredictionModel:
         - Precisione ridotta (float16) per consumi ridotti.
         - Compilato con ottimizzatore 'adam' e perdita 'mean_squared_error'.
         """
-        model = Sequential([
+        lstm_model = Sequential([
             LSTM(
                 64, activation="tanh", return_sequences=True, dtype="float16"
             ),
@@ -123,8 +123,8 @@ class PricePredictionModel:
             ),
             Dense(1, activation="linear", dtype="float16")
         ])
-        model.compile(optimizer="adam", loss="mean_squared_error")
-        return model
+        lstm_model.compile(optimizer="adam", loss="mean_squared_error")
+        return lstm_model
 
     def load_or_create_model(self, asset):
         """
