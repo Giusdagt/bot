@@ -199,6 +199,7 @@ class PricePredictionModel:
         memory_tiled = np.tile(memory, (len(x), 1, 1))
         context_tiled = (
             np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
+        )
         full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
 
         # Training
