@@ -7,7 +7,6 @@ Modulo per la previsione dei prezzi tramite LSTM.
 oppure selezionati dinamicamente.
 """
 
-
 import logging
 from pathlib import Path
 import numpy as np
@@ -83,7 +82,6 @@ class PricePredictionModel:
         rispetto alla memoria esistente.
         - Scrive in un file Parquet ultra compresso.
         """
-
         compressed = (
             np.mean(new_data, axis=0, keepdims=True).astype(np.float32)
         )
@@ -228,7 +226,7 @@ class PricePredictionModel:
 
         if full_state is not None:
             full_state = np.array(full_state).reshape(1, -1, 1)
-            prediction = local_model.predict(full_state)[0][0]
+            prediction = local_model.predict(full_state, verbose=0)[0][0]
             return float(prediction)
 
         # Metodo classico (fallback) con dati storici
@@ -240,53 +238,49 @@ class PricePredictionModel:
 
         data = self.preprocess_data(raw_data)
         last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
-        prediction = local_model.predict(last_sequence)[0][0]
+        prediction = local_model.predict(last_sequence, verbose=0)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
         logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
         return float(predicted_price)
 
-    def build_full_state(asset) -> np.ndarray:
-    """
-    Crea lo stato completo (full_state) per un asset:
-    - Include i dati numerici normalizzati
-    - Calcola signal_score
-    - Aggiunge embedding da tutti i timeframe
-    - Output: vettore numpy normalizzato e compresso
-    """
-    df = pl.DataFrame(get_normalized_market_data(asset))
-    if df.is_empty() or df.shape[0] == 0:
-        return None
+    def build_full_state(self, asset) -> np.ndarray:
+        """
+        Crea lo stato completo (full_state) per un asset:
+        """
+        df = pl.DataFrame(get_normalized_market_data(asset))
+        if df.is_empty() or df.shape[0] == 0:
+            return None
 
-    df = apply_all_market_structure_signals(df)
-    last_row = df[-1]
+        df = apply_all_market_structure_signals(df)
+        last_row = df[-1]
 
-    signal_score = (
-        int(last_row["ILQ_Zone"]) +
-        int(last_row["fakeout_up"]) +
-        int(last_row["fakeout_down"]) +
-        int(last_row["volatility_squeeze"]) +
-        int(last_row["micro_pattern_hft"])
-    )
+        signal_score = (
+            int(last_row["ILQ_Zone"]) +
+            int(last_row["fakeout_up"]) +
+            int(last_row["fakeout_down"]) +
+            int(last_row["volatility_squeeze"]) +
+            int(last_row["micro_pattern_hft"])
+        )
 
-    emb_m1 = get_embedding_for_symbol(asset, "1m")
-    emb_m5 = get_embedding_for_symbol(asset, "5m")
-    emb_m15 = get_embedding_for_symbol(asset, "15m")
-    emb_m30 = get_embedding_for_symbol(asset, "30m")
-    emb_1h = get_embedding_for_symbol(asset, "1h")
-    emb_4h = get_embedding_for_symbol(asset, "4h")
-    emb_1d = get_embedding_for_symbol(asset, "1d")
+        emb_m1 = get_embedding_for_symbol(asset, "1m")
+        emb_m5 = get_embedding_for_symbol(asset, "5m")
+        emb_m15 = get_embedding_for_symbol(asset, "15m")
+        emb_m30 = get_embedding_for_symbol(asset, "30m")
+        emb_1h = get_embedding_for_symbol(asset, "1h")
+        emb_4h = get_embedding_for_symbol(asset, "4h")
+        emb_1d = get_embedding_for_symbol(asset, "1d")
 
-    market_data_array = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        market_data_array = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
 
-    full_state = np.concatenate([
-        market_data_array,
-        [signal_score],
-        emb_m1, emb_m5, emb_m15, emb_m30,
-        emb_1h, emb_4h, emb_1d
-    ])
+        full_state = np.concatenate([
+            market_data_array,
+            [signal_score],
+            emb_m1, emb_m5, emb_m15, emb_m30,
+            emb_1h, emb_4h, emb_1d
+        ])
 
-    return np.clip(full_state, -1, 1)
+        return np.clip(full_state, -1, 1)
 
 
 if __name__ == "__main__":
@@ -294,7 +288,7 @@ if __name__ == "__main__":
     all_assets = get_available_assets()
 
     for asset in all_assets:
-        state = build_full_state(asset)
+        state = model.build_full_state(asset)
         if state is None:
             continue
 
