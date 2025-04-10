@@ -236,5 +236,19 @@ async def main():
     finally:
         mt5.shutdown()  # Assicura che la connessione venga chiusa alla fine
 
+
+def get_available_assets():
+    """
+    Restituisce tutti gli asset disponibili, da preset o in modo dinamico.
+    Nessuna limitazione su USD, EUR o altro.
+    """
+    if USE_PRESET_ASSETS:
+        assets = load_preset_assets()
+        return sum(assets.values(), [])
+
+    mapping = load_auto_symbol_mapping()
+    return list(mapping.values())
+
+
 if __name__ == "__main__":
     asyncio.run(main())
