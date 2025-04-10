@@ -248,13 +248,47 @@ class PricePredictionModel:
 
 
 if __name__ == "__main__":
-
     model = PricePredictionModel()
-    all_assets = get_available_assets()  # Utilizza gli asset disponibili
+    all_assets = get_available_assets()
+
     for current_asset in all_assets:
-        market_data = (
-            get_normalized_market_data(current_asset)["close"].to_numpy()
+        df = pl.DataFrame(get_normalized_market_data(current_asset))
+        if df.is_empty() or df.shape[0] < SEQUENCE_LENGTH:
+            continue
+
+        df = apply_all_market_structure_signals(df)
+
+        last_row = df[-1]
+        signal_score = (
+            int(last_row["ILQ_Zone"]) +
+            int(last_row["fakeout_up"]) +
+            int(last_row["fakeout_down"]) +
+            int(last_row["volatility_squeeze"]) +
+            int(last_row["micro_pattern_hft"])
         )
-        if len(market_data) > SEQUENCE_LENGTH:
-            model.train_model(current_asset, market_data)
-            model.predict_price(current_asset, full_state=None)
+
+        # Embedding da tutti i timeframe
+        emb_m1 = get_embedding_for_symbol(current_asset, "1m")
+        emb_m5 = get_embedding_for_symbol(current_asset, "5m")
+        emb_m15 = get_embedding_for_symbol(current_asset, "15m")
+        emb_m30 = get_embedding_for_symbol(current_asset, "30m")
+        emb_1h = get_embedding_for_symbol(current_asset, "1h")
+        emb_4h = get_embedding_for_symbol(current_asset, "4h")
+        emb_1d = get_embedding_for_symbol(current_asset, "1d")
+
+        # Array dati recenti
+        market_data_array = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+
+        # Costruzione full_state
+        full_state = np.concatenate([
+            market_data_array,
+            [signal_score],
+            emb_m1, emb_m5, emb_m15, emb_m30, emb_1h, emb_4h, emb_1d
+        ])
+        full_state = np.clip(full_state, -1, 1)  # sicurezza contro outlier
+
+        # Avvia training + predizione avanzata
+        raw_close = df["close"].to_numpy()
+        if len(raw_close) > SEQUENCE_LENGTH:
+            model.train_model(current_asset, raw_close)
+            model.predict_price(asset=current_asset, full_state=full_state)
