@@ -44,9 +44,12 @@ class PricePredictionModel:
             row = self.memory_df.filter(pl.col("asset") == asset)
             if row.is_empty():
                 return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
-            return (
-                np.frombuffer(row[0]["compressed_memory"], dtype=np.float32
-                ).reshape(SEQUENCE_LENGTH, 1)
+            return np.frombuffer(
+                row[0]["compressed_memory"],
+                dtype=np.float32
+            ).reshape(
+                SEQUENCE_LENGTH,
+                1
             )
         except (KeyError, ValueError, TypeError):
             return np.zeros((SEQUENCE_LENGTH, 1), dtype=np.float32)
