@@ -152,7 +152,7 @@ class PricePredictionModel:
         if len(raw_data) <= SEQUENCE_LENGTH:
             return
 
-        model = self.load_or_create_model(asset)
+        local_model = self.load_or_create_model(asset)
         memory = self.load_memory(asset)
 
         # Normalizza + segnali extra
@@ -224,11 +224,11 @@ class PricePredictionModel:
         - Se disponibile, usa `full_state` come input avanzato.
         - Altrimenti, utilizza la sequenza storica classica.
         """
-        model = self.load_or_create_model(asset)
+        local_model = self.load_or_create_model(asset)
 
         if full_state is not None:
             full_state = np.array(full_state).reshape(1, -1, 1)
-            prediction = model.predict(full_state)[0][0]
+            prediction = local_model.predict(full_state)[0][0]
             return float(prediction)
 
         # Metodo classico (fallback) con dati storici
@@ -240,7 +240,7 @@ class PricePredictionModel:
 
         data = self.preprocess_data(raw_data)
         last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
-        prediction = model.predict(last_sequence)[0][0]
+        prediction = local_model.predict(last_sequence)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
         logging.info(f"📊 Prezzo previsto per {asset}: {predicted_price:.5f}")
