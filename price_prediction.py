@@ -243,7 +243,7 @@ class PricePredictionModel:
         prediction = local_model.predict(last_sequence)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
-        logging.info("Elaborazione completata per l'asset: %s", asset_name)
+        logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
         return float(predicted_price)
 
 
