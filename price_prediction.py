@@ -270,5 +270,5 @@ if __name__ == "__main__":
                 model.predict_price(asset=asset, full_state=state)
         except Exception as e:
             logging.error(
-                "❌ Errore durante l'elaborazione dell'asset %s: %s", asset, str(e)
+                "❌ durante l'elaborazione dell'asset %s: %s", asset, str(e)
             )
