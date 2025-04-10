@@ -235,7 +235,7 @@ class PricePredictionModel:
         raw_data = get_normalized_market_data(asset)["close"].to_numpy()
 
         if len(raw_data) < SEQUENCE_LENGTH:
-            logging.warning(f"⚠️ Dati insufficienti per {asset}")
+            logging.warning("⚠️ Dati insufficienti per %s", asset)
             return None
 
         data = self.preprocess_data(raw_data)
@@ -243,7 +243,7 @@ class PricePredictionModel:
         prediction = local_model.predict(last_sequence)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
-        logging.info(f"📊 Prezzo previsto per {asset}: {predicted_price:.5f}")
+        logging.info("Elaborazione completata per l'asset: %s", asset_name)
         return float(predicted_price)
 
 
