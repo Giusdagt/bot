@@ -168,9 +168,9 @@ class PricePredictionModel:
                 )
                 prediction = local_model.predict(full_state, verbose=0)[0][0]
                 return float(prediction)
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 logging.error(
-                    f"❌ Errore della previsione con full_state x {asset}: {e}"
+                    "❌ Prezzo previsto per %s: %.5f", asset, predicted_price"
                 )
                 return None
 
@@ -194,11 +194,17 @@ class PricePredictionModel:
             )
             return float(predicted_price)
 
-        except Exception as e:
-            logging.error(f"❌ Errore fallback per {asset}: {e}")
+        except (ValueError, TypeError, tensorflow.errors.InvalidArgumentError) as e:
+            logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
             return None
 
     def build_full_state(self, asset) -> np.ndarray:
+            """
+            Crea lo stato completo (full_state) per un asset specifico.
+            Lo stato completo combina i dati di mercato normalizzati, i segnali strutturali
+            e gli embedding multi-timeframe in un unico array, con un limite nei valori
+            tra -1 e 1.
+            """
         df = pl.DataFrame(get_normalized_market_data(asset))
         if df.is_empty() or df.shape[0] == 0:
             return None
