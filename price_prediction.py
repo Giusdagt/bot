@@ -257,4 +257,4 @@ if __name__ == "__main__":
         )
         if len(market_data) > SEQUENCE_LENGTH:
             model.train_model(current_asset, market_data)
-            model.predict_price(current_asset)
+            model.predict_price(current_asset, full_state=None)
