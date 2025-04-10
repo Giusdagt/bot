@@ -271,7 +271,9 @@ class PricePredictionModel:
         emb_4h = get_embedding_for_symbol(asset, "4h")
         emb_1d = get_embedding_for_symbol(asset, "1d")
 
-        market_data_array = df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        market_data_array = (
+            df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        )
 
         full_state = np.concatenate([
             market_data_array,
@@ -292,7 +294,9 @@ if __name__ == "__main__":
         if state is None:
             continue
 
-        raw_close = pl.DataFrame(get_normalized_market_data(asset))["close"].to_numpy()
+        raw_close = (
+            pl.DataFrame(get_normalized_market_data(asset))["close"].to_numpy()
+        )
         if len(raw_close) > SEQUENCE_LENGTH:
             model.train_model(asset, raw_close)
             model.predict_price(asset=asset, full_state=state)
