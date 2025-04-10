@@ -197,9 +197,8 @@ class PricePredictionModel:
 
         # ➕ CONCATENA memoria + embedding + signal
         memory_tiled = np.tile(memory, (len(x), 1, 1))
-        context_tiled = np.tile(
-            extra_features, (len(x), 1)
-        ).reshape(len(x), 1, -1)
+        context_tiled = (
+            np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
         full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
 
         # Training
@@ -208,14 +207,14 @@ class PricePredictionModel:
             patience=3,
             restore_best_weights=True
         )
-        model.fit(
+        local_model.fit(
             full_input, y, epochs=10,
             batch_size=BATCH_SIZE, verbose=1,
             callbacks=[early_stop]
         )
 
         # Salvataggio
-        model.save(self.get_model_file(asset))
+        local_model.save(self.get_model_file(asset))
         self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
 
     def predict_price(self, asset, full_state=None):
