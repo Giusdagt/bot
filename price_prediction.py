@@ -142,7 +142,7 @@ class PricePredictionModel:
         context_tiled = (
             np.tile(extra_features, (len(x), 1)).reshape(len(x), 1, -1)
         )
-        full_input = (np.concatenate([x, memory_tiled, context_tiled], axis=2)
+        full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
 
         early_stop = (
             EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
