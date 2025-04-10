@@ -170,7 +170,7 @@ class PricePredictionModel:
                 return float(prediction)
             except (ValueError, TypeError) as e:
                 logging.error(
-                    "❌ Prezzo previsto per %s: %.5f", asset, predicted_price"
+                    "❌ Errore durante la previsione per %s: %s", asset, str(e)
                 )
                 return None
 
@@ -194,52 +194,56 @@ class PricePredictionModel:
             )
             return float(predicted_price)
 
-        except (ValueError, TypeError, tensorflow.errors.InvalidArgumentError) as e:
-            logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
+        except (ValueError, TypeError) as e:
+            logging.error("❌ Errore durante la previsione per %s: %s", asset, str(e))
             return None
 
     def build_full_state(self, asset) -> np.ndarray:
-            """
-            Crea lo stato completo (full_state) per un asset specifico.
-            Lo stato completo combina i dati di mercato normalizzati, i segnali strutturali
-            e gli embedding multi-timeframe in un unico array, con un limite nei valori
-            tra -1 e 1.
-            """
-        df = pl.DataFrame(get_normalized_market_data(asset))
-        if df.is_empty() or df.shape[0] == 0:
+        """
+        Crea lo stato completo (full_state) per un asset specifico.
+        Lo stato completo combina i dati di mercato normalizzati, i segnali strutturali
+        e gli embedding multi-timeframe in un unico array, con un limite nei valori
+        tra -1 e 1.
+        """
+        try:
+            df = pl.DataFrame(get_normalized_market_data(asset))
+            if df.is_empty() or df.shape[0] == 0:
+                return None
+
+            df = apply_all_market_structure_signals(df)
+            last_row = df[-1]
+
+            signal_score = (
+                int(last_row["ILQ_Zone"]) +
+                int(last_row["fakeout_up"]) +
+                int(last_row["fakeout_down"]) +
+                int(last_row["volatility_squeeze"]) +
+                int(last_row["micro_pattern_hft"])
+            )
+
+            emb_m1 = get_embedding_for_symbol(asset, "1m")
+            emb_m5 = get_embedding_for_symbol(asset, "5m")
+            emb_m15 = get_embedding_for_symbol(asset, "15m")
+            emb_m30 = get_embedding_for_symbol(asset, "30m")
+            emb_1h = get_embedding_for_symbol(asset, "1h")
+            emb_4h = get_embedding_for_symbol(asset, "4h")
+            emb_1d = get_embedding_for_symbol(asset, "1d")
+
+            market_data_array = (
+                df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+            )
+
+            full_state = np.concatenate([
+                market_data_array,
+                [signal_score],
+                emb_m1, emb_m5, emb_m15, emb_m30,
+                emb_1h, emb_4h, emb_1d
+            ])
+
+            return np.clip(full_state, -1, 1)
+        except Exception as e:
+            logging.error("❌ Errore durante la creazione dello stato per %s: %s", asset, str(e))
             return None
-
-        df = apply_all_market_structure_signals(df)
-        last_row = df[-1]
-
-        signal_score = (
-            int(last_row["ILQ_Zone"]) +
-            int(last_row["fakeout_up"]) +
-            int(last_row["fakeout_down"]) +
-            int(last_row["volatility_squeeze"]) +
-            int(last_row["micro_pattern_hft"])
-        )
-
-        emb_m1 = get_embedding_for_symbol(asset, "1m")
-        emb_m5 = get_embedding_for_symbol(asset, "5m")
-        emb_m15 = get_embedding_for_symbol(asset, "15m")
-        emb_m30 = get_embedding_for_symbol(asset, "30m")
-        emb_1h = get_embedding_for_symbol(asset, "1h")
-        emb_4h = get_embedding_for_symbol(asset, "4h")
-        emb_1d = get_embedding_for_symbol(asset, "1d")
-
-        market_data_array = (
-            df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
-        )
-
-        full_state = np.concatenate([
-            market_data_array,
-            [signal_score],
-            emb_m1, emb_m5, emb_m15, emb_m30,
-            emb_1h, emb_4h, emb_1d
-        ])
-
-        return np.clip(full_state, -1, 1)
 
 
 if __name__ == "__main__":
@@ -247,13 +251,16 @@ if __name__ == "__main__":
     all_assets = get_available_assets()
 
     for asset in all_assets:
-        state = model.build_full_state(asset)
-        if state is None:
-            continue
+        try:
+            state = model.build_full_state(asset)
+            if state is None:
+                continue
 
-        raw_close = (
-            pl.DataFrame(get_normalized_market_data(asset))["close"].to_numpy()
-        )
-        if len(raw_close) > SEQUENCE_LENGTH:
-            model.train_model(asset, raw_close)
-            model.predict_price(asset=asset, full_state=state)
+            raw_close = (
+                pl.DataFrame(get_normalized_market_data(asset))["close"].to_numpy()
+            )
+            if len(raw_close) > SEQUENCE_LENGTH:
+                model.train_model(asset, raw_close)
+                model.predict_price(asset=asset, full_state=state)
+        except Exception as e:
+            logging.error("❌ Errore durante l'elaborazione dell'asset %s: %s", asset, str(e))
