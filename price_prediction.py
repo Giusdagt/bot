@@ -235,7 +235,7 @@ class PricePredictionModel:
         raw_data = get_normalized_market_data(asset)["close"].to_numpy()
 
         if len(raw_data) < SEQUENCE_LENGTH:
-            logging.warning(f"⚠️ Dati insufficienti per {asset}")
+            logging.warning("⚠️ Dati insufficienti per %s", asset)
             return None
 
         data = self.preprocess_data(raw_data)
@@ -243,21 +243,57 @@ class PricePredictionModel:
         prediction = model.predict(last_sequence)[0][0]
         predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
-        logging.info(f"📊 Prezzo previsto per {asset}: {predicted_price:.5f}")
+        logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
         return float(predicted_price)
 
 
+   def build_full_state(self, asset) -> np.ndarray:
+        """
+        Crea lo stato completo (full_state) per un asset:
+        """
+        df = pl.DataFrame(get_normalized_market_data(asset))
+        if df.is_empty() or df.shape[0] == 0:
+            return None
+
+        df = apply_all_market_structure_signals(df)
+        last_row = df[-1]
+
+        signal_score = (
+            int(last_row["ILQ_Zone"]) +
+            int(last_row["fakeout_up"]) +
+            int(last_row["fakeout_down"]) +
+            int(last_row["volatility_squeeze"]) +
+            int(last_row["micro_pattern_hft"])
+        )
+
+        emb_m1 = get_embedding_for_symbol(asset, "1m")
+        emb_m5 = get_embedding_for_symbol(asset, "5m")
+        emb_m15 = get_embedding_for_symbol(asset, "15m")
+        emb_m30 = get_embedding_for_symbol(asset, "30m")
+        emb_1h = get_embedding_for_symbol(asset, "1h")
+        emb_4h = get_embedding_for_symbol(asset, "4h")
+        emb_1d = get_embedding_for_symbol(asset, "1d")
+
+        market_data_array = (
+            df.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+        )
+
+        full_state = np.concatenate([
+            market_data_array,
+            [signal_score],
+            emb_m1, emb_m5, emb_m15, emb_m30,
+            emb_1h, emb_4h, emb_1d
+        ])
+
+        return np.clip(full_state, -1, 1)
+
+
 if __name__ == "__main__":
-    """
-    Esegue il training e la previsione su tutti gli asset disponibili:
-    - Recupera gli asset da `get_available_assets`.
-    - Addestra il modello per ciascun asset.
-    - Prevede il prezzo futuro.
-    """
+
     model = PricePredictionModel()
     all_assets = get_available_assets()  # Utilizza gli asset disponibili
     for asset in all_assets:
         market_data = get_normalized_market_data(asset)["close"].to_numpy()
         if len(market_data) > SEQUENCE_LENGTH:
             model.train_model(asset, market_data)
-            model.predict_price(asset)
+            model.predict_price(asset=asset, full_state=state)
