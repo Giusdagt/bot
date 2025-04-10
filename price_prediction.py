@@ -248,12 +248,7 @@ class PricePredictionModel:
 
 
 if __name__ == "__main__":
-    """
-    Esegue il training e la previsione su tutti gli asset disponibili:
-    - Recupera gli asset da `get_available_assets`.
-    - Addestra il modello per ciascun asset.
-    - Prevede il prezzo futuro.
-    """
+
     model = PricePredictionModel()
     all_assets = get_available_assets()  # Utilizza gli asset disponibili
     for current_asset in all_assets:
