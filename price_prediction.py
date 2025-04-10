@@ -97,10 +97,9 @@ class PricePredictionModel:
             new_row = pl.DataFrame(
                 {
                     "asset": [asset],
-                    "compressed_memory":[compressed.tobytes()]
+                    "compressed_memory": [compressed.tobytes()]
                 }
             )
-                
             self.memory_df = pl.concat([self.memory_df, new_row])
             self.memory_df.write_parquet(MEMORY_FILE, compression="zstd")
         except Exception as e:
