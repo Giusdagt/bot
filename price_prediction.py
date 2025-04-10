@@ -144,8 +144,8 @@ class PricePredictionModel:
         )
         full_input = np.concatenate([x, memory_tiled, context_tiled], axis=2)
 
-        early_stop = (
-            EarlyStopping(monitor="loss", patience=3, restore_best_weights=True)
+        early_stop = EarlyStopping(
+            monitor="loss", patience=3, restore_best_weights=True
         )
         local_model.fit(
             full_input, y, epochs=10,
