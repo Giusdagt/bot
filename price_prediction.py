@@ -217,32 +217,34 @@ class PricePredictionModel:
         self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
 
     def predict_price(self, asset, full_state=None):
-        """
-        Prevede il prossimo prezzo per un asset:
-        - Se disponibile, usa `full_state` come input avanzato.
-        - Altrimenti, utilizza la sequenza storica classica.
-        """
-        local_model = self.load_or_create_model(asset)
+    """
+    Prevede il prossimo prezzo per un asset:
+    - Se disponibile, usa `full_state` come input avanzato.
+    - Altrimenti, utilizza la sequenza storica classica.
+    """
+    local_model = self.load_or_create_model(asset)
 
-        if full_state is not None:
-            full_state = np.array(full_state).reshape(1, -1, 1)
-            prediction = local_model.predict(full_state)[0][0]
-            return float(prediction)
+    if full_state is not None:
+        # Assicurati che `full_state` abbia la forma corretta
+        full_state = np.array(full_state).reshape(1, -1, 1)
+        print(f"Forma di full_state: {full_state.shape}")  # Debug per verifica
+        prediction = local_model.predict(full_state)[0][0]  # Rimuovi parametri extra
+        return float(prediction)
 
-        # Metodo classico (fallback) con dati storici
-        raw_data = get_normalized_market_data(asset)["close"].to_numpy()
+    # Metodo classico (fallback) con dati storici
+    raw_data = get_normalized_market_data(asset)["close"].to_numpy()
 
-        if len(raw_data) < SEQUENCE_LENGTH:
-            logging.warning("⚠️ Dati insufficienti per %s", asset)
-            return None
+    if len(raw_data) < SEQUENCE_LENGTH:
+        logging.warning("⚠️ Dati insufficienti per %s", asset)
+        return None
 
-        data = self.preprocess_data(raw_data)
-        last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
-        prediction = local_model.predict(last_sequence)[0][0]
-        predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
+    data = self.preprocess_data(raw_data)
+    last_sequence = data[-SEQUENCE_LENGTH:].reshape(1, SEQUENCE_LENGTH, 1)
+    prediction = local_model.predict(last_sequence)[0][0]
+    predicted_price = self.scaler.inverse_transform([[prediction]])[0][0]
 
-        logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
-        return float(predicted_price)
+    logging.info("📊 Prezzo previsto per %s: %.5f", asset, predicted_price)
+    return float(predicted_price)
 
     def build_full_state(self, asset) -> np.ndarray:
         """
