@@ -233,7 +233,7 @@ class PricePredictionModel:
             )
 
     def predict_price(
-        self, asset, full_state: Optional[np.ndarray] = None
+        self, asset: str, full_state: Optional[np.ndarray] = None
     ) -> float:
         """
         Prevede il prezzo futuro per un asset specifico.
