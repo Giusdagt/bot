@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 import numpy as np
 import polars as pl
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential, load_model, Model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
@@ -237,7 +237,7 @@ class PricePredictionModel:
         """
         Prevede il prezzo futuro per un asset specifico.
         """
-        local_model = self.load_or_create_model(asset)
+        local_model: Model = self.load_or_create_model(asset)
 
         if full_state is not None:
             try:
@@ -245,7 +245,7 @@ class PricePredictionModel:
                     np.array(full_state, dtype=np.float32).reshape(1, -1, 1)
                 )
                 prediction = (
-                    local_model.predict(reshaped_state)[0][0]
+                    local_model.predict(reshaped_state, verbose=0)[0][0]
                 )
                 return float(prediction)
             except Exception as e:
