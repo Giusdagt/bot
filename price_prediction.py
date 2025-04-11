@@ -14,7 +14,6 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
-from typing import Optional
 from data_handler import get_normalized_market_data, get_available_assets
 from market_fingerprint import get_embedding_for_symbol
 from smart_features import apply_all_market_structure_signals
@@ -233,7 +232,7 @@ class PricePredictionModel:
             )
 
     def predict_price(
-        self, asset: str, full_state: Optional[np.ndarray] = None
+        self, asset: str, full_state: np.ndarray = None
     ) -> float:
         """
         Prevede il prezzo futuro per un asset specifico.
@@ -246,7 +245,7 @@ class PricePredictionModel:
                     np.array(full_state, dtype=np.float32).reshape(1, -1, 1)
                 )
                 prediction = (
-                    local_model.predict(reshaped_state, verbose=0)[0][0]
+                    local_model.predict(reshaped_state)[0][0]
                 )
                 return float(prediction)
             except Exception as e:
