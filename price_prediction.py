@@ -279,7 +279,6 @@ class PricePredictionModel:
             )
             return None
 
-
     def build_full_state(self, asset) -> np.ndarray:
         """
         Crea lo stato completo (full_state) per un asset:
