@@ -53,7 +53,6 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 
 
-
 def initialize_mt5():
     """
     Connessione sicura a MetaTrader 5
@@ -70,7 +69,6 @@ def initialize_mt5():
     return False
 
 
-
 def get_metatrader_balance():
     """
     Recupero saldo da MetaTrader 5
@@ -79,7 +77,6 @@ def get_metatrader_balance():
         return 0
     account_info = mt5.account_info()
     return account_info.balance if account_info else 0
-
 
 
 def fetch_account_balances():
@@ -96,9 +93,9 @@ class AIModel:
     """
     Classe che rappresenta un modello di intelligenza artificiale
     per il trading.
-    Questa classe gestisce il caricamento e il salvataggio della memoria, 
+    Questa classe gestisce il caricamento e il salvataggio della memoria,
     l'adattamento delle dimensioni del lotto,
-    l'esecuzione di operazioni di trading 
+    l'esecuzione di operazioni di trading
     e l'aggiornamento delle performance basandosi su strategie definite.
     strategy_strength (float): La forza della strategia attuale.
     strategy_generator (object): Generatore per le strategie di trading.
@@ -146,9 +143,9 @@ class AIModel:
         logging.info("💾 Memoria IA aggiornata.")
 
     def update_performance(
-            self, account, symbol, action,
-            lot_size, profit, strategy
-        ):
+        self, account, symbol, action,
+        lot_size, profit, strategy
+    ):
         """
         Aggiorna le informazioni di performance relative a
         un'operazione di trading.
@@ -158,6 +155,7 @@ class AIModel:
         lot_size (float):La dimensione del lotto dell'operazione.
         profit (float):Il profitto generato dall'operazione.
         strategy (str):Nome della strategia utilizzata per l'operazione.
+        Returns: None
         """
         # Carica i dati esistenti
         if TRADE_FILE.exists():
@@ -209,7 +207,8 @@ class AIModel:
         balance (float): Il bilancio disponibile per l'account.
         success_probability (float): La probabilità di successo
         stimata per l'operazione.
-        float: La dimensione del lotto calcolata, limitata al massimo consentito.
+        float: La dimensione del lotto calcolata,
+        limitata al massimo consentito.
         """
         max_lot_size = balance / 50
         return min(
