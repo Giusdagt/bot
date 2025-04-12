@@ -126,7 +126,7 @@ class PricePredictionModel:
             ])
             model.compile(optimizer="adam", loss="mean_squared_error")
             return model
-        except Exception as e:
+        except (ValueError, TypeError, RuntimeError) as e:
             logging.error(
                 "❌ durante la costruzione del modello LSTM: %s", str(e)
             )
@@ -141,7 +141,7 @@ class PricePredictionModel:
             if model_file.exists():
                 return load_model(model_file)
             return self.build_lstm_model()
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(
                 "❌ caricamento o creazione modello x %s: %s", asset, str(e)
             )
