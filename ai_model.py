@@ -11,14 +11,19 @@ Include inoltre cicli di ottimizzazione in background
 e strategie per migliorare
 continuamente l'efficacia del modello.
 """
+# Import standard della libreria Python
 import threading
 import time
 import asyncio
 import logging
 from pathlib import Path
+
+# Import di librerie di terze parti
 import polars as pl
 import numpy as np
 import MetaTrader5 as mt5
+
+# Import di moduli locali o del progetto
 from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
