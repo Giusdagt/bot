@@ -1,8 +1,16 @@
-# demo_module.py
+"""
+Modulo demo_module.py
+Questo modulo fornisce funzionalità per simulare operazioni di trading 
+senza inviarle realmente. È utile per test, training automatico 
+o quando le credenziali di trading non sono disponibili.
+Funzionalità principali:
+- Simulazione di trade con profitti casuali.
+- Salvataggio dei dati delle operazioni simulate in un file Parquet.
+"""
 import logging
 import random
-import polars as pl
 from pathlib import Path
+import polars as pl
 
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models")
@@ -19,7 +27,7 @@ def demo_trade(symbol, market_data):
     Ideale per training automatico o mancanza di credenziali.
     """
     if market_data is None or market_data.height == 0:
-        logging.warning(f"⚠️ Nessun dato per il demo trade su {symbol}.")
+        logging.warning("⚠️ Nessun dato per il demo trade su %s.", symbol)
         return
 
     fake_profit = round(random.uniform(-5, 10), 2)
@@ -28,7 +36,9 @@ def demo_trade(symbol, market_data):
         "profit": fake_profit,
         "timestamp": pl.Series([pl.datetime_now()])
     }
-    logging.info(f"🧪 Trade simulato per {symbol} | Profitto: {fake_profit} $")
+    logging.info(
+        "🧪 Trade simulato per %s | Profitto: %.2f $", symbol, fake_profit
+    )
 
     # Salvataggio su disco
     df = (
