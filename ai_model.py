@@ -209,16 +209,24 @@ class AIModel:
             assets_performance, key=assets_performance.get, reverse=True
         )
         logging.info(
-            f"📈 Asset selezionati per il trading: {sorted_assets[:5]}"
+            "📈 Asset selezionati per il trading: %s",
+            sorted_assets[:5]
         )
         return sorted_assets[:5]  # Seleziona i 5 asset migliori
 
     async def decide_trade(self, symbol):
+        """
+        Decide se eseguire un'operazione di trading per un determinato simbolo.
+        Args:symbol (str): Il simbolo dell'asset di mercato da analizzare.
+        Returns:bool: False se non ci sono dati sufficienti o
+        nessuna operazione viene eseguita.
+        """
         market_data = get_normalized_market_data(symbol)
 
         if market_data is None or market_data.height == 0:
             logging.warning(
-                f"⚠️ Nessun dato per {symbol}. Eseguo il backtest x migliorare"
+                "⚠️ Nessun dato per %s. Eseguo il backtest x migliorare",
+                symbol
             )
             run_backtest(symbol, market_data)
             return False
@@ -255,9 +263,6 @@ class AIModel:
             embedding_1h, embedding_4h, embedding_1d
         ])
 
-        """
-        ✅ Protezione contro outlier
-        """
         full_state = np.clip(full_state, -1, 1)
 
         predicted_price = (
@@ -276,7 +281,8 @@ class AIModel:
                 action = "sell"
             else:
                 logging.info(
-                    f"⚠️ Nessun segnale forte su {symbol}, niente operazione."
+                    "⚠️ Nessun segnale forte su %s, niente operazione.",
+                    symbol
                 )
                 return
 
@@ -299,8 +305,9 @@ class AIModel:
                 )
             else:
                 logging.info(
-                    f"🚫 Nessun trade su {symbol} per {account}. "
-                    "Avvio Demo Trade per miglioramento."
+                    ("🚫 Nessun trade su %s per %s."
+                     "Avvio Demo Trade per miglioramento."),
+                    symbol, account
                 )
                 demo_trade(symbol, market_data)
 
@@ -308,6 +315,12 @@ class AIModel:
 def background_optimization_loop(
     ai_model_instance, interval_seconds=43200
 ):
+    """
+    Esegue un ciclo continuo per ottimizzare le strategie e il modello AI.
+    Args:ai_model_instance (AIModel):Istanza del modello AI da ottimizzare.
+    interval_seconds (int, opzionale):Intervallo di tempo in secondi tra
+    due cicli di ottimizzazione. Default: 43200 secondi (12 ore).
+    """
     optimizer = OptimizerCore(
         strategy_generator=ai_model_instance.strategy_generator,
         ai_model=ai_model_instance
