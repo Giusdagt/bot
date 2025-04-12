@@ -49,7 +49,7 @@ class PricePredictionModel:
         if MEMORY_FILE.exists():
             try:
                 return pl.read_parquet(MEMORY_FILE)
-            except Exception as e:
+            except (pl.exceptions.PolarsError, IOError, ValueError) as e:
                 logging.error(
                     "❌ durante il caricamento della memoria: %s", str(e)
                 )
@@ -67,7 +67,7 @@ class PricePredictionModel:
             return np.frombuffer(
                 row[0]["compressed_memory"], dtype=np.float32
             ).reshape(SEQUENCE_LENGTH, 1)
-        except Exception as e:
+        except (ValueError, KeyError, AttributeError) as e:
             logging.error(
                 "❌ durante caricamento memoria per %s: %s", asset, str(e)
             )
@@ -102,7 +102,7 @@ class PricePredictionModel:
             )
             self.memory_df = pl.concat([self.memory_df, new_row])
             self.memory_df.write_parquet(MEMORY_FILE, compression="zstd")
-        except Exception as e:
+        except (ValueError, IOError, pl.exceptions.PolarsError) as e:
             logging.error(
                 "❌ per il salvataggio della memoria per %s: %s", asset, str(e)
             )
@@ -226,7 +226,7 @@ class PricePredictionModel:
 
             local_model.save(self.get_model_file(asset))
             self.save_memory(asset, raw_data[-SEQUENCE_LENGTH:])
-        except Exception as e:
+        except (pl.exceptions.PolarsError, ValueError, IOError) as e:
             logging.error(
                 "❌ per addestramento del modello per %s: %s", asset, str(e)
             )
@@ -248,7 +248,7 @@ class PricePredictionModel:
                     local_model.predict(reshaped_state, verbose=0)[0][0]
                 )
                 return float(prediction)
-            except Exception as e:
+            except (ValueError, TypeError, RuntimeError) as e:
                 logging.error(
                     "❌ durante la previsione per %s: %s", asset, str(e)
                 )
@@ -273,7 +273,7 @@ class PricePredictionModel:
                 "📊 Prezzo previsto per %s: %.5f", asset, predicted_price
             )
             return float(predicted_price)
-        except Exception as e:
+        except (ValueError, KeyError, pl.exceptions.PolarsError) as e:
             logging.error(
                 "❌ durante la previsione per %s: %s", asset, str(e)
             )
@@ -321,7 +321,7 @@ class PricePredictionModel:
                 emb_1h, emb_4h, emb_1d
             ])
             return np.clip(full_state, -1, 1)
-        except Exception as e:
+        except (ValueError, KeyError, AttributeError) as e:
             logging.error(
                 "❌ build_full_state fallita per %s: %s", asset, str(e)
             )
@@ -344,7 +344,7 @@ if __name__ == "__main__":
             if len(raw_close) > SEQUENCE_LENGTH:
                 model_instance.train_model(sym, raw_close)
                 model_instance.predict_price(sym, full_state=state)
-        except Exception as e:
+        except (ValueError, KeyError, RuntimeError) as e:
             logging.error(
                 "❌ durante l'elaborazione dell'asset %s: %s", sym, str(e)
             )
