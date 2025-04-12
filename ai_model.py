@@ -53,8 +53,11 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 TRADE_FILE = MODEL_DIR / "trades.parquet"
 
 
-# Connessione sicura a MetaTrader 5
+
 def initialize_mt5():
+    """
+    Connessione sicura a MetaTrader 5
+    """
     for _ in range(3):
         if mt5.initialize():
             logging.info(
@@ -67,16 +70,22 @@ def initialize_mt5():
     return False
 
 
-# Recupero saldo da MetaTrader 5
+
 def get_metatrader_balance():
+    """
+    Recupero saldo da MetaTrader 5
+    """
     if not initialize_mt5():
         return 0
     account_info = mt5.account_info()
     return account_info.balance if account_info else 0
 
 
-# Recupera automaticamente il saldo per ogni utente
+
 def fetch_account_balances():
+    """
+    Recupera automaticamente il saldo per ogni utente
+    """
     return {
         "Danny": get_metatrader_balance(),
         "Giuseppe": get_metatrader_balance()
@@ -84,6 +93,16 @@ def fetch_account_balances():
 
 
 class AIModel:
+    """
+    Classe che rappresenta un modello di intelligenza artificiale
+    per il trading.
+    Questa classe gestisce il caricamento e il salvataggio della memoria, 
+    l'adattamento delle dimensioni del lotto,
+    l'esecuzione di operazioni di trading 
+    e l'aggiornamento delle performance basandosi su strategie definite.
+    strategy_strength (float): La forza della strategia attuale.
+    strategy_generator (object): Generatore per le strategie di trading.
+    """
     def __init__(self, market_data, balances):
         self.volatility_predictor = VolatilityPredictor()
         self.risk_manager = {acc: RiskManagement() for acc in balances}
@@ -102,6 +121,13 @@ class AIModel:
         )
 
     def load_memory(self):
+        """
+        Carica i dati di memoria compressi da un file Parquet,
+        se esistente.
+        numpy.ndarray: La memoria caricata come un array Numpy.
+        Se il file di memoria non esiste,
+        restituisce un array vuoto predefinito.
+        """
         if DATA_FILE.exists():
             logging.info("📥 Caricamento memoria compressa...")
             loaded_memory = pl.read_parquet(DATA_FILE)["memory"].to_numpy()
@@ -109,14 +135,30 @@ class AIModel:
         return np.zeros(1, dtype=np.float32)
 
     def save_memory(self, new_value):
+        """
+        Salva un nuovo valore nella memoria compressa,
+        aggiornando il file Parquet.
+        new_value (numpy.ndarray):
+        Il nuovo valore da aggiungere alla memoria.
+        """
         df = pl.DataFrame({"memory": [new_value]})
         df.write_parquet(DATA_FILE, compression="zstd", mode="overwrite")
         logging.info("💾 Memoria IA aggiornata.")
 
     def update_performance(
-        self, account, symbol, action,
-        lot_size, profit, strategy
-    ):
+            self, account, symbol, action,
+            lot_size, profit, strategy
+        ):
+        """
+        Aggiorna le informazioni di performance relative a
+        un'operazione di trading.
+        account (str):Nome dell'account per cui aggiornare i dati.
+        symbol (str):Simbolo dell'asset su cui è stata eseguita l'operazione.
+        action (str):Tipo di operazione eseguita ("buy" o "sell").
+        lot_size (float):La dimensione del lotto dell'operazione.
+        profit (float):Il profitto generato dall'operazione.
+        strategy (str):Nome della strategia utilizzata per l'operazione.
+        """
         # Carica i dati esistenti
         if TRADE_FILE.exists():
             df = pl.read_parquet(TRADE_FILE)
@@ -155,11 +197,20 @@ class AIModel:
 
         df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
         logging.info(
-            f"📊 Trade aggiornato per {account} su {symbol}: "
-            f"Profit {profit} | Strategia: {strategy}"
+            "📊 Trade aggiornato per %s su %s: Profit %s | Strategia: %s",
+            account, symbol, profit, strategy
         )
 
     def adapt_lot_size(self, balance, success_probability):
+        """
+        Calcola la dimensione del lotto per un'operazione di trading,
+        basandosi sul bilancio disponibile e sulla probabilità
+        di successo prevista.
+        balance (float): Il bilancio disponibile per l'account.
+        success_probability (float): La probabilità di successo
+        stimata per l'operazione.
+        float: La dimensione del lotto calcolata, limitata al massimo consentito.
+        """
         max_lot_size = balance / 50
         return min(
             balance * (success_probability * self.strategy_strength) / 10,
@@ -167,6 +218,17 @@ class AIModel:
         )
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
+        """
+        Esegue un'operazione di trading su MetaTrader 5
+        in base ai parametri specificati.
+        Args:
+        account (str): Nome dell'account per cui eseguire il trade.
+        symbol (str): Simbolo dell'asset su cui operare (es. EURUSD).
+        action (str): Tipo di operazione da eseguire ("buy" o "sell").
+        lot_size (float): Dimensione del lotto da negoziare.
+        risk (float): Livello di rischio calcolato per il trade.
+        strategy (str): Nome della strategia utilizzata per il trade.
+        """
         order = {
             "symbol": symbol,
             "volume": lot_size,
@@ -193,8 +255,8 @@ class AIModel:
             result.profit if status == "executed" else -10
         )
         logging.info(
-            f"✅ Trade {status} per {account} su {symbol}: "
-            f"{action} {lot_size} lotto | Strategia: {strategy}"
+            "✅ Trade %s per %s su %s: %s %s lotto | Strategia: %s",
+            status, account, symbol, action, lot_size, strategy
         )
 
     def select_best_assets(self, market_data):
