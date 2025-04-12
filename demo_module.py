@@ -1,7 +1,7 @@
 """
 Modulo demo_module.py
-Questo modulo fornisce funzionalità per simulare operazioni di trading 
-senza inviarle realmente. È utile per test, training automatico 
+Questo modulo fornisce funzionalità per simulare operazioni di trading
+senza inviarle realmente. È utile per test, training automatico
 o quando le credenziali di trading non sono disponibili.
 Funzionalità principali:
 - Simulazione di trade con profitti casuali.
