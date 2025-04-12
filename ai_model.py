@@ -11,26 +11,21 @@ Include inoltre cicli di ottimizzazione in background
 e strategie per migliorare
 continuamente l'efficacia del modello.
 """
-# Import standard della libreria Python
 import threading
 import time
 import asyncio
 import logging
 from pathlib import Path
-
-# Import di librerie di terze parti
 import polars as pl
 import numpy as np
 import MetaTrader5 as mt5
-
-# Import di moduli locali o del progetto
+from drl_agent import DRLAgent  # Reinforcement Learning (mio file)
 from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 from optimizer_core import OptimizerCore
 from data_handler import get_normalized_market_data
-from drl_agent import DRLAgent  # Deep Reinforcement Learning
 from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
