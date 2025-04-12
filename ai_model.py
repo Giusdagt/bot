@@ -1,12 +1,14 @@
 """
 Modulo AI Model
-
-Questo modulo definisce una classe `AIModel` per il trading algoritmico basato su
-intelligenza artificiale. Include funzionalità per la gestione del rischio, 
-ottimizzazione del portafoglio, previsione dei prezzi, esecuzione di trade 
+Questo modulo definisce una classe AIModel
+per il trading algoritmico basato su
+intelligenza artificiale. Include funzionalità
+per la gestione del rischio,
+ottimizzazione del portafoglio, previsione dei prezzi,
+esecuzione di trade
 e monitoraggio delle prestazioni.
-
-Include inoltre cicli di ottimizzazione in background e strategie per migliorare 
+Include inoltre cicli di ottimizzazione in background
+e strategie per migliorare
 continuamente l'efficacia del modello.
 """
 import threading
