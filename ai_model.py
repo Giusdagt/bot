@@ -25,7 +25,7 @@ from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 from optimizer_core import OptimizerCore
-from data_handler import get_normalized_market_data
+from data_handler import get_normalized_market_data, get_available_assets
 from risk_management import RiskManagement, VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
@@ -392,7 +392,18 @@ def background_optimization_loop(
 
 
 if __name__ == "__main__":
-    ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
+    # 🔄 Recupera tutti gli asset disponibili (preset o dinamici)
+    assets = get_available_assets()
+
+    # 📊 Crea un dizionario con i dati normalizzati per ciascun asset
+    all_market_data = {
+        symbol: data
+        for symbol in assets
+        if (data := get_normalized_market_data(symbol)) is not None
+    }
+
+    # ⚠️ IMPORTANTE: passare all_market_data, non market_data!
+    ai_model = AIModel(all_market_data, fetch_account_balances())
 
     thread = threading.Thread(
         target=background_optimization_loop,
@@ -400,7 +411,6 @@ if __name__ == "__main__":
     )
     thread.start()
 
-    # 🔥 Loop di miglioramento continuo
     while True:
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
