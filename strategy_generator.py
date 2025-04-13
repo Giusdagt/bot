@@ -215,6 +215,19 @@ class StrategyGenerator:
                 )
             time.sleep(interval_seconds)
 
+    def update_strategies(self, strategy_name, result):
+        """
+        Aggiorna internamente lo stato delle strategie dopo un trade.
+        """
+        logging.info(
+            f"📈 Strategia aggiornata: {strategy_name} con profit: {result}"
+        )
+        self.compressed_knowledge = np.clip(
+            self.compressed_knowledge + (result / 1000), 0, 1
+        )
+        self.save_compressed_knowledge()
+
+
 
 # ✅ Test rapido e avvio
 if __name__ == "__main__":
