@@ -415,4 +415,3 @@ if __name__ == "__main__":
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
         time.sleep(10)
-
