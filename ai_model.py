@@ -249,7 +249,7 @@ class AIModel:
             if status == "executed" else 0, strategy
         )
         self.save_memory(self.strategy_strength)
-        self.strategy_generator.update_knowledge(
+        self.strategy_generator.update_strategies(
             strategy,
             result.profit if status == "executed" else -10
         )
