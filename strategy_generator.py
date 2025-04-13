@@ -228,7 +228,6 @@ class StrategyGenerator:
         self.save_compressed_knowledge()
 
 
-
 # ✅ Test rapido e avvio
 if __name__ == "__main__":
 
