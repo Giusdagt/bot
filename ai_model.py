@@ -396,13 +396,14 @@ if __name__ == "__main__":
     assets = get_available_assets()
 
     # 📊 Crea un dizionario con i dati normalizzati per ciascun asset
-    market_data = {
-        symbol: get_normalized_market_data(symbol)
+    all_market_data = {
+        symbol: data
         for symbol in assets
-        if get_normalized_market_data(symbol) is not None
+        if (data := get_normalized_market_data(symbol)) is not None
     }
 
-    ai_model = AIModel(market_data, fetch_account_balances())
+    # ⚠️ IMPORTANTE: passare all_market_data, non market_data!
+    ai_model = AIModel(all_market_data, fetch_account_balances())
 
     thread = threading.Thread(
         target=background_optimization_loop,
@@ -414,3 +415,4 @@ if __name__ == "__main__":
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
         time.sleep(10)
+
