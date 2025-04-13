@@ -392,7 +392,17 @@ def background_optimization_loop(
 
 
 if __name__ == "__main__":
-    ai_model = AIModel(get_normalized_market_data(), fetch_account_balances())
+    # 🔄 Recupera tutti gli asset disponibili (preset o dinamici)
+    assets = get_available_assets()
+
+    # 📊 Crea un dizionario con i dati normalizzati per ciascun asset
+    market_data = {
+        symbol: get_normalized_market_data(symbol)
+        for symbol in assets
+        if get_normalized_market_data(symbol) is not None
+    }
+
+    ai_model = AIModel(market_data, fetch_account_balances())
 
     thread = threading.Thread(
         target=background_optimization_loop,
@@ -400,7 +410,6 @@ if __name__ == "__main__":
     )
     thread.start()
 
-    # 🔥 Loop di miglioramento continuo
     while True:
         for asset in ai_model.active_assets:
             asyncio.run(ai_model.decide_trade(asset))
