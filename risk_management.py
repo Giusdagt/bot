@@ -39,8 +39,10 @@ class RiskManagement:
         """Starta il sistema di gestione del rischio dalla configurazione"""
         settings = config["risk_management"]
         self.risk_settings = {
-            "max_drawdown": (max_drawdown if max_drawdown is not None
-                             else settings["max_drawdown"]),
+            "max_drawdown": (
+                max_drawdown if max_drawdown is not None
+                             else settings["max_drawdown"]
+            ),
             "trailing_stop_pct": settings["trailing_stop_pct"],
             "risk_per_trade": settings["risk_per_trade"],
             "max_exposure": settings["max_exposure"]
@@ -54,7 +56,9 @@ class RiskManagement:
         """Calcola stop-loss e trailing-stop basati su dati normalizzati."""
         market_data = data_handler.get_normalized_market_data(symbol)
         if not market_data or "volatility" not in market_data:
-            logging.warning(f"⚠️ Dati non disponibili X {symbol}, uso default")
+            logging.warning(
+                "⚠️ Dati non disponibili X %s, uso default", symbol
+            )
             return entry_price * 0.95, entry_price * 0.98
         volatility = market_data["volatility"]
         stop_loss = entry_price * (1 - (volatility * 1.5))
@@ -68,7 +72,9 @@ class RiskManagement:
         if not market_data or any(
             key not in market_data for key in required_keys
         ):
-            logging.warning(f"⚠️ Dati incompleti X {symbol}, resto invariato")
+            logging.warning(
+                "⚠️ Dati incompleti X %s, resto invariato", symbol
+            )
             return  # Non modifica il rischio se i dati non sono completi
 
         future_volatility = self.volatility_predictor.predict_volatility(
@@ -98,13 +104,18 @@ class RiskManagement:
 
         if balance <= 0:
             logging.warning(
-                f"⚠️ Saldo non valido ({balance}) per {symbol}, imposta 0."
+                "⚠️ Saldo non valido (%s) per %s, imposta 0.",
+                balance,
+                symbol
             )
             return 0
 
         if not market_data or "momentum" not in market_data:
             logging.warning(
                 f"⚠️ Momentum non disponibile per {symbol}, uso valore base."
+                symbol
+            )
+            momentum_factor = 1  # Default
             )
             momentum_factor = 1  # Default
         else:
