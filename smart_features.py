@@ -78,8 +78,8 @@ def add_ilq_zone(
 def detect_fakeouts(df: pl.DataFrame, threshold=0.5) -> pl.DataFrame:
     """
     Identifica i fakeouts (falsi breakout) nei dati delle candele.
-    df (pl.DataFrame): Il DataFrame contenente i dati delle candele con colonne 'high',
-    'low' e 'close'.
+    df (pl.DataFrame): Il DataFrame contenente i dati delle candele
+    con colonne 'high', 'low' e 'close'.
     threshold (float): Soglia per identificare i fakeout
     pl.DataFrame: Un nuovo DataFrame con colonne aggiuntive
     'fakeout_up' e 'fakeout_down' che indicano
