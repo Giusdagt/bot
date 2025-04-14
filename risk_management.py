@@ -116,8 +116,6 @@ class RiskManagement:
                 symbol
             )
             momentum_factor = 1  # Default
-            )
-            momentum_factor = 1  # Default
         else:
             momentum_factor = 1 + market_data["momentum"]
 
