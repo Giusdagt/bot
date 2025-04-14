@@ -1,37 +1,19 @@
-"""
-smart_features.py
-Questo modulo contiene funzioni avanzate per l'analisi delle candele
-e dei dati di mercato.
-Le funzionalità includono:
-- Aggiunta di caratteristiche avanzate delle candele.
-- Rilevazione di zone liquide (ILQ Zone).
-- Identificazione di fakeouts, squeeze di volatilità e micro-pattern.
-- Calcolo di segnali di struttura di mercato e vettori multi-timeframe.
-"""
 import polars as pl
 import numpy as np
 
 
 def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Aggiunge colonne avanzate per analisi professionale delle candele:
-    - Dimensione corpo, upper/lower wick, body_ratio, indecision,
-    engulfing, inside bar.
-    """
     body_size = (df["close"] - df["open"]).abs()
     upper_wick = df["high"] - df[["close", "open"]].max(axis=1)
     lower_wick = df[["close", "open"]].min(axis=1) - df["low"]
     total_range = df["high"] - df["low"] + 1e-9
 
     df = df.with_columns([
-        pl.Series(name="body_size", values=body_size),
-        pl.Series(name="upper_wick", values=upper_wick),
-        pl.Series(name="lower_wick", values=lower_wick),
-        pl.Series(name="body_ratio", values=(body_size / total_range)),
-        pl.Series(
-            name="is_indecision",
-            values=((body_size / total_range) < 0.2)
-        ),
+        pl.Series("body_size", body_size),
+        pl.Series("upper_wick", upper_wick),
+        pl.Series("lower_wick", lower_wick),
+        pl.Series("body_ratio", body_size / total_range),
+        ((body_size / total_range) < 0.2).alias("is_indecision")
     ])
 
     engulfing = [
@@ -41,16 +23,15 @@ def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
         df["open"][i + 1] < df["close"][i]
         for i in range(len(df) - 1)
     ] + [False]
-    df = df.with_columns([
-        pl.Series(name="engulfing", values=engulfing)
-    ])
 
     inside_bar = [
         df["high"][i] < df["high"][i - 1] and df["low"][i] > df["low"][i - 1]
         if i > 0 else False for i in range(len(df))
     ]
+
     df = df.with_columns([
-        pl.Series(name="inside_bar", values=inside_bar)
+        pl.Series("engulfing", engulfing),
+        pl.Series("inside_bar", inside_bar)
     ])
 
     return df
@@ -59,39 +40,27 @@ def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
 def add_ilq_zone(
     df: pl.DataFrame, spread_thresh=0.02, volume_factor=2.0
 ) -> pl.DataFrame:
-    """
-    Aggiunge la colonna 'ILQ_Zone':
-    1 se spread è basso e volume è alto → zona liquida
-    0 altrimenti
-    """
     avg_volume = df["volume"].mean()
     ilq = (
-        (df["spread"] < spread_thresh) &
-        (df["volume"] > avg_volume * volume_factor)
+        (df["spread"] < spread_thresh) & (df["volume"] > avg_volume * volume_factor)
     ).cast(pl.Int8)
-
-    return df.with_columns([
-        ilq.alias("ILQ_Zone")
-    ])
+    return df.with_columns([ilq.alias("ILQ_Zone")])
 
 
-def detect_fakeouts(df: pl.DataFrame, threshold=0.5) -> pl.DataFrame:
-    """
-    Identifica i fakeouts (falsi breakout) nei dati delle candele.
-    df (pl.DataFrame): Il DataFrame contenente i dati delle candele
-    con colonne 'high', 'low' e 'close'.
-    threshold (float): Soglia per identificare i fakeout
-    pl.DataFrame: Un nuovo DataFrame con colonne aggiuntive
-    'fakeout_up' e 'fakeout_down' che indicano
-    rispettivamente i fakeouts verso l'alto e verso il basso.
-    """
+def detect_fakeouts(df: pl.DataFrame) -> pl.DataFrame:
+    threshold = (df["high"].max() - df["low"].min()) * 0.05
     highs = df["high"]
     lows = df["low"]
     closes = df["close"]
     prev_highs = highs.shift(1)
     prev_lows = lows.shift(1)
-    fakeout_up = ((highs > prev_highs) & (closes < prev_highs)).cast(pl.Int8)
-    fakeout_down = ((lows < prev_lows) & (closes > prev_lows)).cast(pl.Int8)
+
+    fakeout_up_strength = ((highs - prev_highs).clip(min=0)) / threshold
+    fakeout_up = (fakeout_up_strength > 1).cast(pl.Int8)
+
+    fakeout_down_strength = ((prev_lows - lows).clip(min=0)) / threshold
+    fakeout_down = (fakeout_down_strength > 1).cast(pl.Int8)
+
     return df.with_columns([
         fakeout_up.alias("fakeout_up"),
         fakeout_down.alias("fakeout_down")
@@ -107,11 +76,9 @@ def detect_volatility_squeeze(
 
 
 def detect_micro_patterns(df: pl.DataFrame) -> pl.DataFrame:
-    volume_spike = (df["volume"] > df["volume"].rolling_mean(3) * 1.5)
-    price_jump = (
-        (df["close"] - df["open"]).abs() > df["close"].rolling_std(5)
-    )
-    tight_spread = (df["spread"] < 0.01)
+    volume_spike = df["volume"] > df["volume"].rolling_mean(3) * 1.5
+    price_jump = (df["close"] - df["open"]).abs() > df["close"].rolling_std(5)
+    tight_spread = df["spread"] < 0.01
     micro_pattern = (volume_spike & price_jump & tight_spread).cast(pl.Int8)
     return df.with_columns([micro_pattern.alias("micro_pattern_hft")])
 
@@ -141,6 +108,7 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
     except Exception as e:
         print("⚠️ Errore durante estrazione MTF:", e)
 
+    # Score classico
     signal_score = (
         df["ILQ_Zone"] +
         df["fakeout_up"] +
@@ -149,18 +117,21 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
         df["micro_pattern_hft"]
     ).alias("signal_score")
 
-    return df.with_columns([signal_score])
+    df = df.with_columns([signal_score])
+
+    # Score pesato dinamico (opzionale ma consigliato)
+    df = compute_weighted_signal_score(df)
+
+    return df
 
 
 def extract_multi_timeframe_vector(
     df: pl.DataFrame, timeframes=("1m", "5m", "15m", "30m", "1h", "4h", "1d")
 ) -> np.ndarray:
-    """
-    Comprime in un unico vettore le statistiche multi-timeframe.
-    Ritorna un array di 9 valori [mean, std, range] per ogni timeframe.
-    """
-    vectors = []
+    if "timeframe" not in df.columns:
+        return np.zeros(len(timeframes) * 3, dtype=np.float32)
 
+    vectors = []
     for tf in timeframes:
         tf_df = df.filter(pl.col("timeframe") == tf)
         if tf_df.is_empty():
@@ -171,7 +142,30 @@ def extract_multi_timeframe_vector(
         mean = np.mean(closes)
         std = np.std(closes)
         value_range = closes.max() - closes.min()
-
         vectors.extend([mean, std, value_range])
 
     return np.array(vectors, dtype=np.float32)
+
+
+def compute_weighted_signal_score(
+    df: pl.DataFrame, weights: dict = None
+) -> pl.DataFrame:
+    default_weights = {
+        "ILQ_Zone": 1.0,
+        "fakeout_up": 1.0,
+        "fakeout_down": 1.0,
+        "volatility_squeeze": 1.0,
+        "micro_pattern_hft": 1.0
+    }
+
+    w = weights if weights else default_weights
+
+    score = (
+        df["ILQ_Zone"] * w.get("ILQ_Zone", 1.0) +
+        df["fakeout_up"] * w.get("fakeout_up", 1.0) +
+        df["fakeout_down"] * w.get("fakeout_down", 1.0) +
+        df["volatility_squeeze"] * w.get("volatility_squeeze", 1.0) +
+        df["micro_pattern_hft"] * w.get("micro_pattern_hft", 1.0)
+    )
+
+    return df.with_columns(score.alias("weighted_signal_score"))
