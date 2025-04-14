@@ -40,8 +40,9 @@ class RiskManagement:
         settings = config["risk_management"]
         self.risk_settings = {
             "max_drawdown": (
-                max_drawdown if max_drawdown is not None
-                             else settings["max_drawdown"]
+                max_drawdown
+                if max_drawdown is not None
+                else settings["max_drawdown"]
             ),
             "trailing_stop_pct": settings["trailing_stop_pct"],
             "risk_per_trade": settings["risk_per_trade"],
