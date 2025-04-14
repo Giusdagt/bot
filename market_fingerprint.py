@@ -1,7 +1,20 @@
+"""
+market_fingerprint.py
+Questo modulo gestisce la compressione dei dati di
+mercato in vettori numerici 
+rappresentativi e l'aggiornamento/ripristino degli embedding
+per simboli e timeframe specifici.
+Funzionalità principali:
+- compress_to_vector: Comprimi un DataFrame in un vettore numerico.
+- update_embedding_in_processed_file:
+Aggiorna il file processato con un embedding.
+- get_embedding_for_symbol:
+Recupera l'embedding per un dato simbolo e timeframe.
+"""
 from pathlib import Path
+import hashlib
 import polars as pl
 import numpy as np
-import hashlib
 
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models") if
@@ -60,7 +73,7 @@ def update_embedding_in_processed_file(
         )
         print(f"✅ Embedding aggiornato per {symbol} [{timeframe}]")
 
-    except Exception as e:
+    except (FileNotFoundError, IOError, ValueError) as e:
         print(f"❌ Errore durante aggiornamento embedding: {e}")
 
 
@@ -88,6 +101,6 @@ def get_embedding_for_symbol(
         norm = np.linalg.norm(vector)
         return vector / norm if norm > 0 else vector
 
-    except Exception as e:
+    except (FileNotFoundError, IOError, ValueError) as e:
         print(f"❌ Errore durante il recupero dell'embedding: {e}")
         return np.zeros(length, dtype=np.float32)
