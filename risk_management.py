@@ -112,7 +112,7 @@ class RiskManagement:
 
         if not market_data or "momentum" not in market_data:
             logging.warning(
-                f"⚠️ Momentum non disponibile per {symbol}, uso valore base."
+                "⚠️ Momentum non disponibile per %s, uso valore base.",
                 symbol
             )
             momentum_factor = 1  # Default
