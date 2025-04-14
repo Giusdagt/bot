@@ -1,7 +1,7 @@
 """
 market_fingerprint.py
 Questo modulo gestisce la compressione dei dati di
-mercato in vettori numerici 
+mercato in vettori numerici
 rappresentativi e l'aggiornamento/ripristino degli embedding
 per simboli e timeframe specifici.
 Funzionalità principali:
