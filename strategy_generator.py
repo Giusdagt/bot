@@ -1,10 +1,18 @@
+"""
+Modulo Strategy Generator
+Questo modulo definisce la classe StrategyGenerator per la generazione
+e l'ottimizzazione di strategie di trading algoritmico.
+Include funzionalità
+per rilevare anomalie di mercato, generare strategie basate su indicatori
+tecnici e migliorare continuamente le strategie in base alle prestazioni.
+"""
+import inspect
 import logging
 import threading
-import polars as pl
-import numpy as np
-import inspect
 import time
 from pathlib import Path
+import numpy as np
+import polars as pl
 from indicators import TradingIndicators
 
 # Configura il logging
