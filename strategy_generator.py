@@ -62,6 +62,15 @@ class StrategyGenerator:
         logging.info("Saved compressed knowledge to file")
 
     def detect_market_anomalies(self, market_data):
+        """
+        Rileva anomalie nel mercato basandosi su volatilità e volumi.
+        Questo metodo analizza i dati di mercato per identificare condizioni anomale,
+        come un'elevata volatilità o un improvviso picco nei volumi di scambio.
+        Le anomalie rilevate vengono aggiunte alla lista `self.market_anomalies`.
+        Args:
+        market_data (DataFrame): Dati di mercato contenenti colonne come "volatility"
+        e "volume" utilizzate per il rilevamento delle anomalie.
+        """
         high_volatility = market_data["volatility"].iloc[-1] > 2.0
         sudden_volume_spike = (
             market_data["volume"].iloc[-1] >
@@ -98,6 +107,15 @@ class StrategyGenerator:
             logging.info("Compressed knowledge incrementally")
 
     def generate_new_strategies(self, market_data):
+        """
+        Genera nuove strategie di trading basate sui dati di mercato più recenti.
+        Questo metodo utilizza i valori degli indicatori tecnici calcolati
+        dai dati di mercato per creare nuove strategie di trading. Le strategie
+        vengono salvate nel dizionario `self.generated_strategies`.
+        Args:
+        market_data (DataFrame): Dati di mercato utilizzati per calcolare gli 
+        indicatori tecnici e generare le strategie.
+        """
         indicator_values = (
             {name: func(market_data) for name,
              func in self.all_indicators.items()}
@@ -170,13 +188,24 @@ class StrategyGenerator:
 
         for strategy, condition in strategy_conditions.items():
             if condition:
-                logging.info(f"Best strategy selected: {strategy}")
+                logging.info("Best strategy selected: %s", strategy)
                 return strategy, self.compressed_knowledge.mean()
 
         logging.info("Default strategy selected")
         return "default_strategy", self.compressed_knowledge.mean()
 
     def fuse_top_strategies(self, top_n=5):
+        """
+        Combina le migliori strategie generate in una singola strategia "super".
+        Questo metodo seleziona le migliori `top_n` strategie basandosi sui loro
+        punteggi di performance, e le fonde in una nuova strategia chiamata
+        "super_strategy". Ogni indicatore è mediato tra le strategie selezionate.
+        Args:
+        top_n (int): Numero di strategie migliori da considerare per la fusione. 
+        Updates:
+        - Aggiunge una nuova strategia "super_strategy" al dizionario 
+        self.generated_strategies`.
+        """
         sorted_strategies = sorted(
             self.generated_strategies.items(),
             key=lambda x: x[1].get('performance_score', 0.5),
@@ -197,6 +226,15 @@ class StrategyGenerator:
         logging.info("Fused top strategies into super strategy")
 
     def exploit_market_anomalies(self, market_data):
+        """
+        Identifica e sfrutta le anomalie di mercato per generare strategie dedicate.
+        Questo metodo analizza i dati di mercato per rilevare anomalie, come
+        spread elevati o alta latenza. Per ogni anomalia rilevata, una strategia
+        specifica viene generata e aggiunta al dizionario `self.generated_strategies`.
+        Args:
+        market_data (DataFrame): Dati di mercato contenenti colonne come "spread"
+        e "latency" per l'analisi delle anomalie.
+        """
         anomalies = []
         if market_data["spread"].iloc[-1] > market_data["spread"].mean() * 5:
             anomalies.append("Buco di Liquidità")
@@ -205,9 +243,23 @@ class StrategyGenerator:
         for anomaly in anomalies:
             name = f"exploit_{anomaly.lower().replace(' ', '_')}"
             self.generated_strategies[name] = {"anomaly_detected": True}
-            logging.warning(f"Exploiting market anomaly: {anomaly}")
+            logging.warning("Exploiting market anomaly: %s", anomaly)
 
     def continuous_self_improvement(self, interval_seconds=1800):
+        """
+        Esegue un miglioramento continuo delle strategie di trading
+        a intervalli regolari.
+        Questo metodo genera nuove strategie,
+        fonde le migliori strategie,
+        sfrutta eventuali anomalie di mercato e aggiorna
+        la conoscenza compressa
+        basandosi su dati simulati. Viene eseguito in un loop
+        continuo con una pausa
+        specificata tra un ciclo e l'altro.
+        Args:
+        interval_seconds (int): Intervallo di tempo in secondi
+        tra un ciclo e l'altro.
+        """
         while True:
             if self.latest_market_data is not None:
                 self.generate_new_strategies(self.latest_market_data)
@@ -228,7 +280,9 @@ class StrategyGenerator:
         Aggiorna internamente lo stato delle strategie dopo un trade.
         """
         logging.info(
-            f"📈 Strategia aggiornata: {strategy_name} con profit: {result}"
+            "📈 Strategia aggiornata: %s con profit: %s",
+            strategy_name,
+            result,
         )
         self.compressed_knowledge = np.clip(
             self.compressed_knowledge + (result / 1000), 0, 1
