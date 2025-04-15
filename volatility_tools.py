@@ -9,6 +9,16 @@ import numpy as np
 
 
 class VolatilityPredictor:
+    """
+    Classe per la previsione della volatilità.
+    Questa classe utilizza una memoria compressa per memorizzare i dati 
+    più recenti (massimo 1000 esempi) e apprende un modello di previsione
+    tramite regressione lineare leggera. Se il modello non è addestrato,
+    utilizza la deviazione standard come fallback.
+    Attributi:
+        memory (list): Memoria interna per memorizzare le feature e i target.
+        weights (np.ndarray): Pesi del modello appresi tramite regressione.
+    """
     def __init__(self):
         # Memoria interna per apprendimento (massimo 1000 elementi)
         self.memory = []
