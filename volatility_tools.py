@@ -24,10 +24,10 @@ class VolatilityPredictor:
         self.memory.append((features, target_volatility))
 
         if len(self.memory) >= 10:
-            X = np.array([f for f, _ in self.memory])
+            feature_matrix = np.array([f for f, _ in self.memory])
             y = np.array([v for _, v in self.memory])
             # pseudo addestramento: regressione lineare normalizzata
-            self.weights = np.linalg.pinv(X) @ y
+            self.weights = np.linalg.pinv(feature_matrix) @ y
             self.trained = True
 
     def predict_volatility(self, features: np.ndarray):
