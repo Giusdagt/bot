@@ -31,6 +31,22 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class StrategyGenerator:
+    """
+    Classe per la generazione e l'ottimizzazione di strategie di trading algoritmico.
+
+    Questa classe include metodi per:
+    - Rilevare anomalie di mercato.
+    - Generare strategie basate su indicatori tecnici.
+    - Aggiornare la conoscenza compressa basandosi sulle performance delle strategie.
+    - Migliorare continuamente le strategie tramite un processo iterativo.
+    Attributi:
+        indicators (TradingIndicators): Oggetto per calcolare gli indicatori tecnici.
+        all_indicators (dict): Dizionario contenente i metodi degli indicatori tecnici.
+        compressed_knowledge (np.ndarray): Array NumPy che rappresenta la conoscenza compressa.
+        market_anomalies (list): Elenco di anomalie di mercato rilevate.
+        generated_strategies (dict): Dizionario contenente strategie di trading generate.
+        latest_market_data (Any): Gli ultimi dati di mercato disponibili per l'elaborazione.
+    """
     def __init__(self):
         self.indicators = TradingIndicators()
         self.all_indicators = self.get_all_indicators()
@@ -41,6 +57,15 @@ class StrategyGenerator:
         logger.info("StrategyGenerator initialized")
 
     def get_all_indicators(self):
+        """
+        Recupera tutti i metodi disponibili nella classe TradingIndicators.
+        Questo metodo utilizza la libreria `inspect` per ottenere un dizionario 
+        di tutti i metodi definiti nella classe `TradingIndicators`. 
+        I metodi possono essere utilizzati per calcolare gli indicatori tecnici.
+        Returns:
+        dict: Un dizionario in cui le chiavi sono i nomi dei metodi 
+        e i valori sono i riferimenti ai metodi stessi.
+        """
         return (
             {name: method for name, method in inspect.getmembers(
                 self.indicators, predicate=inspect.ismethod
@@ -48,6 +73,14 @@ class StrategyGenerator:
         )
 
     def load_compressed_knowledge(self):
+        """
+        Carica la conoscenza compressa da un file Parquet.
+        Questo metodo legge un file Parquet contenente la conoscenza compressa 
+        in formato binario e la carica in un array NumPy. Se il file non esiste, 
+        viene restituito un array vuoto inizializzato a zeri.
+        Returns:
+        np.ndarray: Un array NumPy contenente la conoscenza compressa.
+        """
         if STRATEGY_FILE.exists():
             df = pl.read_parquet(STRATEGY_FILE)
             logging.info("Loaded compressed knowledge from file")
@@ -57,6 +90,14 @@ class StrategyGenerator:
             return np.zeros(100, dtype=np.float32)
 
     def save_compressed_knowledge(self):
+        """
+        Salva la conoscenza compressa in un file Parquet.
+        Questo metodo converte l'array di conoscenza compressa in un formato binario 
+        e lo salva in un file Parquet utilizzando la compressione Zstandard. 
+        Questo file può essere usato per recuperare la conoscenza in esecuzioni successive.
+        Updates:
+        - Scrive il contenuto di `self.compressed_knowledge` in `STRATEGY_FILE`.
+        """
         df = pl.DataFrame({"knowledge": [self.compressed_knowledge.tobytes()]})
         df.write_parquet(STRATEGY_FILE, compression="zstd", mode="overwrite")
         logging.info("Saved compressed knowledge to file")
@@ -87,6 +128,20 @@ class StrategyGenerator:
             )
 
     def update_knowledge(self, profit, win_rate, drawdown, volatility):
+        """
+        Aggiorna la conoscenza compressa basandosi sulle performance delle strategie.
+        Questo metodo calcola un punteggio di efficienza basato sui parametri forniti,
+        aggiorna la conoscenza compressa utilizzando tale punteggio e applica una
+        compressione incrementale se necessario.
+        Args:
+        profit (float): Profitto ottenuto dalla strategia.
+        win_rate (float): Percentuale di vittorie della strategia.
+        drawdown (float): Perdita massima subita dalla strategia.
+        volatility (float): Volatilità associata alla strategia.
+        Updates:
+        - Modifica `self.compressed_knowledge` per riflettere i nuovi dati.
+        - Applica la compressione incrementale se la conoscenza supera una certa dimensione.
+        """
         efficiency_score = (
             (profit * 0.5) + (win_rate * 0.3) -
             (drawdown * 0.1) - (volatility * 0.1)
@@ -96,8 +151,8 @@ class StrategyGenerator:
                     (efficiency_score / 1000), 0, 1)
         )
         logging.info(
-            f"Knowledge updated: profit={profit}, win_rate={win_rate}, "
-            f"drawdown={drawdown}, volatility={volatility}"
+        "Knowledge updated: profit=%s, win_rate=%s, drawdown=%s, volatility=%s",
+        profit, win_rate, drawdown, volatility
         )
         self.save_compressed_knowledge()
 
@@ -145,6 +200,21 @@ class StrategyGenerator:
         logging.info("Generated new strategies")
 
     def select_best_strategy(self, market_data):
+        """
+        Seleziona la migliore strategia di trading basata sui dati
+        di mercato attuali e sulla conoscenza compressa.
+        Questo metodo analizza gli indicatori tecnici calcolati dai dati di mercato 
+        e le condizioni delle strategie generate
+        per determinare quale strategia applicare. 
+        Se non viene soddisfatta alcuna condizione,
+        viene selezionata una strategia predefinita.
+        Args:
+        market_data (DataFrame): Dati di mercato utilizzati
+        per calcolare gli indicatori tecnici.
+        Returns:
+        tuple: Una coppia contenente il nome della strategia selezionata (str) 
+        e il valore medio della conoscenza compressa (float).
+        """
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
         indicator_values = (
