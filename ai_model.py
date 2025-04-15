@@ -112,7 +112,7 @@ class AIModel:
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)
-        self.strategy_generator = StrategyGenerator()
+        sself.strategy_generator = StrategyGenerator(market_data)
 
     def load_memory(self):
         """
