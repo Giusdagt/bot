@@ -113,9 +113,6 @@ class AIModel:
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)
         self.strategy_generator = StrategyGenerator()
-        selected_strategy, strategy_weight = (
-            self.strategy_generator.select_best_strategy(market_data)
-        )
 
     def load_memory(self):
         """
@@ -199,7 +196,7 @@ class AIModel:
             account, symbol, profit, strategy
         )
 
-    def adapt_lot_size(self, balance, success_probability, confidence_score):
+    def adapt_lot_size(self, balance, success_probability, confidence_score, risk):
         """
         Calcola la dimensione del lotto per un'operazione di trading,
         tenendo conto della forza strategica e della confidenza.
@@ -214,7 +211,8 @@ class AIModel:
         """
         max_lot_size = balance / 50
         adjusted_lot_size = balance * (
-            success_probability * self.strategy_strength * confidence_score
+            success_probability * self.strategy_strength * confidence_score *
+            risk
         ) / 100
         return max(0.01, min(adjusted_lot_size, max_lot_size))
 
@@ -334,9 +332,11 @@ class AIModel:
                 symbol, full_state
             )
             lot_size = self.adapt_lot_size(
-                self.balances[account], success_probability, confidence_score
+                self.balances[account], success_probability, confidence_score,
+                risk
             )
             last_close = market_data["close"][-1]
+            risk = self.risk_manager[account].calculate_dynamic_risk(market_data)
             if predicted_price > last_close and signal_score >= 2:
                 action = "buy"
             elif predicted_price < last_close and signal_score >= 2:
@@ -350,8 +350,9 @@ class AIModel:
 
             # 🔥 Selezione della strategia migliore
             trade_profit = predicted_price - market_data["close"].iloc[-1]
-            strategy, _ = self.strategy_generator.select_best_strategy(
-                market_data
+            strategy, strategy_weight = self.strategy_generator.select_best_strategy(market_data)
+            self.strategy_strength = np.clip(
+            self.strategy_strength * (1 + (strategy_weight - 0.5)), 0.5, 3.0
             )
             self.strategy_generator.update_knowledge(
                 profit=trade_profit,
