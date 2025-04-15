@@ -1,3 +1,13 @@
+"""
+smart_features.py
+
+Questo modulo contiene funzioni avanzate per l'analisi delle candele
+e dei dati di mercato. Le funzionalità includono:
+- Aggiunta di caratteristiche avanzate delle candele.
+- Rilevazione di zone liquide (ILQ Zone).
+- Identificazione di fakeouts, squeeze di volatilità e micro-pattern.
+- Calcolo di segnali di struttura di mercato e vettori multi-timeframe.
+"""
 import polars as pl
 import numpy as np
 
