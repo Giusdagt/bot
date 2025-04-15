@@ -112,7 +112,7 @@ class AIModel:
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)
-        sself.strategy_generator = StrategyGenerator(market_data)
+        self.strategy_generator = StrategyGenerator(market_data)
 
     def load_memory(self):
         """
@@ -256,7 +256,7 @@ class AIModel:
             result.profit if status == "executed" else -10
         )
         logging.info(
-            "✅ Trade %s per %s su %s: %s %s lotto | Strategia: %s | Rischio: %s",
+            "✅ Trade %s per %s su %s: %s %s lotto | Strat: %s | Rischio: %s",
             status, account, symbol, action, lot_size, strategy, risk
         )
 
