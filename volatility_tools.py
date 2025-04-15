@@ -6,7 +6,7 @@ import numpy as np
 
 class VolatilityPredictor:
     """
-    Classe per la previsione della volatilità basata su caratteristiche fornite.
+    Classe per la previsione della volatilità basata su caratteristiche fornite
     Questa classe calcola la volatilità (deviazione standard) utilizzando
     un array NumPy di caratteristiche. Può essere estesa per includere
     modelli di previsione più complessi.
