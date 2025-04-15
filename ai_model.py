@@ -218,7 +218,6 @@ class AIModel:
         ) / 100
         return max(0.01, min(adjusted_lot_size, max_lot_size))
 
-
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
         """
         Esegue un'operazione di trading su MetaTrader 5
@@ -329,7 +328,9 @@ class AIModel:
 
         for account in self.balances:
             success_probability = self.drl_agent.predict(symbol, full_state)
-            confidence_score = self.drl_agent.get_confidence(symbol, full_state)
+            confidence_score = self.drl_agent.get_confidence(
+                symbol, full_state
+            )
             lot_size = self.adapt_lot_size(
                 self.balances[account], success_probability, confidence_score
             )
