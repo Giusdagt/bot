@@ -257,7 +257,7 @@ class AIModel:
         )
         logging.info(
             "✅ Trade %s per %s su %s: %s %s lotto | Strategia: %s",
-            status, account, symbol, action, lot_size, strategy
+            status, account, symbol, action, lot_size, strategy, risk
         )
 
     def select_best_assets(self, market_data):
