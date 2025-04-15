@@ -11,7 +11,7 @@ import numpy as np
 class VolatilityPredictor:
     """
     Classe per la previsione della volatilità.
-    Questa classe utilizza una memoria compressa per memorizzare i dati 
+    Questa classe utilizza una memoria compressa per memorizzare i dati
     più recenti (massimo 1000 esempi) e apprende un modello di previsione
     tramite regressione lineare leggera. Se il modello non è addestrato,
     utilizza la deviazione standard come fallback.
