@@ -34,7 +34,7 @@ class VolatilityPredictor:
             self.memory = self.memory[-1000:]
 
         # Prepara i dati per l'addestramento
-        X = np.array([f for f, _ in self.memory])
+        x = np.array([f for f, _ in self.memory])
         y = np.array([v for _, v in self.memory])
 
         # Solo se abbastanza dati (almeno tanti quanto le feature)
