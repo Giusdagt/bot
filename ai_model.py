@@ -343,7 +343,7 @@ class AIModel:
                 self.balances[account], success_probability, confidence_score,
                 risk
             )
-            
+
             if predicted_price > last_close and signal_score >= 2:
                 action = "buy"
             elif predicted_price < last_close and signal_score >= 2:
