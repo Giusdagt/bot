@@ -256,7 +256,7 @@ class AIModel:
             result.profit if status == "executed" else -10
         )
         logging.info(
-            "✅ Trade %s per %s su %s: %s %s lotto | Strategia: %s",
+            "✅ Trade %s per %s su %s: %s %s lotto | Strategia: %s| Rischio: %s","
             status, account, symbol, action, lot_size, strategy, risk
         )
 
