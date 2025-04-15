@@ -72,10 +72,8 @@ class StrategyGenerator:
         dict: Un dizionario in cui le chiavi sono i nomi dei metodi
         e i valori sono i riferimenti ai metodi stessi.
         """
-        return (
-            {name: method for name, method in inspect.getmembers(
-                self.indicators, predicate=inspect.ismethod
-            )}
+        return dict(
+            inspect.getmembers(self.indicators, predicate=inspect.ismethod)
         )
 
     def load_compressed_knowledge(self):
@@ -92,9 +90,9 @@ class StrategyGenerator:
             df = pl.read_parquet(STRATEGY_FILE)
             logging.info("Loaded compressed knowledge from file")
             return np.frombuffer(df["knowledge"][0], dtype=np.float32)
-        else:
-            logging.info("Nessun file di conoscenza esistente trovato")
-            return np.zeros(100, dtype=np.float32)
+
+        logging.info("Nessun file di conoscenza esistente trovato")
+        return np.zeros(100, dtype=np.float32)
 
     def save_compressed_knowledge(self):
         """
