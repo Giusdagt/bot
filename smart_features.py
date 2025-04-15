@@ -84,7 +84,8 @@ def detect_fakeouts(df: pl.DataFrame) -> pl.DataFrame:
     Args:
     df (pl.DataFrame): Dati di mercato.
     Returns:
-    pl.DataFrame: DataFrame con le colonne "fakeout_up" e "fakeout_down" aggiunte.
+    pl.DataFrame:
+    DataFrame con le colonne "fakeout_up" e "fakeout_down" aggiunte.
     """
     threshold = (df["high"].max() - df["low"].min()) * 0.05
     highs = df["high"]
@@ -159,9 +160,11 @@ def apply_all_market_structure_signals(df: pl.DataFrame) -> pl.DataFrame:
 
 def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
     """
-    Applica tutte le caratteristiche avanzate e i segnali di mercato al DataFrame.
+    Applica tutte le caratteristiche avanzate e
+    i segnali di mercato al DataFrame.
     Questa funzione:
-    - Aggiunge caratteristiche relative alle candele (body_size, upper_wick, ecc.).
+    - Aggiunge caratteristiche relative alle candele
+    (body_size, upper_wick, ecc.).
     - Calcola segnali di struttura del mercato come fakeouts,
     squeeze di volatilità e micro-pattern.
     - Aggiunge zone liquide (ILQ Zone) e vettori multi-timeframe.
@@ -213,7 +216,7 @@ def extract_multi_timeframe_vector(
     Estrae un vettore di caratteristiche multi-timeframe dai dati di mercato.
     Args:
     df (pl.DataFrame): Il DataFrame contenente i dati di mercato.
-    timeframes (tuple, optional): Gli intervalli temporali da considerare. 
+    timeframes (tuple, optional): Gli intervalli temporali da considerare.
     Default: ("1m", "5m", "15m", "30m", "1h", "4h", "1d").
     Returns:
     np.ndarray: Un array contenente le caratteristiche calcolate
