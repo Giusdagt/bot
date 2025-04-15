@@ -9,7 +9,7 @@ config.json per automazione totale.
 
 import logging
 import numpy as np
-from ai_model import VolatilityPredictor
+from volatility_tools import VolatilityPredictor
 from data_loader import (
     load_config,
     load_auto_symbol_mapping,
