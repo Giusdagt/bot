@@ -358,7 +358,7 @@ class AIModel:
                 self.strategy_generator.select_best_strategy(market_data)
             )
             self.strategy_strength = np.clip(
-            self.strategy_strength * (1 + (strategy_weight - 0.5)), 0.5, 3.0
+                self.strategy_strength * (1 + (strategy_weight - 0.5)), 0.5, 3.0
             )
             self.strategy_generator.update_knowledge(
                 profit=trade_profit,
