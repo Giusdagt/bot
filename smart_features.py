@@ -13,6 +13,14 @@ import numpy as np
 
 
 def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Aggiunge caratteristiche avanzate relative alle candele al DataFrame.
+    Args:
+    df (pl.DataFrame): Dati di mercato.
+    Returns:
+    pl.DataFrame: DataFrame con colonne aggiunte per body_size,
+    upper_wick, lower_wick e altre.
+    """
     body_size = (df["close"] - df["open"]).abs()
     upper_wick = df["high"] - df[["close", "open"]].max(axis=1)
     lower_wick = df[["close", "open"]].min(axis=1) - df["low"]
@@ -50,6 +58,15 @@ def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
 def add_ilq_zone(
     df: pl.DataFrame, spread_thresh=0.02, volume_factor=2.0
 ) -> pl.DataFrame:
+    """
+    Aggiunge una colonna per identificare le zone liquide (ILQ Zone).
+    Args:
+    df (pl.DataFrame): Dati di mercato.
+    spread_thresh (float): Soglia dello spread.
+    volume_factor (float): Fattore moltiplicativo per il volume medio.
+    Returns:
+    pl.DataFrame: DataFrame con la colonna "ILQ_Zone" aggiunta.
+    """
     avg_volume = df["volume"].mean()
     ilq = (
         (
@@ -62,6 +79,13 @@ def add_ilq_zone(
 
 
 def detect_fakeouts(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Rileva falsi breakout nei dati di mercato.
+    Args:
+    df (pl.DataFrame): Dati di mercato.
+    Returns:
+    pl.DataFrame: DataFrame con le colonne "fakeout_up" e "fakeout_down" aggiunte.
+    """
     threshold = (df["high"].max() - df["low"].min()) * 0.05
     highs = df["high"]
     lows = df["low"]
@@ -88,12 +112,25 @@ def detect_fakeouts(df: pl.DataFrame) -> pl.DataFrame:
 def detect_volatility_squeeze(
     df: pl.DataFrame, window=20, threshold=0.01
 ) -> pl.DataFrame:
+    """
+    Rileva condizioni di squeeze di volatilità.
+    Args:
+    df (pl.DataFrame): Dati di mercato.
+    window (int): Dimensione della finestra per il
+    calcolo della deviazione standard.
+    threshold (float): Soglia per identificare uno squeeze.
+    Returns:
+    pl.DataFrame: DataFrame con la colonna "volatility_squeeze" aggiunta.
+    """
     vol = df["close"].rolling_std(window_size=window)
     squeeze = (vol < threshold).cast(pl.Int8)
     return df.with_columns([squeeze.alias("volatility_squeeze")])
 
 
 def detect_micro_patterns(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Rileva micro-pattern nei dati di mercato.
+    """
     volume_spike = df["volume"] > df["volume"].rolling_mean(3) * 1.5
     price_jump = (df["close"] - df["open"]).abs() > df["close"].rolling_std(5)
     tight_spread = df["spread"] < 0.01
@@ -102,6 +139,18 @@ def detect_micro_patterns(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def apply_all_market_structure_signals(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Applica tutti i segnali relativi alla struttura di mercato al DataFrame.
+    Questa funzione calcola e aggiunge i segnali di mercato, tra cui:
+    - Fakeouts (falsi breakout al rialzo e al ribasso).
+    - Squeeze di volatilità.
+    - Micro-pattern ad alta frequenza.
+    Args:
+    df (pl.DataFrame): Il DataFrame contenente i dati di mercato.
+    Returns:
+    pl.DataFrame: Il DataFrame aggiornato con i segnali di struttura
+    di mercato aggiunti.
+    """
     df = detect_fakeouts(df)
     df = detect_volatility_squeeze(df)
     df = detect_micro_patterns(df)
@@ -109,6 +158,20 @@ def apply_all_market_structure_signals(df: pl.DataFrame) -> pl.DataFrame:
 
 
 def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Applica tutte le caratteristiche avanzate e i segnali di mercato al DataFrame.
+    Questa funzione:
+    - Aggiunge caratteristiche relative alle candele (body_size, upper_wick, ecc.).
+    - Calcola segnali di struttura del mercato come fakeouts,
+    squeeze di volatilità e micro-pattern.
+    - Aggiunge zone liquide (ILQ Zone) e vettori multi-timeframe.
+    - Calcola punteggi dei segnali (classico e pesato).
+    Args:
+    df (pl.DataFrame): Il DataFrame contenente i dati di mercato.
+    Returns:
+    pl.DataFrame: Il DataFrame aggiornato con tutte le caratteristiche avanzate
+    e i segnali aggiunti.
+    """
     df = add_candle_features(df)
     df = df.with_columns([
         (df["close"] - df["close"].shift(1)).alias("momentum"),
@@ -123,7 +186,7 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
         df = df.with_columns([
             pl.Series("mtf_vector", [vector.tobytes()])
         ])
-    except Exception as e:
+    except KeyError, ValueError, Exception as e:
         print("⚠️ Errore durante estrazione MTF:", e)
 
     # Score classico
@@ -146,6 +209,16 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
 def extract_multi_timeframe_vector(
     df: pl.DataFrame, timeframes=("1m", "5m", "15m", "30m", "1h", "4h", "1d")
 ) -> np.ndarray:
+    """
+    Estrae un vettore di caratteristiche multi-timeframe dai dati di mercato.
+    Args:
+    df (pl.DataFrame): Il DataFrame contenente i dati di mercato.
+    timeframes (tuple, optional): Gli intervalli temporali da considerare. 
+    Default: ("1m", "5m", "15m", "30m", "1h", "4h", "1d").
+    Returns:
+    np.ndarray: Un array contenente le caratteristiche calcolate
+    (media, deviazione standard, range dei prezzi) per ciascun timeframe.
+    """
     if "timeframe" not in df.columns:
         return np.zeros(len(timeframes) * 3, dtype=np.float32)
 
@@ -168,6 +241,16 @@ def extract_multi_timeframe_vector(
 def compute_weighted_signal_score(
     df: pl.DataFrame, weights: dict = None
 ) -> pl.DataFrame:
+    """
+    Calcola un punteggio pesato basato sui segnali di mercato.
+    Args:
+    df (pl.DataFrame): Il DataFrame contenente i segnali di mercato.
+    weights (dict, optional): Un dizionario di pesi per ogni segnale.
+    Se non specificato, vengono utilizzati i pesi predefiniti.
+    Returns:
+    pl.DataFrame: Il DataFrame aggiornato con la colonna
+    "weighted_signal_score".
+    """
     default_weights = {
         "ILQ_Zone": 1.0,
         "fakeout_up": 1.0,
