@@ -199,22 +199,25 @@ class AIModel:
             account, symbol, profit, strategy
         )
 
-    def adapt_lot_size(self, balance, success_probability):
+    def adapt_lot_size(self, balance, success_probability, confidence_score):
         """
         Calcola la dimensione del lotto per un'operazione di trading,
-        basandosi sul bilancio disponibile e sulla probabilità
-        di successo prevista.
-        balance (float): Il bilancio disponibile per l'account.
-        success_probability (float): La probabilità di successo
-        stimata per l'operazione.
-        float: La dimensione del lotto calcolata,
-        limitata al massimo consentito.
+        tenendo conto della forza strategica e della confidenza.
+        Args:
+        balance (float): Bilancio disponibile dell’account.
+        success_probability (float): Probabilità di successo stimata.
+        confidence_score (float): Confidenza del modello (es. DRL).
+        Ovviamente get_confidence è un esempio: assicurati che il tuo DRLAgent
+        lo supporti o calcolalo in altro modo
+        Returns:
+        float: Dimensione ottimale del lotto.
         """
         max_lot_size = balance / 50
-        return min(
-            balance * (success_probability * self.strategy_strength) / 10,
-            max_lot_size
-        )
+        adjusted_lot_size = balance * (
+            success_probability * self.strategy_strength * confidence_score
+        ) / 100
+        return max(0.01, min(adjusted_lot_size, max_lot_size))
+
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
         """
@@ -326,8 +329,9 @@ class AIModel:
 
         for account in self.balances:
             success_probability = self.drl_agent.predict(symbol, full_state)
+            confidence_score = self.drl_agent.get_confidence(symbol, full_state)
             lot_size = self.adapt_lot_size(
-                self.balances[account], success_probability
+                self.balances[account], success_probability, confidence_score
             )
             last_close = market_data["close"][-1]
             if predicted_price > last_close and signal_score >= 2:
