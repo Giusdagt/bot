@@ -142,6 +142,14 @@ async def process_historical_data():
 
 
 def fetch_mt5_data(symbol, timeframe="1m"):
+    """
+    Recupera i dati di mercato da MetaTrader5 per un simbolo e timeframe.
+    Args:
+    symbol (str): Il simbolo di mercato da analizzare.
+    timeframe (str): Il timeframe (es. "1m", "5m", "1h").
+    Returns:
+    pl.DataFrame: Dati elaborati, normalizzati e arricchiti con indicatori.
+    """
     try:
         tf_map = {
             "1m": mt5.TIMEFRAME_M1,
@@ -176,7 +184,7 @@ async def get_realtime_data(symbols):
     try:
         for symbol in symbols:
             for tf in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]:
-                logging.info(f"📡 Dati realtime {symbol} | TF {tf}")
+                logging.info("📡 Dati realtime %s | TF %s", symbol, tf)
                 df = fetch_mt5_data(symbol, timeframe=tf)
                 if df is None:
                     continue
