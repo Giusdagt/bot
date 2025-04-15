@@ -117,7 +117,7 @@ def get_indicators_list():
 class TradingIndicators:
     """Classe per calcolare e gestire gli indicatori di trading."""
 
-    def __init__(self, data=None):
+    def __init__(self, data):
         self.data = data
         self.indicators = {}
 
