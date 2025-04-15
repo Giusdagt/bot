@@ -60,10 +60,14 @@ def detect_fakeouts(df: pl.DataFrame) -> pl.DataFrame:
     prev_lows = lows.shift(1)
 
     fakeout_up_strength = ((highs - prev_highs).clip(min=0)) / threshold
-    fakeout_up = ((fakeout_up_strength > 1) & (closes < prev_highs)).cast(pl.Int8)
+    fakeout_up = (
+        (fakeout_up_strength > 1) & (closes < prev_highs)
+    ).cast(pl.Int8)
 
     fakeout_down_strength = ((prev_lows - lows).clip(min=0)) / threshold
-    fakeout_down = ((fakeout_down_strength > 1) & (closes > prev_lows)).cast(pl.Int8)
+    fakeout_down = (
+        (fakeout_down_strength > 1) & (closes > prev_lows)
+    ).cast(pl.Int8)
 
     return df.with_columns([
         fakeout_up.alias("fakeout_up"),
