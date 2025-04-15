@@ -5,6 +5,7 @@ import numpy as np
 
 
 class VolatilityPredictor:
+    # pylint: disable=too-few-public-methods
     """
     Classe per la previsione della volatilità basata su caratteristiche fornite
     Questa classe calcola la volatilità (deviazione standard) utilizzando
