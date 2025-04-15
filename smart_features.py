@@ -189,7 +189,7 @@ def apply_all_advanced_features(df: pl.DataFrame) -> pl.DataFrame:
         df = df.with_columns([
             pl.Series("mtf_vector", [vector.tobytes()])
         ])
-    except (KeyError, ValueError, Exception, TypeError) as e:
+    except (KeyError, ValueError, TypeError) as e:
         print("⚠️ Errore durante estrazione MTF:", e)
 
     # Score classico
