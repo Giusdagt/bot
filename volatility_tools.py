@@ -34,13 +34,13 @@ class VolatilityPredictor:
             self.memory = self.memory[-1000:]
 
         # Prepara i dati per l'addestramento
-        x = np.array([f for f, _ in self.memory])
+        feature_matrix = np.array([f for f, _ in self.memory])
         y = np.array([v for _, v in self.memory])
 
         # Solo se abbastanza dati (almeno tanti quanto le feature)
-        if len(X) >= X.shape[1]:
+        if len(feature_matrix) >= feature_matrix.shape[1]:
             # Pseudo-regressione lineare compressa
-            self.weights = np.linalg.pinv(X) @ y
+            self.weights = np.linalg.pinv(feature_matrix) @ y
 
     def predict_volatility(self, features: np.ndarray):
         """
