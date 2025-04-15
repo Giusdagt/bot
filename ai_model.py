@@ -26,7 +26,8 @@ from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
 from optimizer_core import OptimizerCore
 from data_handler import get_normalized_market_data, get_available_assets
-from risk_management import RiskManagement, VolatilityPredictor
+from risk_management import RiskManagement
+from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
 from market_fingerprint import get_embedding_for_symbol
