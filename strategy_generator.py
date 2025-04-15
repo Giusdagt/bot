@@ -64,11 +64,14 @@ class StrategyGenerator:
     def detect_market_anomalies(self, market_data):
         """
         Rileva anomalie nel mercato basandosi su volatilità e volumi.
-        Questo metodo analizza i dati di mercato per identificare condizioni anomale,
+        Questo metodo analizza i dati di mercato
+        per identificare condizioni anomale,
         come un'elevata volatilità o un improvviso picco nei volumi di scambio.
-        Le anomalie rilevate vengono aggiunte alla lista `self.market_anomalies`.
+        Le anomalie rilevate vengono
+        aggiunte alla lista `self.market_anomalies`.
         Args:
-        market_data (DataFrame): Dati di mercato contenenti colonne come "volatility"
+        market_data (DataFrame):
+        Dati di mercato contenenti colonne come "volatility"
         e "volume" utilizzate per il rilevamento delle anomalie.
         """
         high_volatility = market_data["volatility"].iloc[-1] > 2.0
@@ -108,12 +111,14 @@ class StrategyGenerator:
 
     def generate_new_strategies(self, market_data):
         """
-        Genera nuove strategie di trading basate sui dati di mercato più recenti.
-        Questo metodo utilizza i valori degli indicatori tecnici calcolati
+        Genera nuove strategie di trading basate sui
+        dati di mercato più recenti.
+        Questo metodo utilizza i valori degli
+        indicatori tecnici calcolati
         dai dati di mercato per creare nuove strategie di trading. Le strategie
         vengono salvate nel dizionario `self.generated_strategies`.
         Args:
-        market_data (DataFrame): Dati di mercato utilizzati per calcolare gli 
+        market_data (DataFrame): Dati di mercato utilizzati per calcolare gli
         indicatori tecnici e generare le strategie.
         """
         indicator_values = (
@@ -196,14 +201,17 @@ class StrategyGenerator:
 
     def fuse_top_strategies(self, top_n=5):
         """
-        Combina le migliori strategie generate in una singola strategia "super".
-        Questo metodo seleziona le migliori `top_n` strategie basandosi sui loro
+        Combina le migliori strategie generate
+        in una singola strategia "super".
+        Questo metodo seleziona le migliori `top_n`
+        strategie basandosi sui loro
         punteggi di performance, e le fonde in una nuova strategia chiamata
-        "super_strategy". Ogni indicatore è mediato tra le strategie selezionate.
+        "super_strategy". Ogni indicatore è mediato
+        tra le strategie selezionate.
         Args:
-        top_n (int): Numero di strategie migliori da considerare per la fusione. 
+        top_n (int): Numero di strategie migliori da considerare per la fusione
         Updates:
-        - Aggiunge una nuova strategia "super_strategy" al dizionario 
+        - Aggiunge una nuova strategia "super_strategy" al dizionario
         self.generated_strategies`.
         """
         sorted_strategies = sorted(
@@ -227,12 +235,16 @@ class StrategyGenerator:
 
     def exploit_market_anomalies(self, market_data):
         """
-        Identifica e sfrutta le anomalie di mercato per generare strategie dedicate.
+        Identifica e sfrutta le anomalie di mercato per
+        generare strategie dedicate.
         Questo metodo analizza i dati di mercato per rilevare anomalie, come
-        spread elevati o alta latenza. Per ogni anomalia rilevata, una strategia
-        specifica viene generata e aggiunta al dizionario `self.generated_strategies`.
+        spread elevati o alta latenza. Per ogni anomalia rilevata,
+        una strategia
+        specifica viene generata e aggiunta al dizionario
+        self.generated_strategies.
         Args:
-        market_data (DataFrame): Dati di mercato contenenti colonne come "spread"
+        market_data (DataFrame): Dati di mercato
+        contenenti colonne come "spread"
         e "latency" per l'analisi delle anomalie.
         """
         anomalies = []
