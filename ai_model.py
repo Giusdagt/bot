@@ -329,18 +329,21 @@ class AIModel:
         )
 
         for account in self.balances:
-            success_probability = self.drl_agent.predict(symbol, full_state)
-            confidence_score = self.drl_agent.get_confidence(
-                symbol, full_state
-            )
-            lot_size = self.adapt_lot_size(
-                self.balances[account], success_probability, confidence_score,
-                risk
-            )
             last_close = market_data["close"][-1]
             risk = (
                 self.risk_manager[account].calculate_dynamic_risk(market_data)
             )
+
+            success_probability = self.drl_agent.predict(symbol, full_state)
+            confidence_score = self.drl_agent.get_confidence(
+                symbol, full_state
+            )
+
+            lot_size = self.adapt_lot_size(
+                self.balances[account], success_probability, confidence_score,
+                risk
+            )
+            
             if predicted_price > last_close and signal_score >= 2:
                 action = "buy"
             elif predicted_price < last_close and signal_score >= 2:
