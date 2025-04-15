@@ -376,7 +376,6 @@ class AIModel:
                 market_data["volatility"].to_numpy()[-1]
             )
 
-
             if success_probability > 0.5:
                 self.execute_trade(
                     account, symbol, action, lot_size,
