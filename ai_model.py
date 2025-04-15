@@ -305,13 +305,7 @@ class AIModel:
 
         last_row = market_data[-1]
 
-        signal_score = (
-            int(last_row["ILQ_Zone"]) +
-            int(last_row["fakeout_up"]) +
-            int(last_row["fakeout_down"]) +
-            int(last_row["volatility_squeeze"]) +
-            int(last_row["micro_pattern_hft"])
-        )
+        signal_score = int(last_row["weighted_signal_score"])
 
         market_data_array = (
             market_data.select(
