@@ -53,7 +53,7 @@ class StrategyGenerator:
         latest_market_data (Any):
         Gli ultimi dati di mercato disponibili per l'elaborazione.
     """
-    def __init__(self):
+    def __init__(self, data):
         self.indicators = TradingIndicators()
         self.all_indicators = self.get_all_indicators()
         self.compressed_knowledge = self.load_compressed_knowledge()
