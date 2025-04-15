@@ -1,8 +1,8 @@
 """
 volatility_tools.py
 """
-
 import numpy as np
+
 
 class VolatilityPredictor:
     def __init__(self):
