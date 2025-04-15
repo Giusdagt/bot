@@ -196,7 +196,9 @@ class AIModel:
             account, symbol, profit, strategy
         )
 
-    def adapt_lot_size(self, balance, success_probability, confidence_score, risk):
+    def adapt_lot_size(
+        self, balance, success_probability, confidence_score, risk
+    ):
         """
         Calcola la dimensione del lotto per un'operazione di trading,
         tenendo conto della forza strategica e della confidenza.
@@ -336,7 +338,9 @@ class AIModel:
                 risk
             )
             last_close = market_data["close"][-1]
-            risk = self.risk_manager[account].calculate_dynamic_risk(market_data)
+            risk = (
+                self.risk_manager[account].calculate_dynamic_risk(market_data)
+            )
             if predicted_price > last_close and signal_score >= 2:
                 action = "buy"
             elif predicted_price < last_close and signal_score >= 2:
@@ -350,7 +354,9 @@ class AIModel:
 
             # 🔥 Selezione della strategia migliore
             trade_profit = predicted_price - market_data["close"].iloc[-1]
-            strategy, strategy_weight = self.strategy_generator.select_best_strategy(market_data)
+            strategy, strategy_weight = (
+                self.strategy_generator.select_best_strategy(market_data)
+            )
             self.strategy_strength = np.clip(
             self.strategy_strength * (1 + (strategy_weight - 0.5)), 0.5, 3.0
             )
