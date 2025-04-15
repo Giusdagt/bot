@@ -42,8 +42,12 @@ def add_ilq_zone(
 ) -> pl.DataFrame:
     avg_volume = df["volume"].mean()
     ilq = (
-        (df["spread"] < spread_thresh) & (df["volume"] > avg_volume * volume_factor)
-    ).cast(pl.Int8)
+        (
+            (df["spread"] < spread_thresh)
+            & (df["volume"] > avg_volume * volume_factor)
+        )
+        .cast(pl.Int8)
+    )
     return df.with_columns([ilq.alias("ILQ_Zone")])
 
 
@@ -56,10 +60,10 @@ def detect_fakeouts(df: pl.DataFrame) -> pl.DataFrame:
     prev_lows = lows.shift(1)
 
     fakeout_up_strength = ((highs - prev_highs).clip(min=0)) / threshold
-    fakeout_up = (fakeout_up_strength > 1).cast(pl.Int8)
+    fakeout_up = ((fakeout_up_strength > 1) & (closes < prev_highs)).cast(pl.Int8)
 
     fakeout_down_strength = ((prev_lows - lows).clip(min=0)) / threshold
-    fakeout_down = (fakeout_down_strength > 1).cast(pl.Int8)
+    fakeout_down = ((fakeout_down_strength > 1) & (closes > prev_lows)).cast(pl.Int8)
 
     return df.with_columns([
         fakeout_up.alias("fakeout_up"),
