@@ -3,6 +3,7 @@ volatility_tools.py
 """
 import numpy as np
 
+
 class VolatilityPredictor:
     """
     Predizione della volatilità intelligente.
