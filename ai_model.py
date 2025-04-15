@@ -338,6 +338,10 @@ class AIModel:
             confidence_score = self.drl_agent.get_confidence(
                 symbol, full_state
             )
+            
+            predicted_volatility = self.volatility_predictor.predict_volatility(
+                full_state.reshape(1, -1)
+            )[0]
 
             lot_size = self.adapt_lot_size(
                 self.balances[account], success_probability, confidence_score,
