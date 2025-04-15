@@ -198,25 +198,24 @@ class AIModel:
         )
 
     def adapt_lot_size(
-        self, balance, success_probability, confidence_score, risk
+        self, balance, success_probability, confidence_score, risk,
+        predicted_volatility=None
     ):
         """
-        Calcola la dimensione del lotto per un'operazione di trading,
-        tenendo conto della forza strategica e della confidenza.
-        Args:
-        balance (float): Bilancio disponibile dell’account.
-        success_probability (float): Probabilità di successo stimata.
+        Calcola la dimensione del lotto in modo ultra-adattivo.
+        Tiene conto di strategia, confidenza, rischio e volatilità prevista.
         confidence_score (float): Confidenza del modello (es. DRL).
         Ovviamente get_confidence è un esempio: assicurati che il tuo DRLAgent
-        lo supporti o calcolalo in altro modo
-        Returns:
-        float: Dimensione ottimale del lotto.
         """
         max_lot_size = balance / 50
         adjusted_lot_size = balance * (
             success_probability * self.strategy_strength * confidence_score *
             risk
         ) / 100
+
+        if predicted_volatility is not None:
+            base_lot *= np.clip(1 / (1 + predicted_volatility), 0.5, 2.0)
+
         return max(0.01, min(adjusted_lot_size, max_lot_size))
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
@@ -342,7 +341,7 @@ class AIModel:
 
             lot_size = self.adapt_lot_size(
                 self.balances[account], success_probability, confidence_score,
-                risk
+                risk, predicted_volatility
             )
 
             if predicted_price > last_close and signal_score >= 2:
