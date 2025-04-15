@@ -1,39 +1,59 @@
 """
 volatility_tools.py
+Modulo per la previsione della volatilità.
+Utilizza memoria compressa e regressione lineare leggera.
+Nessun file, nessuna crescita infinita.
 """
+
 import numpy as np
 
 
 class VolatilityPredictor:
-    """
-    Predizione della volatilità intelligente.
-    Usa fallback con std, ma può anche apprendere nel tempo.
-    """
     def __init__(self):
-        self.memory = []  # solo array, senza file
-        self.max_size = 100
-        self.weights = np.random.rand(10)  # pseudo-rete base con 10 input
-        self.trained = False
+        # Memoria interna per apprendimento (massimo 1000 elementi)
+        self.memory = []
+        # Pesi del modello (imparati via regressione)
+        self.weights = None
 
     def update(self, features: np.ndarray, target_volatility: float):
         """
-        Aggiorna i pesi in modo semplice, senza crescere.
+        Aggiorna la memoria e ricalcola i pesi se ci sono dati sufficienti.
+        Args:
+        features (np.ndarray): 1D o 2D array di input (full_state).
+        target_volatility (float): Volatilità reale osservata (ultimo valore).
         """
-        if len(self.memory) >= self.max_size:
-            self.memory.pop(0)
-        self.memory.append((features, target_volatility))
+        # Assicura che sia 2D per consistenza
+        if features.ndim == 1:
+            features = features.reshape(1, -1)
 
-        if len(self.memory) >= 10:
-            feature_matrix = np.array([f for f, _ in self.memory])
-            y = np.array([v for _, v in self.memory])
-            # pseudo addestramento: regressione lineare normalizzata
-            self.weights = np.linalg.pinv(feature_matrix) @ y
-            self.trained = True
+        # Aggiunge il nuovo esempio alla memoria
+        self.memory.append((features[0], target_volatility))
+
+        # Compressione: mantiene solo gli ultimi 1000 esempi
+        if len(self.memory) > 1000:
+            self.memory = self.memory[-1000:]
+
+        # Prepara i dati per l'addestramento
+        X = np.array([f for f, _ in self.memory])
+        y = np.array([v for _, v in self.memory])
+
+        # Solo se abbastanza dati (almeno tanti quanto le feature)
+        if len(X) >= X.shape[1]:
+            # Pseudo-regressione lineare compressa
+            self.weights = np.linalg.pinv(X) @ y
 
     def predict_volatility(self, features: np.ndarray):
         """
-        Predice la volatilità. Se non è addestrato, fallback std.
+        Predice la volatilità. Se non addestrato, fallback con std().
+        Args:
+            features (np.ndarray): input 2D
+        Returns:
+            np.ndarray: valori di volatilità previsti
         """
-        if not self.trained:
-            return np.std(features, axis=1)
-        return features @ self.weights  # prodotto scalare
+        if features.ndim == 1:
+            features = features.reshape(1, -1)
+
+        if self.weights is None or features.shape[1] != self.weights.shape[0]:
+            return np.std(features, axis=1)  # fallback
+
+        return features @ self.weights
