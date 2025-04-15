@@ -371,6 +371,11 @@ class AIModel:
                 drawdown=abs(min(0, trade_profit)),
                 volatility=market_data["volatility"].iloc[-1]
             )
+            self.volatility_predictor.update(
+                full_state.reshape(1, -1),
+                market_data["volatility"].to_numpy()[-1]
+            )
+
 
             if success_probability > 0.5:
                 self.execute_trade(
