@@ -53,13 +53,13 @@ class StrategyGenerator:
         latest_market_data (Any):
         Gli ultimi dati di mercato disponibili per l'elaborazione.
     """
-    def __init__(self, market_data):
-        self.indicators = TradingIndicators(data=market_data)
-        self.all_indicators = self.get_all_indicators()
+    def __init__(self,):
+        self.indicators = None
+        self.all_indicators = {}
         self.compressed_knowledge = self.load_compressed_knowledge()
         self.market_anomalies = []
         self.generated_strategies = {}
-        self.latest_market_data = market_data
+        self.latest_market_data = None
         logger.info("StrategyGenerator initialized")
 
     def get_all_indicators(self):
@@ -188,6 +188,8 @@ class StrategyGenerator:
         market_data (DataFrame): Dati di mercato utilizzati per calcolare gli
         indicatori tecnici e generare le strategie.
         """
+        self.indicators = TradingIndicators(data=market_data)
+        self.all_indicators = self.get_all_indicators()
         indicator_values = (
             {name: func(market_data) for name,
              func in self.all_indicators.items()}
@@ -228,6 +230,8 @@ class StrategyGenerator:
         tuple: Una coppia contenente il nome della strategia selezionata (str)
         e il valore medio della conoscenza compressa (float).
         """
+        self.indicators = TradingIndicators(data=market_data)
+        self.all_indicators = self.get_all_indicators()
         self.detect_market_anomalies(market_data)
         self.generate_new_strategies(market_data)
         indicator_values = (
