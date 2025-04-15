@@ -214,7 +214,7 @@ class AIModel:
         ) / 100
 
         if predicted_volatility is not None:
-            base_lot *= np.clip(1 / (1 + predicted_volatility), 0.5, 2.0)
+            adjusted_lot_size *= np.clip(1 / (1 + predicted_volatility), 0.5, 2.0)
 
         return max(0.01, min(adjusted_lot_size, max_lot_size))
 
