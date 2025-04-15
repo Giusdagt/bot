@@ -283,6 +283,8 @@ class AIModel:
         Args:symbol (str): Il simbolo dell'asset di mercato da analizzare.
         Returns:bool: False se non ci sono dati sufficienti o
         nessuna operazione viene eseguita.
+        Ovviamente get_confidence è un esempio: assicurati che il tuo DRLAgent
+        lo supporti o calcolalo in altro modo.
         """
         market_data = get_normalized_market_data(symbol)
 
