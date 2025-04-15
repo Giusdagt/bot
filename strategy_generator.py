@@ -388,7 +388,7 @@ class StrategyGenerator:
 # ✅ Test rapido e avvio
 if __name__ == "__main__":
 
-    sg = StrategyGenerator()
+    sg = StrategyGenerator(market_data)
     threading.Thread(
         target=sg.continuous_self_improvement, daemon=True
     ).start()
