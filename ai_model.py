@@ -388,6 +388,9 @@ class AIModel:
                     account, symbol, action, lot_size,
                     success_probability, strategy
                 )
+                self.drl_agent.update(
+                    full_state, 1 if trade_profit > 0 else 0
+                )
             else:
                 logging.info(
                     ("🚫 Nessun trade su %s per %s."
@@ -395,6 +398,7 @@ class AIModel:
                     symbol, account
                 )
                 demo_trade(symbol, market_data)
+                self.drl_agent.update(full_state, 0)
 
 
 def background_optimization_loop(
