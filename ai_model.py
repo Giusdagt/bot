@@ -116,6 +116,8 @@ class AIModel:
         self.active_assets = self.select_best_assets(market_data)
         self.strategy_generator = StrategyGenerator()
         self.drl_super_manager = DRLSuperManager()
+        self.drl_super_manager.load_all()
+
 
     def load_memory(self):
         """
@@ -207,7 +209,6 @@ class AIModel:
         Calcola la dimensione del lotto in modo ultra-adattivo.
         Tiene conto di strategia, confidenza, rischio e volatilità prevista.
         confidence_score (float): Confidenza del modello (es. DRL).
-        Ovviamente get_confidence è un esempio: assicurati che il tuo DRLAgent
         """
         max_lot_size = balance / 50
         adjusted_lot_size = balance * (
@@ -287,8 +288,6 @@ class AIModel:
         Args:symbol (str): Il simbolo dell'asset di mercato da analizzare.
         Returns:bool: False se non ci sono dati sufficienti o
         nessuna operazione viene eseguita.
-        Ovviamente get_confidence è un esempio: assicurati che il tuo DRLAgent
-        lo supporti o calcolalo in altro modo.
         """
         market_data = get_normalized_market_data(symbol)
 
