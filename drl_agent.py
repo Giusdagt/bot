@@ -76,15 +76,25 @@ class DRLAgent:
     def get_confidence(self, state: np.ndarray) -> float:
         """
         Restituisce la confidenza sulla predizione attuale.
-        Basata sulla varianza dei valori predetti in memoria.
+        Basata su similarità tra stato attuale e memoria recente.
+        Non cresce nel tempo.
         """
-        if not self.memory:
-            return 0.1  # minima confidenza
-        predictions = [np.dot(s, self.weights) for s, _ in self.memory[-10:]]
+        if len(self.memory) < 10:
+            return 0.1  # minima confidenza iniziale
+
+        # Seleziona ultimi 10 stati
+        recent_states = np.array([s for s, _ in self.memory[-10:]])
+        dot_products = np.dot(recent_states, state)
+        similarity = np.mean(dot_products)
+
+        # Calcola varianza dei valori predetti
+        predictions = [np.dot(s, self.weights) for s in recent_states]
         variance = np.var(predictions) + 1e-6
-        similarity = np.mean([np.dot(state, s) for s, _ in self.memory[-10:]])
+
+        # Formula di confidenza
         confidence = 1 / (1 + variance * (1 - similarity))
         return float(np.clip(confidence, 0.1, 1.0))
+
 
     def update(self, state: np.ndarray, outcome: float):
         self.memory.append((state, outcome))
