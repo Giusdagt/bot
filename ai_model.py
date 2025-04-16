@@ -339,10 +339,11 @@ class AIModel:
             )
 
             action_rl, confidence_score, algo_used = (
-                self.drl_super_manager.get_best_action_and_confidence(full_state)
+                self.drl_super_manager.get_best_action_and_confidence(
+                    full_state
+                )
             )
             success_probability = confidence_score
-
 
             predicted_volatility = (
                 self.volatility_predictor.predict_volatility(
