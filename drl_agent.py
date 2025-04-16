@@ -1,8 +1,8 @@
-""" 
+"""
 DRL avanzato + PPO/DQN/A2C/SAC con ReplayBuffer,
 DummyVecEnv, Environment autonomo
 DRLSuperAgent - Agente di Decisione Reinforcement Learning
-Auto-Migliorante 
+Auto-Migliorante
 """
 
 import numpy as np
@@ -64,7 +64,9 @@ class DRLAgent:
         self.max_memory = max_memory
         self.learning_rate = 0.01
         logging.info(
-            f"🧠 DRLAgent attivo | stato: {state_size}, memoria max: {max_memory}"
+            "🧠 DRLAgent attivo | stato: %d, memoria max: %d",
+            state_size,
+            max_memory
         )
 
     def predict(self, state: np.ndarray) -> float:
