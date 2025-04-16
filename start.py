@@ -1,9 +1,11 @@
 import asyncio
 import threading
 import logging
+from data_loader import load_config, load_preset_assets, load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
 from data_handler import get_available_assets, get_normalized_market_data
 from ai_model import AIModel, fetch_account_balances, background_optimization_loop
 from drl_agent import DRLSuperAgent
+import subprocess
 
 # Logging di sistema
 logging.basicConfig(
@@ -29,6 +31,16 @@ class TradingSystem:
         self.ai_model = AIModel(self.market_data, self.balances)
         self.drl_super_agent = DRLSuperAgent()
 
+    # 🔄 Caricamento dinamico o da preset
+    mapping = load_auto_symbol_mapping()
+    if USE_PRESET_ASSETS:
+        preset_assets = load_preset_assets()
+        from data_handler import save_preset_assets_from_dict
+        save_preset_assets_from_dict(preset_assets)  # aggiorna simboli normalizzati
+    else:
+        dynamic_assets_loading(mapping)
+
+
     def start_optimization_loop(self):
         thread = threading.Thread(
             target=background_optimization_loop,
@@ -45,7 +57,8 @@ class TradingSystem:
             for asset in self.ai_model.active_assets:
                 await self.ai_model.decide_trade(asset)
             await asyncio.sleep(10)
-
+            
+subprocess.Popen(["python", "super_agent_runner.py"])
 
 if __name__ == "__main__":
     system = TradingSystem()
