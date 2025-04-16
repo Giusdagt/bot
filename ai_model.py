@@ -118,7 +118,6 @@ class AIModel:
         self.drl_super_manager = DRLSuperManager()
         self.drl_super_manager.load_all()
 
-
     def load_memory(self):
         """
         Carica i dati di memoria compressi da un file Parquet,
