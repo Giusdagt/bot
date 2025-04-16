@@ -1,3 +1,9 @@
+"""
+Questo modulo esegue l'addestramento automatico
+del DRLSuperAgent utilizzando diversi algoritmi
+di reinforcement learning. Il processo viene eseguito
+in un thread separato e ripetuto ogni 6 ore.
+"""
 import threading
 import random
 import time
@@ -5,6 +11,12 @@ from drl_agent import DRLSuperAgent
 
 
 def auto_train_super_agent():
+    """
+    Esegue l'addestramento continuo del DRLSuperAgent
+    utilizzando algoritmi di reinforcement learning.
+    Gli algoritmi vengono scelti casualmente tra PPO, DQN, A2C e SAC.
+    L'addestramento viene ripetuto ogni 6 ore.
+    """
     algos = ["PPO", "DQN", "A2C", "SAC"]
     while True:
         algo = random.choice(algos)
