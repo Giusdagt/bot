@@ -86,7 +86,6 @@ class DRLAgent:
         confidence = 1 / (1 + variance * (1 - similarity))
         return float(np.clip(confidence, 0.1, 1.0))
 
-
     def update(self, state: np.ndarray, outcome: float):
         self.memory.append((state, outcome))
         if len(self.memory) > self.max_memory:
