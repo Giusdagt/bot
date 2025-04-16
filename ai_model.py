@@ -20,6 +20,7 @@ import polars as pl
 import numpy as np
 import MetaTrader5 as mt5
 from drl_agent import DRLAgent  # Reinforcement Learning (mio file)
+from drl_super_integration import DRLSuperManager
 from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
@@ -114,6 +115,7 @@ class AIModel:
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)
         self.strategy_generator = StrategyGenerator()
+        self.drl_super_manager = DRLSuperManager()
 
     def load_memory(self):
         """
@@ -336,10 +338,11 @@ class AIModel:
                 self.risk_manager[account].calculate_dynamic_risk(market_data)
             )
 
-            success_probability = self.drl_agent.predict(symbol, full_state)
-            confidence_score = self.drl_agent.get_confidence(
-                symbol, full_state
+            action_rl, confidence_score, algo_used = (
+                self.drl_super_manager.get_best_action_and_confidence(full_state)
             )
+            success_probability = confidence_score
+
 
             predicted_volatility = (
                 self.volatility_predictor.predict_volatility(
@@ -391,6 +394,9 @@ class AIModel:
                 self.drl_agent.update(
                     full_state, 1 if trade_profit > 0 else 0
                 )
+                self.drl_super_manager.update_all(
+                    full_state, 1 if trade_profit > 0 else 0
+                )
             else:
                 logging.info(
                     ("🚫 Nessun trade su %s per %s."
@@ -399,6 +405,9 @@ class AIModel:
                 )
                 demo_trade(symbol, market_data)
                 self.drl_agent.update(full_state, 0)
+                self.drl_super_manager.update_all(
+                    full_state, 1 if trade_profit > 0 else 0
+                )
 
 
 def background_optimization_loop(
