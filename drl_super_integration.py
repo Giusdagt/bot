@@ -6,13 +6,18 @@ from drl_agent import DRLSuperAgent
 from pathlib import Path
 import logging
 
-MODEL_PATH = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_PATH = (
+    Path("/mnt/usb_trading_data/models") if
+    Path("/mnt/usb_trading_data").exists() else
+    Path("D:/trading_data/models")
+)
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 
 class DRLSuperManager:
     """
-    DRLSuperManager: Wrapper per integrare DRLSuperAgent nel sistema AI principale.
+    DRLSuperManager: Wrapper per integrare
+    DRLSuperAgent nel sistema AI principale.
     Addestra e aggiorna autonomamente PPO/DQN/A2C/SAC
     su array compressi senza occupare risorse.
     """
