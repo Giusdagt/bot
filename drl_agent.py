@@ -1,5 +1,9 @@
-# DRL avanzato + PPO/DQN/A2C/SAC con ReplayBuffer, DummyVecEnv, Environment autonomo
-# DRLSuperAgent - Agente di Decisione Reinforcement Learning Auto-Migliorante
+""" 
+DRL avanzato + PPO/DQN/A2C/SAC con ReplayBuffer,
+DummyVecEnv, Environment autonomo
+DRLSuperAgent - Agente di Decisione Reinforcement Learning
+Auto-Migliorante 
+"""
 
 import numpy as np
 import gym
@@ -9,7 +13,11 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 from pathlib import Path
 import logging
 
-MODEL_PATH = Path("/mnt/usb_trading_data/models") if Path("/mnt/usb_trading_data").exists() else Path("D:/trading_data/models")
+MODEL_PATH = Path(
+    ("/mnt/usb_trading_data/models") if
+    Path("/mnt/usb_trading_data").exists() else
+    Path("D:/trading_data/models")
+)
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO)
@@ -23,16 +31,20 @@ class GymTradingEnv(gym.Env):
         super(GymTradingEnv, self).__init__()
         self.state_size = state_size
         self.action_space = spaces.Discrete(3)  # 0 = hold, 1 = buy, 2 = sell
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(state_size,), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=-1, high=1, shape=(state_size,), dtype=np.float32
+        )
         self.current_step = 0
 
     def reset(self):
         self.current_step = 0
-        return np.random.uniform(-1, 1, size=self.state_size).astype(np.float32)
+        return np.random.uniform(
+            -1, 1, size=self.state_size
+        ).astype(np.float32)
 
     def step(self, action):
         self.current_step += 1
-        reward = np.random.uniform(-1, 1) * (action - 1)  # semplice simulazione
+        reward = np.random.uniform(-1, 1) * (action - 1)  # semplicesimulazione
         done = self.current_step > 100
         obs = np.random.uniform(-1, 1, size=self.state_size).astype(np.float32)
         return obs, reward, done, {}
@@ -51,7 +63,9 @@ class DRLAgent:
         self.weights = np.random.normal(0, 0.1, state_size).astype(np.float32)
         self.max_memory = max_memory
         self.learning_rate = 0.01
-        logging.info(f"🧠 DRLAgent attivo | stato: {state_size}, memoria max: {max_memory}")
+        logging.info(
+            f"🧠 DRLAgent attivo | stato: {state_size}, memoria max: {max_memory}"
+        )
 
     def predict(self, state: np.ndarray) -> float:
         value = np.dot(state, self.weights)
@@ -70,7 +84,9 @@ class DRLAgent:
             self.memory = self.memory[-self.max_memory:]
 
     def save(self):
-        np.savez_compressed(str(MODEL_PATH / "agent_weights.npz"), weights=self.weights)
+        np.savez_compressed(
+            str(MODEL_PATH / "agent_weights.npz"), weights=self.weights
+        )
 
     def load(self):
         data = np.load(str(MODEL_PATH / "agent_weights.npz"))
