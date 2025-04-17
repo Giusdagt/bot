@@ -1,6 +1,17 @@
-# DRLSuperAgent Integration for AIModel (Autonomous, Compressed Learning)
-# File: drl_super_integration.py
-
+"""
+drl_super_integration.py
+Questo modulo fornisce l'integrazione per DRLSuperAgent,
+un sistema avanzato di reinforcement learning
+per la gestione autonoma di strategie di trading.
+Include la classe DRLSuperManager, che gestisce
+molteplici agenti RL (PPO, DQN, A2C, SAC),
+addestrandoli e selezionando le migliori azioni
+basate sugli stati del mercato.
+Funzionalità principali:
+- Addestramento e aggiornamento degli agenti RL in background.
+- Selezione delle migliori azioni con confidenza associata.
+- Ottimizzazione per ambienti di trading algoritmico.
+"""
 import logging
 from pathlib import Path
 import numpy as np
