@@ -15,6 +15,8 @@ Funzionalità principali:
 import logging
 from pathlib import Path
 import numpy as np
+import threading
+import time
 from drl_agent import DRLSuperAgent
 
 MODEL_PATH = (
@@ -74,3 +76,24 @@ class DRLSuperManager:
         for name, agent in self.super_agents.items():
             agent.train(steps=steps)
             logging.info("🎯 Addestramento completato: %s", name)
+
+    def reinforce_best_agent(self, full_state: np.ndarray, outcome: float):
+        """
+        Addestra solo l'agente che ha preso l'azione migliore.
+        Ultra leggero e preciso.
+        """
+        action, confidence, best_algo = self.get_best_action_and_confidence(full_state)
+        logging.info(f"🎯 Allenamento mirato su {best_algo}")
+        self.super_agents[best_algo].train(steps=1000)
+
+    def start_auto_training(self, interval_hours=6):
+        """
+        Avvia il training continuo in background ogni X ore.
+        """
+        def loop():
+            while True:
+                self.train_background(steps=5000)
+                time.sleep(interval_hours * 3600)
+
+    thread = threading.Thread(target=loop, daemon=True)
+    thread.start()
