@@ -117,6 +117,7 @@ class AIModel:
         self.strategy_generator = StrategyGenerator()
         self.drl_super_manager = DRLSuperManager()
         self.drl_super_manager.load_all()
+        self.drl_super_manager.start_auto_training() 
 
     def load_memory(self):
         """
@@ -214,6 +215,13 @@ class AIModel:
             success_probability * self.strategy_strength * confidence_score *
             risk
         ) / 100
+        # Se il sistema è molto sicuro, moltiplica dinamicamente la size
+        if (
+            success_probability > 0.9 and
+            confidence_score > 0.9 and
+            self.strategy_strength > 2.0
+        ):
+            adjusted_lot_size *= 10  # autorizza ad aprire lotti grandi anche con poco saldo
 
         if predicted_volatility is not None:
             adjusted_lot_size *= (
@@ -396,6 +404,7 @@ class AIModel:
                 self.drl_super_manager.update_all(
                     full_state, 1 if trade_profit > 0 else 0
                 )
+                self.drl_super_manager.reinforce_best_agent(full_state, 1)
             else:
                 logging.info(
                     ("🚫 Nessun trade su %s per %s."
@@ -405,7 +414,7 @@ class AIModel:
                 demo_trade(symbol, market_data)
                 self.drl_agent.update(full_state, 0)
                 self.drl_super_manager.update_all(
-                    full_state, 1 if trade_profit > 0 else 0
+                    full_state, 0
                 )
 
 
