@@ -22,6 +22,8 @@ class TradingSystem:
     - DRLSuperAgent (modello avanzato con PPO, DQN, A2C, SAC)
     """
     def __init__(self):
+        self.config = load_config()  # Utilizzo di load_config
+        logging.info(f"Configurazione caricata: {self.config}")
         self.assets = get_available_assets()
         self.market_data = {
             symbol: data for symbol in self.assets
@@ -36,7 +38,7 @@ class TradingSystem:
     if USE_PRESET_ASSETS:
         preset_assets = load_preset_assets()
         from data_handler import save_preset_assets_from_dict
-        save_preset_assets_from_dict(preset_assets)  # aggiorna simboli normalizzati
+        save_preset_assets_from_dict(preset_assets)
     else:
         dynamic_assets_loading(mapping)
 
