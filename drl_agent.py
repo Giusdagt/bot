@@ -139,9 +139,13 @@ class DRLSuperAgent:
         else:
             raise ValueError("Algoritmo non supportato")
 
-    def train(self, steps=100_000):
-        self.model.learn(total_timesteps=steps)
-        self.save()
+    def train(self, steps=5000):
+        self.model.learn(total_timesteps=steps, reset_num_timesteps=False)
+        self.model.save(str(MODEL_PATH / "super_agent_model"))
+        self.drl_agent.compress_memory()
+        self.drl_agent.save()
+        logging.info(f"💪 {type(self.model).__name__} aggiornato.")
+
 
     def predict(self, state):
         action, _ = self.model.predict(state, deterministic=True)
