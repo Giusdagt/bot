@@ -1,10 +1,10 @@
 # DRLSuperAgent Integration for AIModel (Autonomous, Compressed Learning)
 # File: drl_super_integration.py
 
+import logging
+from pathlib import Path
 import numpy as np
 from drl_agent import DRLSuperAgent
-from pathlib import Path
-import logging
 
 MODEL_PATH = (
     Path("/mnt/usb_trading_data/models") if
@@ -35,6 +35,9 @@ class DRLSuperManager:
     def update_all(self, full_state: np.ndarray, outcome: float):
         """Aggiorna tutti gli agenti con lo stato attuale e il risultato."""
         for name, agent in self.super_agents.items():
+            logging.info(
+                "Aggiornamento agente: %s con risultato: %f", name, outcome
+            )
             agent.drl_agent.update(full_state, outcome)
 
     def get_best_action_and_confidence(self, full_state: np.ndarray):
@@ -59,4 +62,4 @@ class DRLSuperManager:
         """Addestramento leggero in background (chiamato in loop)."""
         for name, agent in self.super_agents.items():
             agent.train(steps=steps)
-            logging.info(f"🎯 Addestramento completato: {name}")
+            logging.info("🎯 Addestramento completato: %s", name)
