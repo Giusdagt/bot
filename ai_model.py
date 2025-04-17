@@ -32,6 +32,7 @@ from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
 from market_fingerprint import get_embedding_for_symbol
+from position_manager import PositionManager
 
 # Configurazione logging avanzata
 logging.basicConfig(
@@ -435,6 +436,14 @@ def background_optimization_loop(
         optimizer.run_full_optimization()
         time.sleep(interval_seconds)
 
+def loop_position_monitor(pm):
+    """
+    Controlla e gestisce tutte le posizioni aperte in autonomia.
+    """
+    while True:
+        pm.monitor_open_positions()
+        time.sleep(10)
+
 
 if __name__ == "__main__":
     # 🔄 Recupera tutti gli asset disponibili (preset o dinamici)
@@ -455,6 +464,13 @@ if __name__ == "__main__":
         args=(ai_model,), daemon=True
     )
     thread.start()
+
+    pm = PositionManager()
+
+    threading.Thread(
+        target=lambda: loop_position_monitor(pm), daemon=True
+    ).start()
+
 
     while True:
         for asset in ai_model.active_assets:
