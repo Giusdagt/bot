@@ -1,7 +1,7 @@
 """
 start.py
-Questo script rappresenta il punto di ingresso principale per il sistema di trading
-automatizzato.
+Questo script rappresenta il punto di ingresso
+principale per il sistema di trading automatizzato.
 Include la configurazione iniziale, il caricamento dei dati,
 la gestione dei modelli di intelligenza artificiale,
 e l'integrazione con i componenti avanzati basati su DRL
