@@ -1,13 +1,22 @@
+"""
+start.py
+Questo script rappresenta il punto di ingresso principale per il sistema di trading
+automatizzato.
+Include la configurazione iniziale, il caricamento dei dati,
+la gestione dei modelli di intelligenza artificiale,
+e l'integrazione con i componenti avanzati basati su DRL
+(Deep Reinforcement Learning).
+"""
 import asyncio
 import threading
 import logging
 from data_loader import (
-load_config, load_preset_assets,
-load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
+    load_config, load_preset_assets,
+    load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
 )
 from data_handler import get_available_assets, get_normalized_market_data
 from ai_model import (
-AIModel, fetch_account_balances, background_optimization_loop
+    AIModel, fetch_account_balances, background_optimization_loop
 )
 from drl_agent import DRLSuperAgent
 import subprocess
