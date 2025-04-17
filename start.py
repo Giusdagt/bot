@@ -1,9 +1,14 @@
 import asyncio
 import threading
 import logging
-from data_loader import load_config, load_preset_assets, load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
+from data_loader import (
+load_config, load_preset_assets,
+load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
+)
 from data_handler import get_available_assets, get_normalized_market_data
-from ai_model import AIModel, fetch_account_balances, background_optimization_loop
+from ai_model import (
+AIModel, fetch_account_balances, background_optimization_loop
+)
 from drl_agent import DRLSuperAgent
 import subprocess
 
@@ -42,7 +47,6 @@ class TradingSystem:
     else:
         dynamic_assets_loading(mapping)
 
-
     def start_optimization_loop(self):
         thread = threading.Thread(
             target=background_optimization_loop,
@@ -59,7 +63,8 @@ class TradingSystem:
             for asset in self.ai_model.active_assets:
                 await self.ai_model.decide_trade(asset)
             await asyncio.sleep(10)
-            
+
+
 subprocess.Popen(["python", "super_agent_runner.py"])
 
 if __name__ == "__main__":
