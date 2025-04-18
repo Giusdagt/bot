@@ -69,6 +69,15 @@ class PositionManager:
                 )
             )
 
+            if action_rl == 2 and action == "buy":
+                self.close_position(pos)
+
+            elif action_rl == 1 and action == "sell":
+                self.close_position(pos)
+
+            elif confidence_score < 0.3:
+                self.close_position(pos)
+
             # Strategia di chiusura intelligente
             trailing_stop_trigger = 0.5 * predicted_volatility * 10000
             gain = (
