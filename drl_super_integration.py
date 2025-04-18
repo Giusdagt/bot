@@ -82,7 +82,9 @@ class DRLSuperManager:
         Addestra solo l'agente che ha preso l'azione migliore.
         Ultra leggero e preciso.
         """
-        action, confidence, best_algo = self.get_best_action_and_confidence(full_state)
+        action, confidence, best_algo = (
+            self.get_best_action_and_confidence(full_state)
+        )
         logging.info(f"🎯 Allenamento mirato su {best_algo}")
         self.super_agents[best_algo].train(steps=1000)
 
