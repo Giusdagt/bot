@@ -95,5 +95,5 @@ class DRLSuperManager:
                 self.train_background(steps=5000)
                 time.sleep(interval_hours * 3600)
 
-    thread = threading.Thread(target=loop, daemon=True)
-    thread.start()
+        thread = threading.Thread(target=loop, daemon=True)
+        thread.start()
