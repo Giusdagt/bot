@@ -33,6 +33,7 @@ from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
 from market_fingerprint import get_embedding_for_symbol
 from position_manager import PositionManager
+from pattern_brain import PatternBrain
 
 # Configurazione logging avanzata
 logging.basicConfig(
@@ -115,6 +116,7 @@ class AIModel:
         self.price_predictor = PricePredictionModel()
         self.drl_agent = DRLAgent()
         self.active_assets = self.select_best_assets(market_data)
+        self.pattern_brain = PatternBrain()
         self.strategy_generator = StrategyGenerator()
         self.drl_super_manager = DRLSuperManager()
         self.drl_super_manager.load_all()
@@ -291,66 +293,64 @@ class AIModel:
         return sorted_assets[:5]  # Seleziona i 5 asset migliori
 
     async def decide_trade(self, symbol):
-        """
-        Decide se eseguire un'operazione di trading per un determinato simbolo.
-        Args:symbol (str): Il simbolo dell'asset di mercato da analizzare.
-        Returns:bool: False se non ci sono dati sufficienti o
-        nessuna operazione viene eseguita.
-        """
         market_data = get_normalized_market_data(symbol)
 
         if market_data is None or market_data.height == 0:
             logging.warning(
-                "⚠️ Nessun dato per %s. Eseguo il backtest x migliorare",
-                symbol
+                "⚠️ Nessun dato per %s. Eseguo il backtest x migliorare", symbol
             )
             run_backtest(symbol, market_data)
             return False
 
         market_data = apply_all_market_structure_signals(market_data)
 
-        # 🔢 Calcola punteggio cumulativo (signal_score)
-        embedding_m1 = get_embedding_for_symbol(symbol, "1m")
-        embedding_m5 = get_embedding_for_symbol(symbol, "5m")
-        embedding_m15 = get_embedding_for_symbol(symbol, "15m")
-        embedding_m30 = get_embedding_for_symbol(symbol, "30m")
-        embedding_1h = get_embedding_for_symbol(symbol, "1h")
-        embedding_4h = get_embedding_for_symbol(symbol, "4h")
-        embedding_1d = get_embedding_for_symbol(symbol, "1d")
-
-        last_row = market_data[-1]
-
-        signal_score = int(last_row["weighted_signal_score"])
-
+        # Calcolo degli embedding e del signal score
+        signal_score = int(market_data[-1]["weighted_signal_score"])
+        embeddings = [
+            get_embedding_for_symbol(symbol, tf) for tf in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+        ]
+        pattern_data = [
+            market_data["ILQ_Zone"][-1],
+            market_data["fakeout_up"][-1],
+            market_data["fakeout_down"][-1],
+            market_data["volatility_squeeze"][-1],
+            market_data["micro_pattern_hft"][-1]
+        ]
+        pattern_confidence = self.pattern_brain.predict_score(pattern_data)
         market_data_array = (
-            market_data.select(
-                pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
+            market_data.select(pl.col(pl.NUMERIC_DTYPES)).to_numpy().flatten()
         )
-        full_state = np.concatenate([
-            market_data_array,
-            [signal_score],
-            embedding_m1, embedding_m5, embedding_m15, embedding_m30,
-            embedding_1h, embedding_4h, embedding_1d
-        ])
-
+        full_state = np.concatenate(
+            [market_data_array, [signal_score], *embeddings]
+        )
         full_state = np.clip(full_state, -1, 1)
 
-        predicted_price = (
-            self.price_predictor.predict_price(symbol, full_state)
-        )
+        predicted_price = self.price_predictor.predict_price(symbol, full_state)
 
         for account in self.balances:
             last_close = market_data["close"][-1]
-            risk = (
-                self.risk_manager[account].calculate_dynamic_risk(market_data)
-            )
+            risk = self.risk_manager[account].calculate_dynamic_risk(market_data)
 
             action_rl, confidence_score, algo_used = (
-                self.drl_super_manager.get_best_action_and_confidence(
-                    full_state
-                )
+                self.drl_super_manager.get_best_action_and_confidence(full_state)
             )
-            success_probability = confidence_score
+            success_probability = confidence_score * pattern_confidence
+
+            if action_rl == 1:
+                action = "buy"
+            elif action_rl == 2:
+                action = "sell"
+            else:
+                logging.info(
+                    "⚠️ AI ha suggerito HOLD. Nessuna operazione per %s.", symbol
+                )
+                return
+
+            if signal_score < 2:
+                logging.info(
+                    "⚠️ Segnale troppo debole su %s (score=%s).", symbol, signal_score
+                )
+                return
 
             predicted_volatility = (
                 self.volatility_predictor.predict_volatility(
@@ -359,22 +359,18 @@ class AIModel:
             )
 
             lot_size = self.adapt_lot_size(
-                self.balances[account], success_probability, confidence_score,
-                risk, predicted_volatility
+                self.balances[account],
+                success_probability,
+                confidence_score,
+                risk,
+                predicted_volatility
             )
 
-            if predicted_price > last_close and signal_score >= 2:
-                action = "buy"
-            elif predicted_price < last_close and signal_score >= 2:
-                action = "sell"
-            else:
-                logging.info(
-                    "⚠️ Nessun segnale forte su %s, niente operazione.",
-                    symbol
-                )
-                return
+            logging.info(
+                f"🤖 Azione AI: {action} | Algoritmo: {algo_used} | Confidenza: {confidence_score:.2f} | Score: {signal_score}"
+            )
 
-            # 🔥 Selezione della strategia migliore
+            # Strategia
             trade_profit = predicted_price - market_data["close"].iloc[-1]
             strategy, strategy_weight = (
                 self.strategy_generator.select_best_strategy(market_data)
@@ -394,6 +390,9 @@ class AIModel:
                 market_data["volatility"].to_numpy()[-1]
             )
 
+            if pattern_confidence < 0.3:
+                return
+
             if success_probability > 0.5:
                 self.execute_trade(
                     account, symbol, action, lot_size,
@@ -408,15 +407,12 @@ class AIModel:
                 self.drl_super_manager.reinforce_best_agent(full_state, 1)
             else:
                 logging.info(
-                    ("🚫 Nessun trade su %s per %s."
-                     "Avvio Demo Trade per miglioramento."),
+                    "🚫 Nessun trade su %s per %s. Avvio Demo per miglioramento.",
                     symbol, account
-                )
+                    )
                 demo_trade(symbol, market_data)
                 self.drl_agent.update(full_state, 0)
-                self.drl_super_manager.update_all(
-                    full_state, 0
-                )
+                self.drl_super_manager.update_all(full_state, 0)
 
 
 def background_optimization_loop(
@@ -437,12 +433,12 @@ def background_optimization_loop(
         time.sleep(interval_seconds)
 
 
-def loop_position_monitor(pm):
+def loop_position_monitor(position_manager_instance):
     """
     Controlla e gestisce tutte le posizioni aperte in autonomia.
     """
     while True:
-        pm.monitor_open_positions()
+        position_manager_instance.monitor_open_positions()
         time.sleep(10)
 
 
