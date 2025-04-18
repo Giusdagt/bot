@@ -118,7 +118,7 @@ class AIModel:
         self.strategy_generator = StrategyGenerator()
         self.drl_super_manager = DRLSuperManager()
         self.drl_super_manager.load_all()
-        self.drl_super_manager.start_auto_training() 
+        self.drl_super_manager.start_auto_training()
 
     def load_memory(self):
         """
@@ -222,7 +222,7 @@ class AIModel:
             confidence_score > 0.9 and
             self.strategy_strength > 2.0
         ):
-            adjusted_lot_size *= 10  # autorizza ad aprire lotti grandi anche con poco saldo
+            adjusted_lot_size *= 10  # autorizza ad aprire lotti grandi
 
         if predicted_volatility is not None:
             adjusted_lot_size *= (
@@ -436,6 +436,7 @@ def background_optimization_loop(
         optimizer.run_full_optimization()
         time.sleep(interval_seconds)
 
+
 def loop_position_monitor(pm):
     """
     Controlla e gestisce tutte le posizioni aperte in autonomia.
@@ -470,7 +471,6 @@ if __name__ == "__main__":
     threading.Thread(
         target=lambda: loop_position_monitor(pm), daemon=True
     ).start()
-
 
     while True:
         for asset in ai_model.active_assets:
