@@ -456,6 +456,11 @@ if __name__ == "__main__":
     # ⚠️ IMPORTANTE: passare all_market_data, non market_data!
     ai_model = AIModel(all_market_data, fetch_account_balances())
 
+    threading.Thread(
+        target=ai_model.strategy_generator.continuous_self_improvement,
+        daemon=True
+    ).start()
+
     thread = threading.Thread(
         target=background_optimization_loop,
         args=(ai_model,), daemon=True
