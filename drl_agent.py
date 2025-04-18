@@ -146,7 +146,6 @@ class DRLSuperAgent:
         self.drl_agent.save()
         logging.info(f"💪 {type(self.model).__name__} aggiornato.")
 
-
     def predict(self, state):
         action, _ = self.model.predict(state, deterministic=True)
         confidence = self.drl_agent.predict(state)
