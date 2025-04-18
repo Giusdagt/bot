@@ -297,7 +297,8 @@ class AIModel:
 
         if market_data is None or market_data.height == 0:
             logging.warning(
-                "⚠️ Nessun dato per %s. Eseguo il backtest x migliorare", symbol
+                "⚠️ Nessun dato per %s. Eseguo il backtest x migliorare",
+                symbol
             )
             run_backtest(symbol, market_data)
             return False
@@ -307,7 +308,9 @@ class AIModel:
         # Calcolo degli embedding e del signal score
         signal_score = int(market_data[-1]["weighted_signal_score"])
         embeddings = [
-            get_embedding_for_symbol(symbol, tf) for tf in ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+            get_embedding_for_symbol(symbol, tf) for tf in (
+                ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+            )
         ]
         pattern_data = [
             market_data["ILQ_Zone"][-1],
@@ -325,11 +328,16 @@ class AIModel:
         )
         full_state = np.clip(full_state, -1, 1)
 
-        predicted_price = self.price_predictor.predict_price(symbol, full_state)
+        predicted_price = (
+            self.price_predictor.predict_price(symbol, full_state)
+        )
 
         for account in self.balances:
-            last_close = market_data["close"][-1]
-            risk = self.risk_manager[account].calculate_dynamic_risk(market_data)
+            # Rimuovi questa riga inutilizzata
+            # last_close = market_data["close"][-1]
+            risk = (
+                self.risk_manager[account].calculate_dynamic_risk(market_data)
+            )
 
             action_rl, confidence_score, algo_used = (
                 self.drl_super_manager.get_best_action_and_confidence(full_state)
@@ -342,13 +350,15 @@ class AIModel:
                 action = "sell"
             else:
                 logging.info(
-                    "⚠️ AI ha suggerito HOLD. Nessuna operazione per %s.", symbol
+                    "⚠️ AI ha suggerito HOLD. Nessuna operazione per %s.",
+                    symbol
                 )
                 return
 
             if signal_score < 2:
                 logging.info(
-                    "⚠️ Segnale troppo debole su %s (score=%s).", symbol, signal_score
+                    "⚠️ Segnale troppo debole su %s (score=%s).",
+                    symbol, signal_score
                 )
                 return
 
@@ -367,7 +377,9 @@ class AIModel:
             )
 
             logging.info(
-                f"🤖 Azione AI: {action} | Algoritmo: {algo_used} | Confidenza: {confidence_score:.2f} | Score: {signal_score}"
+                "🤖 Azione AI: %s | Algoritmo: %s | Confidenza: %.2f | Score: %d" % (
+                    action, algo_used, confidence_score, signal_score
+                )
             )
 
             # Strategia
@@ -407,7 +419,7 @@ class AIModel:
                 self.drl_super_manager.reinforce_best_agent(full_state, 1)
             else:
                 logging.info(
-                    "🚫 Nessun trade su %s per %s. Avvio Demo per miglioramento.",
+                    "🚫 Nessun trade su %s per %s. Avvio Demo.",
                     symbol, account
                     )
                 demo_trade(symbol, market_data)
