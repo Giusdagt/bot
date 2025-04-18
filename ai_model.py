@@ -340,7 +340,9 @@ class AIModel:
             )
 
             action_rl, confidence_score, algo_used = (
-                self.drl_super_manager.get_best_action_and_confidence(full_state)
+                self.drl_super_manager.get_best_action_and_confidence(
+                    full_state
+                )
             )
             success_probability = confidence_score * pattern_confidence
 
@@ -377,7 +379,7 @@ class AIModel:
             )
 
             logging.info(
-                "🤖 Azione AI: %s | Algoritmo: %s | Confidenza: %.2f | Score: %d" % (
+                "🤖 Azione AI: %s | Algo: %s | Confidenza: %.2f | Score: %d" % (
                     action, algo_used, confidence_score, signal_score
                 )
             )
