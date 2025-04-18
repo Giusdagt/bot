@@ -28,7 +28,7 @@ class PositionManager:
             entry_price = pos.price_open
             current_price = (
                 mt5.symbol_info_tick(symbol).bid if
-                action == "buy" else 
+                action == "buy" else
                 mt5.symbol_info_tick(symbol).ask
             )
             profit = pos.profit
@@ -59,10 +59,14 @@ class PositionManager:
                 self.price_predictor.predict_price(symbol, full_state)
             )
             predicted_volatility = (
-                self.volatility_predictor.predict_volatility(full_state.reshape(1, -1))[0]
+                self.volatility_predictor.predict_volatility(
+                    full_state.reshape(1, -1)
+                )[0]
             )
             action_rl, confidence_score, algo_used = (
-                self.drl_super_manager.get_best_action_and_confidence(full_state)
+                self.drl_super_manager.get_best_action_and_confidence(
+                    full_state
+                )
             )
 
             # Strategia di chiusura intelligente
@@ -76,13 +80,13 @@ class PositionManager:
                 if gain * 100000 > trailing_stop_trigger and signal_score < 1:
                     self.close_position(pos)
                     logging.info(
-                        f"🚨 TRAILING EXIT | {symbol} | Profit: {profit:.2f} | Chiuso per calo segnali"
+                        "🚨 EXIT | %s | Profit: %.2f | Segnali in calo" % (symbol, profit)
                     )
             elif profit < 0:
                 if abs(profit) > 0.02 * volume * 100000:  # stop loss dinamico
                     self.close_position(pos)
                     logging.info(
-                        f"🚑 STOP LOSS | {symbol} | Perdita: {profit:.2f} | Chiuso per protezione"
+                        "🚑 STOP | %s | Perd: %.2f | Prot." % (symbol, profit)
                     )
             else:
                 # Se il segnale cambia direzione bruscamente
@@ -93,7 +97,9 @@ class PositionManager:
                 ):
                     self.close_position(pos)
                     logging.info(
-                        f"📊 REVERSAL EXIT | {symbol} | Profit: {profit:.2f} | Chiuso per inversione prevista"
+                        "📊 EXIT | %s | Profit: %.2f | inversione" % (
+                            symbol, profit
+                        )
                     )
 
     def close_position(self, pos):
@@ -124,5 +130,7 @@ class PositionManager:
             )
         else:
             logging.warning(
-                f"❌ Errore chiusura posizione su {symbol} | Retcode: {result.retcode}"
+                "❌ Errore chiusura posizione su %s | Retcode: %d" % (
+                    symbol, result.retcode
+                )
             )
