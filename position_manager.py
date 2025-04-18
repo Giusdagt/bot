@@ -80,7 +80,9 @@ class PositionManager:
                 if gain * 100000 > trailing_stop_trigger and signal_score < 1:
                     self.close_position(pos)
                     logging.info(
-                        "🚨 EXIT | %s | Profit: %.2f | Segnali in calo" % (symbol, profit)
+                        "🚨 EXIT | %s | Profit: %.2f | Segnali in calo" % (
+                            symbol, profit
+                        )
                     )
             elif profit < 0:
                 if abs(profit) > 0.02 * volume * 100000:  # stop loss dinamico
