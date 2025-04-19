@@ -11,12 +11,15 @@ Funzionalità principali:
 - Addestramento e aggiornamento degli agenti RL in background.
 - Selezione delle migliori azioni con confidenza associata.
 - Ottimizzazione per ambienti di trading algoritmico.
+- Caricamento e salvataggio automatico dei modelli.
 """
+
 import logging
 from pathlib import Path
 import numpy as np
 import threading
 import time
+import joblib
 from drl_agent import DRLSuperAgent
 
 MODEL_PATH = (
@@ -28,12 +31,6 @@ MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 
 class DRLSuperManager:
-    """
-    DRLSuperManager: Wrapper per integrare
-    DRLSuperAgent nel sistema AI principale.
-    Addestra e aggiorna autonomamente PPO/DQN/A2C/SAC
-    su array compressi senza occupare risorse.
-    """
     def __init__(self, state_size=512):
         self.super_agents = {
             "PPO": DRLSuperAgent(algo="PPO", state_size=state_size),
@@ -43,10 +40,32 @@ class DRLSuperManager:
         }
         self.last_states = []
         self.state_size = state_size
-        logging.info("🧠 DRLSuperManager inizializzato con 4 agenti RL")
+        self.save_interval = 3600  # ogni ora
+        logging.info(
+            "🧠 DRLSuperManager inizializzato con 4 agenti RL"
+        )
+
+    def save_all(self):
+        for name, agent in self.super_agents.items():
+            path = MODEL_PATH / f"agent_{name}.joblib"
+            joblib.dump(agent.drl_agent, path)
+            logging.info(f"💾 Agente {name} salvato su disco.")
+
+    def load_all(self):
+        for name in self.super_agents:
+            path = MODEL_PATH / f"agent_{name}.joblib"
+            if path.exists():
+                try:
+                    self.super_agents[name].drl_agent = joblib.load(path)
+                    logging.info(f"📂 Agente {name} caricato da disco.")
+                except Exception as e:
+                    logging.warning(f"⚠️ Errore caricamento agente {name}: {e}")
+            else:
+                logging.info(
+                    f"📁 Nessun modello trovato per {name}, inizializzo da zero."
+                )
 
     def update_all(self, full_state: np.ndarray, outcome: float):
-        """Aggiorna tutti gli agenti con lo stato attuale e il risultato."""
         for name, agent in self.super_agents.items():
             logging.info(
                 "Aggiornamento agente: %s con risultato: %f", name, outcome
@@ -54,10 +73,6 @@ class DRLSuperManager:
             agent.drl_agent.update(full_state, outcome)
 
     def get_best_action_and_confidence(self, full_state: np.ndarray):
-        """
-        Seleziona l'azione migliore tra tutti gli agenti.
-        Restituisce: (azione, confidenza, nome_modello)
-        """
         best = None
         best_confidence = -1
         best_algo = None
@@ -72,16 +87,11 @@ class DRLSuperManager:
         return best, best_confidence, best_algo
 
     def train_background(self, steps=5000):
-        """Addestramento leggero in background (chiamato in loop)."""
         for name, agent in self.super_agents.items():
             agent.train(steps=steps)
             logging.info("🎯 Addestramento completato: %s", name)
 
     def reinforce_best_agent(self, full_state: np.ndarray, outcome: float):
-        """
-        Addestra solo l'agente che ha preso l'azione migliore.
-        Ultra leggero e preciso.
-        """
         action, confidence, best_algo = (
             self.get_best_action_and_confidence(full_state)
         )
@@ -89,12 +99,10 @@ class DRLSuperManager:
         self.super_agents[best_algo].train(steps=1000)
 
     def start_auto_training(self, interval_hours=6):
-        """
-        Avvia il training continuo in background ogni X ore.
-        """
         def loop():
             while True:
                 self.train_background(steps=5000)
+                self.save_all()
                 time.sleep(interval_hours * 3600)
 
         thread = threading.Thread(target=loop, daemon=True)
