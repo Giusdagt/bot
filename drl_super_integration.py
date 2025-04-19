@@ -59,10 +59,12 @@ class DRLSuperManager:
                     self.super_agents[name].drl_agent = joblib.load(path)
                     logging.info(f"📂 Agente {name} caricato da disco.")
                 except Exception as e:
-                    logging.warning(f"⚠️ Errore caricamento agente {name}: {e}")
+                    logging.warning(
+                        f"⚠️ Errore caricamento agente {name}: {e}"
+                    )
             else:
                 logging.info(
-                    f"📁 Nessun modello trovato per {name}, inizializzo da zero."
+                    f"📁 Nessun modello per {name}, inizializzo da zero."
                 )
 
     def update_all(self, full_state: np.ndarray, outcome: float):
