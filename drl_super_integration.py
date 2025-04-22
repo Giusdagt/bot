@@ -97,8 +97,16 @@ class DRLSuperManager:
         action, confidence, best_algo = (
             self.get_best_action_and_confidence(full_state)
         )
-        logging.info(f"🎯 Allenamento mirato su {best_algo}")
-        self.super_agents[best_algo].train(steps=1000)
+        if outcome > 0.5:
+            logging.info(
+                f"🎯 Rinforzo positivo su {best_algo} | Outcome: {outcome}"
+            )
+            self.super_agents[best_algo].drl_agent.update(full_state, outcome)
+            self.super_agents[best_algo].train(steps=1000)
+        else:
+            logging.info(
+                f"⚠️ Nessun rinforzo su {best_algo} (outcome: {outcome})"
+            )
 
     def start_auto_training(self, interval_hours=6):
         def loop():
