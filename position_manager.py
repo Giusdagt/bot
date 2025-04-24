@@ -113,7 +113,7 @@ class PositionManager:
                     logging.info(
                         "🚨 EXIT | %s | Profit: %.2f | Segnali in calo",
                         symbol,
-                        profit                      
+                        profit               
                     )
             elif profit < 0:
                 if abs(profit) > 0.02 * volume * 100000:  # stop loss dinamico
@@ -132,9 +132,9 @@ class PositionManager:
                 ):
                     self.close_position(pos)
                     logging.info(
-                        "📊 EXIT | %s | Profit: %.2f | inversione" % 
+                        "📊 EXIT | %s | Profit: %.2f | inversione" %
                         symbol,
-                        profit                      
+                        profit            
                     )
 
     def close_position(self, pos):
