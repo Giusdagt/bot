@@ -134,7 +134,7 @@ class PositionManager:
                     logging.info(
                         "📊 EXIT | %s | Profit: %.2f | inversione" %
                         symbol,
-                        profit 
+                        profit
                     )
 
     def close_position(self, pos):
