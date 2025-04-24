@@ -5,8 +5,8 @@ che utilizza modelli di machine learning
 e segnali di mercato per monitorare e chiudere
 automaticamente le posizioni di trading.
 """
-import MetaTrader5 as mt5
 import logging
+import MetaTrader5 as mt5
 import numpy as np
 from market_fingerprint import get_embedding_for_symbol
 from smart_features import apply_all_market_structure_signals
@@ -89,7 +89,7 @@ class PositionManager:
             logging.info(
                 "Algoritmo usato: %s | Azione: %d | Confidence: %.2f",
                 algo_used, action_rl, confidence_score
-        )
+            )
 
             if action_rl == 2 and action == "buy":
                 self.close_position(pos)
@@ -171,5 +171,6 @@ class PositionManager:
         else:
             logging.warning(
                 "❌ Errore chiusura posizione su %s | Retcode: %d",
-                symbol, result.retcode
+                symbol,
+                result.retcode,
             )
