@@ -16,9 +16,9 @@ Funzionalità principali:
 
 import logging
 from pathlib import Path
-import numpy as np
 import threading
 import time
+import numpy as np
 import joblib
 from drl_agent import DRLSuperAgent
 
@@ -31,6 +31,12 @@ MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 
 class DRLSuperManager:
+    """
+    DRLSuperManager: Wrapper per integrare
+    DRLSuperAgent nel sistema AI principale.
+    Addestra e aggiorna autonomamente PPO/DQN/A2C/SAC
+    su array compressi senza occupare risorse.
+    """
     def __init__(self, state_size=512):
         self.super_agents = {
             "PPO": DRLSuperAgent(algo="PPO", state_size=state_size),
@@ -68,6 +74,7 @@ class DRLSuperManager:
                 )
 
     def update_all(self, full_state: np.ndarray, outcome: float):
+        """Aggiorna tutti gli agenti con lo stato attuale e il risultato."""
         for name, agent in self.super_agents.items():
             logging.info(
                 "Aggiornamento agente: %s con risultato: %f", name, outcome
@@ -75,6 +82,10 @@ class DRLSuperManager:
             agent.drl_agent.update(full_state, outcome)
 
     def get_best_action_and_confidence(self, full_state: np.ndarray):
+        """
+        Seleziona l'azione migliore tra tutti gli agenti.
+        Restituisce: (azione, confidenza, nome_modello)
+        """
         best = None
         best_confidence = -1
         best_algo = None
@@ -89,26 +100,47 @@ class DRLSuperManager:
         return best, best_confidence, best_algo
 
     def train_background(self, steps=5000):
+        """Addestramento in background."""
         for name, agent in self.super_agents.items():
             agent.train(steps=steps)
             logging.info("🎯 Addestramento completato: %s", name)
 
     def reinforce_best_agent(self, full_state: np.ndarray, outcome: float):
+        """
+        Rinforza l'agente che ha preso l'azione
+        migliore in base allo stato attuale.
+        Argomenti:
+        full_state (np.ndarray): Lo stato completo del mercato.
+        outcome (float):
+        Il risultato dell'azione precedente (positivo o negativo).
+        """
         action, confidence, best_algo = (
             self.get_best_action_and_confidence(full_state)
         )
         if outcome > 0.5:
             logging.info(
-                f"🎯 Rinforzo positivo su {best_algo} | Outcome: {outcome}"
+                "🎯 Rinforzo positivo su %s | Outcome: %.2f",
+                best_algo,
+                outcome
             )
             self.super_agents[best_algo].drl_agent.update(full_state, outcome)
             self.super_agents[best_algo].train(steps=1000)
         else:
             logging.info(
-                f"⚠️ Nessun rinforzo su {best_algo} (outcome: {outcome})"
+                "⚠️ Nessun rinforzo su %s (outcome: %.2f)",
+                best_algo,
+                outcome
             )
 
     def start_auto_training(self, interval_hours=6):
+        """
+        Avvia un processo in background
+        per addestrare gli agenti RL
+        automaticamente a intervalli regolari.
+        Argomenti:
+        interval_hours (int): Intervallo di tempo in ore
+        tra un ciclo di addestramento e l'altro.
+        """
         def loop():
             while True:
                 self.train_background(steps=5000)
