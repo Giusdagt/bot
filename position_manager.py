@@ -119,7 +119,7 @@ class PositionManager:
                 if abs(profit) > 0.02 * volume * 100000:  # stop loss dinamico
                     self.close_position(pos)
                     logging.info(
-                        "🚑 STOP | %s | Perd: %.2f | Prot." %,
+                        "🚑 STOP | %s | Perd: %.2f | Prot.",
                         symbol,
                         profit
                     )
