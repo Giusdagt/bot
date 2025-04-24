@@ -1,3 +1,10 @@
+"""
+Modulo per la gestione delle posizioni di trading.
+Questo modulo include la classe PositionManager,
+che utilizza modelli di machine learning
+e segnali di mercato per monitorare e chiudere
+automaticamente le posizioni di trading.
+"""
 import MetaTrader5 as mt5
 import logging
 import numpy as np
@@ -10,6 +17,11 @@ from drl_super_integration import DRLSuperManager
 
 
 class PositionManager:
+    """
+    Gestisce le posizioni di trading aperte, monitorando i segnali di mercato,
+    la volatilità prevista e le azioni suggerite da modelli di machine learning
+    per applicare strategie di chiusura automatizzate.
+    """
     def __init__(self):
         self.price_predictor = PricePredictionModel()
         self.volatility_predictor = VolatilityPredictor()
@@ -17,6 +29,12 @@ class PositionManager:
         self.drl_super_manager.load_all()
 
     def monitor_open_positions(self):
+        """
+        Monitora le posizioni aperte e applica
+        strategie di chiusura basate su segnali di mercato,
+        volatilità prevista e azioni suggerite
+        da un modello di reinforcement learning.
+        """
         positions = mt5.positions_get()
         if positions is None or len(positions) == 0:
             return
@@ -68,6 +86,10 @@ class PositionManager:
                     full_state
                 )
             )
+            logging.info(
+                "Algoritmo usato: %s | Azione: %d | Confidence: %.2f",
+                algo_used, action_rl, confidence_score
+        )
 
             if action_rl == 2 and action == "buy":
                 self.close_position(pos)
@@ -114,6 +136,12 @@ class PositionManager:
                     )
 
     def close_position(self, pos):
+        """
+        Chiude una posizione di trading aperta.
+        Argomenti:
+        pos: L'oggetto posizione che contiene
+        i dettagli della trade da chiudere.
+        """
         symbol = pos.symbol
         action = mt5.ORDER_SELL if pos.type == 0 else mt5.ORDER_BUY
         price = (
@@ -137,11 +165,11 @@ class PositionManager:
         result = mt5.order_send(request)
         if result.retcode == mt5.TRADE_RETCODE_DONE:
             logging.info(
-                f"🔍 Posizione chiusa: {symbol} | Volume: {pos.volume}"
+                "🔍 Posizione chiusa: %s | Volume: %.2f",
+                symbol, pos.volume
             )
         else:
             logging.warning(
-                "❌ Errore chiusura posizione su %s | Retcode: %d" % (
-                    symbol, result.retcode
-                )
+                "❌ Errore chiusura posizione su %s | Retcode: %d",
+                symbol, result.retcode
             )
