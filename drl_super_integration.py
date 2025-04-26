@@ -118,28 +118,29 @@ class DRLSuperManager:
 
     def reinforce_best_agent(self, full_state: np.ndarray, outcome: float):
         """
-        Rinforza l'agente che ha preso l'azione migliore
-        in base allo stato attuale.
+        Rinforza l'agente che ha preso l'azione migliore in base allo stato attuale.
         Usa anche il livello di confidenza per decidere se rinforzare o no.
         """
         action, confidence, best_algo = (
             self.get_best_action_and_confidence(full_state)
         )
-        if confidence > 0.7 and outcome > 0.5:
+        if action in [1, 2] and confidence > 0.7 and outcome > 0.5:
             logging.info(
-                "🎯 Rinforzo positivo su %s | Outcome: %.2f | Confidenza: %.2f",
+                "🎯 Rinforzo positivo su %s | Outcome: %.2f | Confidenza: %.2f | Azione: %s",
                 best_algo,
                 outcome,
-                confidence
+                confidence,
+                action
             )
             self.super_agents[best_algo].drl_agent.update(full_state, outcome)
             self.super_agents[best_algo].train(steps=1000)
         else:
             logging.info(
-                " Rinforzo ignorato su %s | Outcome: %.2f | Confidenza: %.2f",
+                "⚠️ Rinforzo ignorato su %s | Outcome: %.2f | Confidenza: %.2f | Azione: %s",
                 best_algo,
                 outcome,
-                confidence
+                confidence,
+                action
             )
 
     def start_auto_training(self, interval_hours=6):
