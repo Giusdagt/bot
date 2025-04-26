@@ -71,7 +71,8 @@ class PatternBrain:
         return score
 
     def train(self, x_train, y_train, epochs=5):
-        """Addestra il modello con i dati forniti.
+        """
+        Addestra il modello con i dati forniti.
         Args:
         x_train (array-like): Dati di input per l'addestramento.
         y_train (array-like): Etichette corrispondenti ai dati di input.
