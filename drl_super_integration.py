@@ -52,25 +52,36 @@ class DRLSuperManager:
         )
 
     def save_all(self):
+        """
+        Salva tutti gli agenti RL su disco.
+        Ogni agente viene salvato come file .joblib
+        nella directory specificata.
+        """
         for name, agent in self.super_agents.items():
             path = MODEL_PATH / f"agent_{name}.joblib"
             joblib.dump(agent.drl_agent, path)
-            logging.info(f"💾 Agente {name} salvato su disco.")
+            logging.info("💾 Agente %s salvato su disco.", name)
 
     def load_all(self):
+        """
+        Carica gli agenti RL salvati su disco.
+        Se un file modello esiste, l'agente viene caricato. 
+        In caso contrario, viene inizializzato da zero.
+        """
         for name in self.super_agents:
             path = MODEL_PATH / f"agent_{name}.joblib"
             if path.exists():
                 try:
                     self.super_agents[name].drl_agent = joblib.load(path)
-                    logging.info(f"📂 Agente {name} caricato da disco.")
-                except Exception as e:
+                    logging.info("📂 Agente %s caricato da disco.", name)
+                except FileNotFoundError as e:
                     logging.warning(
-                        f"⚠️ Errore caricamento agente {name}: {e}"
+                        "⚠️ Errore caricamento agente %s: %s", name, e
                     )
             else:
                 logging.info(
-                    f"📁 Nessun modello per {name}, inizializzo da zero."
+                    "📁 Nessun modello per %s, inizializzo da zero.",
+                    name
                 )
 
     def update_all(self, full_state: np.ndarray, outcome: float):
