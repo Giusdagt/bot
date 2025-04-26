@@ -76,7 +76,6 @@ class GymTradingEnv(gym.Env):
             raise NotImplementedError(
                 f"La modalità '{mode}' non è supportata."
             )
-        return
 
 
 class DRLAgent:
