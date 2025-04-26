@@ -65,7 +65,7 @@ class DRLSuperManager:
     def load_all(self):
         """
         Carica gli agenti RL salvati su disco.
-        Se un file modello esiste, l'agente viene caricato. 
+        Se un file modello esiste, l'agente viene caricato.
         In caso contrario, viene inizializzato da zero.
         """
         for name in self.super_agents:
