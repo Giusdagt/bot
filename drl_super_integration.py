@@ -68,11 +68,11 @@ class DRLSuperManager:
         Se un file modello esiste, l'agente viene caricato.
         In caso contrario, viene inizializzato da zero.
         """
-        for name in self.super_agents:
+        for name, agent in self.super_agents.items():
             path = MODEL_PATH / f"agent_{name}.joblib"
             if path.exists():
                 try:
-                    self.super_agents[name].drl_agent = joblib.load(path)
+                    agent.drl_agent = joblib.load(path)
                     logging.info("📂 Agente %s caricato da disco.", name)
                 except FileNotFoundError as e:
                     logging.warning(
