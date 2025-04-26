@@ -128,8 +128,8 @@ class DRLSuperManager:
         )
         if action in [1, 2] and confidence > 0.7 and outcome > 0.5:
             logging.info(
-                "🎯 Rinforzo positivo su %s | Outcome: %.2f | Confidenza: %.2f | "
-                "Azione: %s",
+                "🎯 Rinforzo positivo su %s | Outcome: %.2f | "
+                "Confidenza: %.2f | Azione: %s",
                 best_algo,
                 outcome,
                 confidence,
@@ -139,8 +139,8 @@ class DRLSuperManager:
             self.super_agents[best_algo].train(steps=1000)
         else:
             logging.info(
-                "⚠️ Rinforzo ignorato su %s | Outcome: %.2f | Confidenza: %.2f | "
-                "Azione: %s",
+                "⚠️ Rinforzo ignorato su %s | Outcome: %.2f | "
+                "Confidenza: %.2f | Azione: %s",
                 best_algo,
                 outcome,
                 confidence,
