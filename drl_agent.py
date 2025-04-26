@@ -72,7 +72,7 @@ class GymTradingEnv(gym.Env):
         Args:
         mode (str): Modalità di rendering. Default è 'human'.
         """
-        pass
+        return
 
 
 class DRLAgent:
