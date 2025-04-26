@@ -72,7 +72,11 @@ class GymTradingEnv(gym.Env):
         Args:
         mode (str): Modalità di rendering. Default è 'human'.
         """
-        return  # pylint: disable=unnecessary-pass
+        if mode != 'human':
+            raise NotImplementedError(
+                f"La modalità '{mode}' non è supportata."
+            )
+        return
 
 
 class DRLAgent:
