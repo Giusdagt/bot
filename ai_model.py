@@ -293,6 +293,12 @@ class AIModel:
         return sorted_assets[:5]  # Seleziona i 5 asset migliori
 
     async def decide_trade(self, symbol):
+        """
+        Analizza i dati di mercato per un determinato simbolo e decide
+        se eseguire un'operazione di trading.
+        Args:
+        symbol (str): Il simbolo dell'asset da analizzare
+        """
         market_data = get_normalized_market_data(symbol)
 
         if market_data is None or market_data.height == 0:
@@ -379,9 +385,8 @@ class AIModel:
             )
 
             logging.info(
-                "🤖 Azione AI: %s | Algo: %s | Confidenza: %.2f | Score: %d" % (
-                    action, algo_used, confidence_score, signal_score
-                )
+                "🤖 Azione AI: %s | Algo: %s | Confidenza: %.2f | Score: %d",
+                action, algo_used, confidence_score, signal_score
             )
 
             # Strategia
