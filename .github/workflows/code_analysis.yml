@@ -7,6 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       analyze_code: ${{ steps.check.outputs.analyze_code }}
+      enable_flake8: ${{ steps.check.outputs.enable_flake8 }}
+      enable_pylint: ${{ steps.check.outputs.enable_pylint }}
+      enable_mypy: ${{ steps.check.outputs.enable_mypy }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -15,10 +18,16 @@ jobs:
         id: check
         run: |
           analyze_code=$(yq e '.analyze_code' .github/config.yml)
-          echo "::set-output name=analyze_code::$analyze_code"
+          enable_flake8=$(yq e '.enable_flake8' .github/config.yml)
+          enable_pylint=$(yq e '.enable_pylint' .github/config.yml)
+          enable_mypy=$(yq e '.enable_mypy' .github/config.yml)
+          echo "analyze_code=$analyze_code" >> $GITHUB_ENV
+          echo "enable_flake8=$enable_flake8" >> $GITHUB_ENV
+          echo "enable_pylint=$enable_pylint" >> $GITHUB_ENV
+          echo "enable_mypy=$enable_mypy" >> $GITHUB_ENV
 
   lint:
-    if: ${{ fromJson(needs.check-config.outputs.analyze_code) == true }}
+    if: ${{ env.analyze_code == 'true' }}
     runs-on: ubuntu-latest
     needs: check-config
     steps:
@@ -36,13 +45,16 @@ jobs:
           pip install flake8 pylint mypy
 
       - name: Run flake8
+        if: ${{ env.enable_flake8 == 'true' }}
         run: |
           flake8 .
 
       - name: Run pylint
+        if: ${{ env.enable_pylint == 'true' }}
         run: |
           pylint **/*.py
 
       - name: Run mypy
+        if: ${{ env.enable_mypy == 'true' }}
         run: |
           mypy .
