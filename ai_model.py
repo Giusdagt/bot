@@ -1,5 +1,5 @@
 """
-Modulo AI Model
+Modulo AI Model.
 Questo modulo definisce una classe AIModel
 per il trading algoritmico basato su
 intelligenza artificiale. Include funzionalità
