@@ -1,80 +1,98 @@
 """
 start.py
-Questo script rappresenta il punto di ingresso
-principale per il sistema di trading automatizzato.
-Include la configurazione iniziale, il caricamento dei dati,
-la gestione dei modelli di intelligenza artificiale,
-e l'integrazione con i componenti avanzati basati su DRL
-(Deep Reinforcement Learning).
+File principale di avvio per il trading system completo.
+Inizializza tutto, carica i dati,
+avvia il bot AI, il PositionManager,
+il ciclo di ottimizzazione e il super agent runner.
 """
+
 import asyncio
 import threading
 import logging
+import subprocess
+import time
 from data_loader import (
     load_config, load_preset_assets,
     load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
 )
 from data_handler import get_available_assets, get_normalized_market_data
 from ai_model import (
-    AIModel, fetch_account_balances, background_optimization_loop
+AIModel, fetch_account_balances, background_optimization_loop
 )
-from drl_agent import DRLSuperAgent
-import subprocess
+from position_manager import PositionManager
 
-# Logging di sistema
+# Configurazione logging globale
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-
 class TradingSystem:
     """
-    Sistema principale che inizializza e coordina tutti i componenti:
-    - AIModel (trading classico)
-    - DRLSuperAgent (modello avanzato con PPO, DQN, A2C, SAC)
+    Sistema principale che avvia:
+    - AIModel (trading decisionale)
+    - PositionManager (gestione posizioni aperte)
+    - Super agent runner (DRLSuperManager continuo)
     """
     def __init__(self):
-        self.config = load_config()  # Utilizzo di load_config
-        logging.info(f"Configurazione caricata: {self.config}")
+        self.config = load_config()
+        logging.info(f"✅ Configurazione caricata: {self.config}")
+
+        mapping = load_auto_symbol_mapping()
+        if USE_PRESET_ASSETS:
+            preset_assets = load_preset_assets()
+            from data_handler import save_preset_assets_from_dict
+            save_preset_assets_from_dict(preset_assets)
+        else:
+            dynamic_assets_loading(mapping)
+
         self.assets = get_available_assets()
         self.market_data = {
             symbol: data for symbol in self.assets
             if (data := get_normalized_market_data(symbol)) is not None
         }
         self.balances = fetch_account_balances()
+
         self.ai_model = AIModel(self.market_data, self.balances)
-        self.drl_super_agent = DRLSuperAgent()
+        self.position_manager = PositionManager()
 
-    # 🔄 Caricamento dinamico o da preset
-    mapping = load_auto_symbol_mapping()
-    if USE_PRESET_ASSETS:
-        preset_assets = load_preset_assets()
-        from data_handler import save_preset_assets_from_dict
-        save_preset_assets_from_dict(preset_assets)
-    else:
-        dynamic_assets_loading(mapping)
-
-    def start_optimization_loop(self):
-        thread = threading.Thread(
+    def start_background_tasks(self):
+        # Ottimizzazione continua AI Model
+        threading.Thread(
             target=background_optimization_loop,
             args=(self.ai_model,), daemon=True
-        )
-        thread.start()
-        logging.info("🔁 Ottimizzazione AIModel avviata in background")
+        ).start()
+        logging.info("🔁 Ottimizzazione AI Model avviata.")
+
+        # Monitoraggio posizioni aperte
+        threading.Thread(
+            target=lambda: self.monitor_positions_loop(), daemon=True
+        ).start()
+        logging.info("🛡️ Monitoraggio posizioni attivo.")
+
+        # SuperAgent runner separato
+        subprocess.Popen(["python", "super_agent_runner.py"])
+        logging.info("🚀 Super Agent Runner avviato.")
+
+    def monitor_positions_loop(self):
+        while True:
+            self.position_manager.monitor_open_positions()
+            time.sleep(10)
 
     async def run(self):
-        """Loop principale asincrono per il trading continuo."""
-        self.start_optimization_loop()
-        logging.info("🚀 Sistema di trading avviato.")
+        """
+        Loop principale per decidere i trade su asset attivi.
+        """
+        self.start_background_tasks()
+        logging.info(
+            "🏁 Trading system avviato. Monitoraggio asset in corso..."
+        )
+
         while True:
             for asset in self.ai_model.active_assets:
                 await self.ai_model.decide_trade(asset)
             await asyncio.sleep(10)
-
-
-subprocess.Popen(["python", "super_agent_runner.py"])
 
 if __name__ == "__main__":
     system = TradingSystem()
