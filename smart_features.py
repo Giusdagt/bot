@@ -8,9 +8,9 @@ e dei dati di mercato. Le funzionalità includono:
 - Identificazione di fakeouts, squeeze di volatilità e micro-pattern.
 - Calcolo di segnali di struttura di mercato e vettori multi-timeframe.
 """
+from typing import Optional, Dict
 import polars as pl
 import numpy as np
-from typing import Optional, Dict
 
 
 def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
