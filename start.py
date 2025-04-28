@@ -17,7 +17,7 @@ from data_loader import (
 )
 from data_handler import get_available_assets, get_normalized_market_data
 from ai_model import (
-AIModel, fetch_account_balances, background_optimization_loop
+    AIModel, fetch_account_balances, background_optimization_loop
 )
 from position_manager import PositionManager
 
@@ -27,6 +27,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
 )
+
 
 class TradingSystem:
     """
@@ -93,6 +94,7 @@ class TradingSystem:
             for asset in self.ai_model.active_assets:
                 await self.ai_model.decide_trade(asset)
             await asyncio.sleep(10)
+
 
 if __name__ == "__main__":
     system = TradingSystem()
