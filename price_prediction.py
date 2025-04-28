@@ -8,13 +8,13 @@ Modulo per la previsione dei prezzi tramite LSTM.
 
 import logging
 from pathlib import Path
+from typing import Optional
 import numpy as np
 import polars as pl
 from tensorflow.keras.models import Sequential, load_model, Model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
-from typing import Optional
 from data_handler import get_normalized_market_data, get_available_assets
 from market_fingerprint import get_embedding_for_symbol
 from smart_features import apply_all_market_structure_signals
