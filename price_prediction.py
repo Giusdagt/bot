@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 import numpy as np
 import polars as pl
+from typing import Optional
 from tensorflow.keras.models import Sequential, load_model, Model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
@@ -233,7 +234,7 @@ class PricePredictionModel:
 
     def predict_price(
         self, asset: str, full_state: np.ndarray = None
-    ) -> float:
+    ) -> Optional[float]:
         """
         Prevede il prezzo futuro per un asset specifico.
         """
@@ -279,7 +280,7 @@ class PricePredictionModel:
             )
             return None
 
-    def build_full_state(self, asset) -> np.ndarray:
+    def build_full_state(self, asset) -> Optional[np.ndarray]:
         """
         Crea lo stato completo (full_state) per un asset:
         - Dati normalizzati
