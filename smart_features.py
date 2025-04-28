@@ -10,6 +10,7 @@ e dei dati di mercato. Le funzionalità includono:
 """
 import polars as pl
 import numpy as np
+from typing import Optional, Dict
 
 
 def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
@@ -242,7 +243,7 @@ def extract_multi_timeframe_vector(
 
 
 def compute_weighted_signal_score(
-    df: pl.DataFrame, weights: dict = None
+    df: pl.DataFrame, weights: Optional[Dict[str, float]] = None
 ) -> pl.DataFrame:
     """
     Calcola un punteggio pesato basato sui segnali di mercato.
