@@ -11,11 +11,15 @@ import threading
 import logging
 import subprocess
 import time
+import contextlib
 from data_loader import (
     load_config, load_preset_assets,
-    load_auto_symbol_mapping, dynamic_assets_loading, USE_PRESET_ASSETS
+    load_auto_symbol_mapping, dynamic_assets_loading,
+    USE_PRESET_ASSETS
 )
-from data_handler import get_available_assets, get_normalized_market_data
+from data_handler import (
+    get_available_assets, get_normalized_market_data
+)
 from ai_model import (
     AIModel, fetch_account_balances, background_optimization_loop
 )
@@ -38,13 +42,11 @@ class TradingSystem:
     """
     def __init__(self):
         self.config = load_config()
-        logging.info(f"✅ Configurazione caricata: {self.config}")
+        logging.info("✅ Configurazione caricata: %s", self.config)
 
         mapping = load_auto_symbol_mapping()
         if USE_PRESET_ASSETS:
             preset_assets = load_preset_assets()
-            from data_handler import save_preset_assets_from_dict
-            save_preset_assets_from_dict(preset_assets)
         else:
             dynamic_assets_loading(mapping)
 
@@ -59,24 +61,32 @@ class TradingSystem:
         self.position_manager = PositionManager()
 
     def start_background_tasks(self):
-        # Ottimizzazione continua AI Model
+        """
+        Avvia i task in background:
+        - Ottimizzazione continua del modello AI.
+        - Monitoraggio delle posizioni aperte.
+        - Esecuzione del Super Agent Runner.
+        """
         threading.Thread(
             target=background_optimization_loop,
             args=(self.ai_model,), daemon=True
         ).start()
         logging.info("🔁 Ottimizzazione AI Model avviata.")
 
-        # Monitoraggio posizioni aperte
         threading.Thread(
-            target=lambda: self.monitor_positions_loop(), daemon=True
+            target=self.monitor_positions_loop, daemon=True
         ).start()
         logging.info("🛡️ Monitoraggio posizioni attivo.")
 
-        # SuperAgent runner separato
-        subprocess.Popen(["python", "super_agent_runner.py"])
+        with contextlib.suppress(Exception):
+            subprocess.Popen(["python", "super_agent_runner.py"])
         logging.info("🚀 Super Agent Runner avviato.")
 
     def monitor_positions_loop(self):
+        """
+        Monitora continuamente le posizioni aperte
+        e aggiorna lo stato.
+        """
         while True:
             self.position_manager.monitor_open_positions()
             time.sleep(10)
