@@ -1,0 +1,15 @@
+numpy
+polars
+tensorflow
+scikit-learn
+requests
+MetaTrader5
+gym
+stable-baselines3
+joblib
+aiohttp
+TA-Lib
+scipy
+PyPortfolioOpt
+types-requests
+types-tensorflow
