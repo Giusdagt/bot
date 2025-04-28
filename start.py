@@ -18,7 +18,8 @@ from data_loader import (
     USE_PRESET_ASSETS
 )
 from data_handler import (
-    get_available_assets, get_normalized_market_data
+    get_available_assets, get_normalized_market_data,
+    save_preset_assets_from_dict
 )
 from ai_model import (
     AIModel, fetch_account_balances, background_optimization_loop
@@ -47,8 +48,11 @@ class TradingSystem:
         mapping = load_auto_symbol_mapping()
         if USE_PRESET_ASSETS:
             preset_assets = load_preset_assets()
+            save_preset_assets_from_dict(preset_assets)
+            logging.info("📚 Asset preset caricati e sincronizzati.")
         else:
             dynamic_assets_loading(mapping)
+            logging.info("🔄 Asset caricati dinamicamente.")
 
         self.assets = get_available_assets()
         self.market_data = {
@@ -73,11 +77,13 @@ class TradingSystem:
         ).start()
         logging.info("🔁 Ottimizzazione AI Model avviata.")
 
+        # Monitoraggio posizioni aperte
         threading.Thread(
             target=self.monitor_positions_loop, daemon=True
         ).start()
         logging.info("🛡️ Monitoraggio posizioni attivo.")
 
+        # SuperAgent runner separato
         with contextlib.suppress(Exception):
             subprocess.Popen(["python", "super_agent_runner.py"])
         logging.info("🚀 Super Agent Runner avviato.")
