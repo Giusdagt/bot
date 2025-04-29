@@ -11,7 +11,6 @@ import threading
 import logging
 from subprocess import Popen
 import time
-import contextlib
 from data_loader import (
     load_config, load_preset_assets,
     load_auto_symbol_mapping, dynamic_assets_loading,
