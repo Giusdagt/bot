@@ -18,7 +18,6 @@ from data_loader import (
 )
 from data_handler import (
     get_available_assets, get_normalized_market_data,
-    save_preset_assets_from_dict
 )
 from ai_model import (
     AIModel, fetch_account_balances, background_optimization_loop
@@ -46,8 +45,7 @@ class TradingSystem:
 
         mapping = load_auto_symbol_mapping()
         if USE_PRESET_ASSETS:
-            preset_assets = load_preset_assets()
-            save_preset_assets_from_dict(preset_assets)
+            load_preset_assets()
             logging.info("📚 Asset preset caricati e sincronizzati.")
         else:
             dynamic_assets_loading(mapping)
