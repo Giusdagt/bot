@@ -9,7 +9,7 @@ il ciclo di ottimizzazione e il super agent runner.
 import asyncio
 import threading
 import logging
-import subprocess
+import subprocess import Popen
 import time
 import contextlib
 from data_loader import (
@@ -84,9 +84,15 @@ class TradingSystem:
         logging.info("🛡️ Monitoraggio posizioni attivo.")
 
         # SuperAgent runner separato
-        with contextlib.suppress(Exception):
-            subprocess.Popen(["python", "super_agent_runner.py"])
-        logging.info("🚀 Super Agent Runner avviato.")
+        try:
+            with Popen(["python", "super_agent_runner.py"]) as process:
+                logging.info(
+                    "🚀 Super Agent Runner avviato con PID %s", process.pid
+                )
+        except Exception as e:
+            logging.info(
+                "❌ Errore durante l'avvio del Super Agent Runner: %s", e
+            )
 
     def monitor_positions_loop(self):
         """
