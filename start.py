@@ -88,7 +88,7 @@ class TradingSystem:
                 logging.info(
                     "🚀 Super Agent Runner avviato con PID %s", process.pid
                 )
-        except Exception as e:
+        except (FileNotFoundError, OSError) as e:
             logging.info(
                 "❌ Errore durante l'avvio del Super Agent Runner: %s", e
             )
