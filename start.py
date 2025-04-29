@@ -9,7 +9,7 @@ il ciclo di ottimizzazione e il super agent runner.
 import asyncio
 import threading
 import logging
-import subprocess import Popen
+from subprocess import Popen
 import time
 import contextlib
 from data_loader import (
