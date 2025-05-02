@@ -16,7 +16,7 @@ import random
 import logging
 import numpy as np
 
-print ( "backtest_module.py caricato ✅" )
+print("backtest_module.py caricato ✅")
 
 
 def run_backtest(symbol, historical_data):
