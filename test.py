@@ -368,9 +368,10 @@ if not any(pos.symbol == "ASSET2" for pos in dummy_mt5.positions):
             )
     )
     print(
-        "\n(
-        Note: Add a simulated existing BUY position for ASSET2 to test position management.
-        )"
+        """
+        Note: Add a simulated existing BUY position for
+        ASSET2 to test position management.
+        """
     )
 
 # 4. Monitoraggio e gestione posizioni aperte
