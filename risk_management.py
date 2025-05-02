@@ -18,6 +18,8 @@ from data_loader import (
 )
 import data_handler
 
+print("risk_management.py caricato ✅")
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
