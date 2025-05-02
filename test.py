@@ -12,6 +12,41 @@ import asyncio
 import types
 import pandas as pd
 import numpy as np
+import sys
+import subprocess
+import data_handler
+import ai_model
+import smart_features
+import strategy_generator
+import drl_agent
+import drl_super_integration
+import price_prediction
+import volatility_tools
+import risk_management
+import position_manager
+import pattern_brain
+import demo_module
+
+# Configura il logger per scrivere sia sulla console che in un file
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # Scrive sulla console
+        logging.FileHandler("module_load_log.txt", mode="w")  # Scrive in un file
+    ]
+)
+
+# Reindirizza i messaggi di print al logger
+class PrintLogger:
+    def write(self, message):
+        if message.strip():  # Ignora righe vuote
+            logging.info(message.strip())
+    def flush(self):
+        pass  # Necessario per compatibilità con sys.stdout
+
+sys.stdout = PrintLogger()
 
 # --- Simulazione ambiente MetaTrader5 e altre dipendenze esterne ---
 
@@ -158,9 +193,6 @@ class DummyPopen:
 subprocess.Popen = DummyPopen
 
 # --- Import moduli del bot con i dummy applicati ---
-import data_handler, ai_model, smart_features, strategy_generator
-import drl_agent, drl_super_integration, price_prediction, volatility_tools
-import risk_management, position_manager, pattern_brain, demo_module
 
 # --- Patch delle funzioni e classi del bot per usare i dummy e simulare i dati ---
 
@@ -312,30 +344,39 @@ if system:
 
 # 2. Simulazione ciclo decisionale trading sugli asset attivi
 print("\n## Simulating Trading Decisions for Active Assets ##")
+
+
 async def run_decisions():
     for asset in system.ai_model.active_assets:
         print(f"\n### Deciding trade for {asset} ###")
         try:
             result = await system.ai_model.decide_trade(asset)
             if result is False:
-                print(f"No trade executed for {asset} (no sufficient data or skipped).")
+                print(
+                    f"No trade executed for {asset} (no sufficient data or skipped)."
+                )
             else:
                 print(f"Trade decision completed for {asset}.")
-            # Il risultato atteso è l'apertura di un trade reale o demo a seconda della logica
         except Exception as e:
             print(f"Error during trade decision for {asset}: {e}")
 asyncio.run(run_decisions())
 
-# 3. Aggiunge una posizione aperta simulata per ASSET2 se non creata, per testare gestione posizioni
 if not any(pos.symbol == "ASSET2" for pos in dummy_mt5.positions):
-    dummy_mt5.positions.append(types.SimpleNamespace(symbol="ASSET2", volume=0.1, type=0,
-                                                     price_open=100.0, profit=0.0))
-    print("\n(Note: Added a simulated existing BUY position for ASSET2 to test position management.)")
+    dummy_mt5.positions.append(
+        types.SimpleNamespace(
+            symbol="ASSET2", volume=0.1, type=0, price_open=100.0, profit=0.0
+            )
+    )
+    print(
+        "\n(
+        Note: Add a simulated existing BUY position for ASSET2 to test position management.
+        )"
+    )
 
 # 4. Monitoraggio e gestione posizioni aperte
 print("\n## Monitoring and Managing Open Positions ##")
 try:
-    system.position_manager.monitor_open_positions()  # controlla posizioni aperte e applica regole di chiusura
+    system.position_manager.monitor_open_positions()
     print("Open positions monitored and managed.")
 except Exception as e:
     print(f"Error during position monitoring: {e}")
