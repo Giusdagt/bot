@@ -19,6 +19,8 @@ from data_handler import get_normalized_market_data, get_available_assets
 from market_fingerprint import get_embedding_for_symbol
 from smart_features import apply_all_market_structure_signals
 
+print("price_prediction.py caricato ✅")
+
 MODEL_DIR = Path("D:/trading_data/models")
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 MEMORY_FILE = MODEL_DIR / "lstm_memory.parquet"
