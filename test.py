@@ -254,7 +254,7 @@ drl_super_integration.DRLSuperManager = type('DummyDRLSuperManager', (object,), 
     "start_auto_training": lambda self: logging.info("DRLSuperManager: start_auto_training called (dummy)"),
     "get_best_action_and_confidence": lambda self, full_state: (
         # Incrementa il contatore delle chiamate
-        self.call_count += 1 or None,
+        setattr(self, "call_count", self.call_count + 1) or None,
         # Ritorna azioni e confidence diversi a seconda della chiamata (per testare vari scenari)
         [(1, 0.8, "PPO"),   # 1ª chiamata: suggerisce BUY con confidenza 0.8
          (1, 0.4, "PPO"),   # 2ª chiamata: suggerisce BUY con confidenza bassa 0.4
