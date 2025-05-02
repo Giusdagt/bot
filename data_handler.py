@@ -31,6 +31,8 @@ from data_api_module import main as fetch_new_data
 from smart_features import apply_all_advanced_features
 from market_fingerprint import update_embedding_in_processed_file
 
+print("data_handler.py caricato ✅")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
