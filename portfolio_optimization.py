@@ -13,7 +13,7 @@ from scipy.optimize import minimize
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt.expected_returns import mean_historical_return
-from pypfopt.hierarchical_risk_parity import HRPOpt
+from pypfopt.hierarchical_portfolio import HRPOpt
 from risk_management import RiskManagement
 
 print("portfolio_optimization.py caricato ✅")
