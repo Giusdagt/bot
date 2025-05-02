@@ -10,13 +10,14 @@ senza chiamate reali a MetaTrader5 o API esterne.
 Stampa un report dettagliato di cosa è stato testato,
 funzionamenti ed eventuali anomalie.
 """
+
 import logging
 import asyncio
+import sys
+import subprocess
 import types
 import pandas as pd
 import numpy as np
-import sys
-import subprocess
 import data_handler
 import ai_model
 import smart_features
@@ -128,7 +129,6 @@ class DummyMT5:
 
 # Inserisce DummyMT5 come modulo MetaTrader5 per l'uso nel codice del bot
 dummy_mt5 = DummyMT5()
-import sys
 sys.modules['MetaTrader5'] = dummy_mt5
 
 # Dummy per altre librerie esterne (tensorflow, sklearn, joblib) per evitare errori di import
@@ -346,27 +346,22 @@ data_handler.get_normalized_market_data = lambda symbol: market_data_map.get(sym
 # Patch fetch_account_balances per evitare chiamate MetaTrader e usare valori fissi
 ai_model.fetch_account_balances = lambda: {"Danny": 10000.0, "Giuseppe": 10000.0}
 
-# Imposta logging a livello INFO (visualizza log del bot durante test)
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s | %(levelname)s | %(message)s",
-                    datefmt="%Y-%m-%d %H:%M:%S")
-
 # --- Inizio test simulato ---
 print("# Testing Trading Bot Simulation #")
 
 # 1. Inizializzazione del sistema di trading
 print("\n## Initializing Trading System ##")
 try:
-    system = ai_model.TradingSystem()  # crea il sistema di trading con config simulata
+    trading_system = ai_model.AIModel(market_data_map, ai_model.fetch_account_balances())
     print("Initialization: SUCCESS - TradingSystem and components initialized.")
 except Exception as e:
     print(f"Initialization: FAILURE - Exception occurred: {e}")
-    system = None
+    trading_system = None
 
 # Verifica asset attivi selezionati
-if system:
+if trading_system:
     try:
-        assets_selected = system.ai_model.active_assets
+        assets_selected = trading_system.active_assets
         print(f"Active assets selected for trading: {assets_selected}")
     except Exception as e:
         print(f"Error during asset selection: {e}")
@@ -376,10 +371,10 @@ print("\n## Simulating Trading Decisions for Active Assets ##")
 
 
 async def run_decisions():
-    for asset in system.ai_model.active_assets:
+    for asset in trading_system.active_assets:
         print(f"\n### Deciding trade for {asset} ###")
         try:
-            result = await system.ai_model.decide_trade(asset)
+            result = await trading_system.decide_trade(asset)
             if result is False:
                 print(
                     f"No trade executed for {asset} (no sufficient data or skipped)."
@@ -403,10 +398,13 @@ if not any(pos.symbol == "ASSET2" for pos in dummy_mt5.positions):
         """
     )
 
+# Inizializza il gestore delle posizioni
+position_manager = PositionManager()
+
 # 4. Monitoraggio e gestione posizioni aperte
 print("\n## Monitoring and Managing Open Positions ##")
 try:
-    system.position_manager.monitor_open_positions()
+    position_manager.monitor_open_positions()
     print("Open positions monitored and managed.")
 except Exception as e:
     print(f"Error during position monitoring: {e}")
