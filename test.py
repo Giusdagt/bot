@@ -27,7 +27,7 @@ import drl_super_integration
 import price_prediction
 import volatility_tools
 import risk_management
-import position_manager
+from position_manager import PositionManager
 import pattern_brain
 import demo_module
 
