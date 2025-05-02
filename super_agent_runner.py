@@ -9,6 +9,8 @@ import random
 import time
 from drl_agent import DRLSuperAgent
 
+print("super_agent_runner.py caricato✅")
+
 
 def auto_train_super_agent():
     """
