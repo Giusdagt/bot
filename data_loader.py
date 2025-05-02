@@ -10,6 +10,8 @@ import logging
 import re
 import requests
 
+print("data_loader.py caricato ✅")
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
