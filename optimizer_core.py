@@ -29,6 +29,8 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 
+print("optimizer_core.py caricato ✅")
+
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models")
     if Path("/mnt/usb_trading_data").exists()
