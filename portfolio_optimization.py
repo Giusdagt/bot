@@ -16,6 +16,8 @@ from pypfopt.expected_returns import mean_historical_return
 from pypfopt.hierarchical_risk_parity import HRPOpt
 from risk_management import RiskManagement
 
+print("portfolio_optimization.py caricato ✅")
+
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
