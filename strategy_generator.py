@@ -15,6 +15,8 @@ import numpy as np
 import polars as pl
 from indicators import TradingIndicators
 
+print("strategy_generator.py caricato✅")
+
 # Configura il logging
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s'
