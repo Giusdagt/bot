@@ -7,6 +7,8 @@ Nessun file, nessuna crescita infinita.
 
 import numpy as np
 
+print("volatility_tools.py caricato✅")
+
 
 class VolatilityPredictor:
     """
