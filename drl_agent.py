@@ -13,6 +13,8 @@ from gym import spaces
 from stable_baselines3 import PPO, DQN, A2C, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+print("drl_agent.py caricato ✅")
+
 MODEL_PATH = Path(
     ("/mnt/usb_trading_data/models") if
     Path("/mnt/usb_trading_data").exists() else
