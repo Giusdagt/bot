@@ -15,6 +15,8 @@ from price_prediction import PricePredictionModel
 from volatility_tools import VolatilityPredictor
 from drl_super_integration import DRLSuperManager
 
+print("position_manager.py caricato ✅")
+
 
 class PositionManager:
     """
