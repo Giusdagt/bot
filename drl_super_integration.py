@@ -22,6 +22,8 @@ import numpy as np
 import joblib
 from drl_agent import DRLSuperAgent
 
+print("drl_super_integration.py caricato ✅")
+
 MODEL_PATH = (
     Path("/mnt/usb_trading_data/models") if
     Path("/mnt/usb_trading_data").exists() else
