@@ -12,6 +12,8 @@ import random
 from pathlib import Path
 import polars as pl
 
+print("demo_module.py caricato ✅")
+
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models")
     if Path("/mnt/usb_trading_data").exists()
