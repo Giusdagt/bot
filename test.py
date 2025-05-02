@@ -48,7 +48,6 @@ class PrintLogger:
         if message.strip():  # Ignora righe vuote
             logging.info(message.strip())
 
-
     def flush(self):
         pass  # Necessario per compatibilità con sys.stdout
 
@@ -206,7 +205,6 @@ sys.modules['polars'] = dummy_polars
 
 # Dummy subprocess.Popen (avvia Super Agent Runner) – evita apertura vero processo
 class DummyPopen:
-
 
     def __init__(self, args, **kwargs):
         self.pid = 12345  # PID fittizio
