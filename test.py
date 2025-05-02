@@ -47,8 +47,8 @@ class PrintLogger:
     def write(self, message):
         if message.strip():  # Ignora righe vuote
             logging.info(message.strip())
-    
-    
+
+
     def flush(self):
         pass  # Necessario per compatibilità con sys.stdout
 
@@ -203,13 +203,14 @@ dummy_polars.read_parquet = lambda path: ExtendedDataFrame()
 dummy_polars.exceptions = types.SimpleNamespace(PolarsError=Exception)
 sys.modules['polars'] = dummy_polars
 
+
 # Dummy subprocess.Popen (avvia Super Agent Runner) – evita apertura vero processo
-import subprocess
 class DummyPopen:
 
 
     def __init__(self, args, **kwargs):
         self.pid = 12345  # PID fittizio
+
     def __enter__(self):
 
         return self
@@ -217,6 +218,8 @@ class DummyPopen:
     def __exit__(self, exc_type, exc_val, exc_tb):
 
         return False  # non sopprime eccezioni
+
+
 subprocess.Popen = DummyPopen
 
 
