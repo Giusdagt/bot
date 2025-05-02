@@ -7,6 +7,8 @@ import polars as pl
 import requests
 import talib
 
+print("indicators.py caricato ✅")
+
 # 📌 Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
