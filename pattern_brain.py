@@ -9,6 +9,8 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+print("pattern_brain.py caricato ✅")
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
