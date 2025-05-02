@@ -22,6 +22,8 @@ from data_loader import (
 )
 from column_definitions import required_columns
 
+print("data_api_module.py caricato ✅")
+
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
