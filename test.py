@@ -253,13 +253,14 @@ drl_super_integration.DRLSuperManager = type('DummyDRLSuperManager', (object,), 
     "load_all": lambda self: logging.info("DRLSuperManager: load_all called (dummy)"),
     "start_auto_training": lambda self: logging.info("DRLSuperManager: start_auto_training called (dummy)"),
     "get_best_action_and_confidence": lambda self, full_state: (
+        # Incrementa il contatore delle chiamate
+        self.call_count += 1 or None,
         # Ritorna azioni e confidence diversi a seconda della chiamata (per testare vari scenari)
         [(1, 0.8, "PPO"),   # 1ª chiamata: suggerisce BUY con confidenza 0.8
          (1, 0.4, "PPO"),   # 2ª chiamata: suggerisce BUY con confidenza bassa 0.4
          (2, 0.6, "PPO"),   # 3ª chiamata: suggerisce SELL (chiusura) con confidenza 0.6
          (1, 0.2, "PPO")]   # 4ª chiamata: suggerisce BUY con confidenza molto bassa 0.2
         [min(self.call_count, 3)]  # usa indice in base a call_count incrementato
-        if setattr(self, "call_count", self.call_count + 1) or True else None
     ),
     "update_all": lambda self, full_state, outcome: logging.info(f"DRLSuperManager: update_all called with outcome {outcome}"),
     "reinforce_best_agent": lambda self, full_state, outcome: logging.info("DRLSuperManager: reinforce_best_agent called (dummy)")
