@@ -2,7 +2,7 @@
 Definizioni delle colonne richieste per il DataFrame.
 """
 
-print ( "column_definitions.py caricato ✅" )
+print("column_definitions.py caricato ✅")
 
 required_columns = [
     'coin_id', 'symbol', 'name', 'image', 'last_updated',
