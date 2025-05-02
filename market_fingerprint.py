@@ -16,6 +16,8 @@ import hashlib
 import polars as pl
 import numpy as np
 
+print("market_fingerprint.py caricato ✅")
+
 MODEL_DIR = (
     Path("/mnt/usb_trading_data/models") if
     Path("/mnt/usb_trading_data").exists() else
