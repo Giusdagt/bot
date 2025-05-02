@@ -35,6 +35,8 @@ from market_fingerprint import get_embedding_for_symbol
 from position_manager import PositionManager
 from pattern_brain import PatternBrain
 
+print (ai_model.py caricato ✅)
+
 # Configurazione logging avanzata
 logging.basicConfig(
     level=logging.INFO,
