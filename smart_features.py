@@ -12,6 +12,8 @@ from typing import Optional, Dict
 import polars as pl
 import numpy as np
 
+print("smart_features.py caricato ✅")
+
 
 def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
     """
