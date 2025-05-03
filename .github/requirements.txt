@@ -13,3 +13,4 @@ scipy
 PyPortfolioOpt
 types-requests
 types-tensorflow
+shimmy
