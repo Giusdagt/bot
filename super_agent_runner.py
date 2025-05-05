@@ -7,7 +7,7 @@ in un thread separato e ripetuto ogni 6 ore.
 import threading
 import random
 import time
-import numpy as np
+import numpy
 from drl_agent import DRLSuperAgent
 
 print("super_agent_runner.py caricato✅")
