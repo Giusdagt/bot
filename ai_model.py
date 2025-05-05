@@ -19,8 +19,6 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 import MetaTrader5 as mt5
-from drl_agent import DRLAgent  # Reinforcement Learning (mio file)
-from drl_super_integration import DRLSuperManager
 from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
@@ -107,6 +105,8 @@ class AIModel:
     strategy_generator (object): Generatore per le strategie di trading.
     """
     def __init__(self, market_data, balances):
+        from drl_agent import DRLAgent  # Reinforcement Learning (mio file)
+        from drl_super_integration import DRLSuperManager
         self.volatility_predictor = VolatilityPredictor()
         self.risk_manager = {acc: RiskManagement() for acc in balances}
         self.memory = self.load_memory()
