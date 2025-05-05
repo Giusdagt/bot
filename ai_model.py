@@ -25,6 +25,7 @@ from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
 from price_prediction import PricePredictionModel
+from optimizer_core import OptimizerCore
 from data_handler import get_normalized_market_data, get_available_assets
 from risk_management import RiskManagement
 from volatility_tools import VolatilityPredictor
@@ -444,7 +445,6 @@ def background_optimization_loop(
     interval_seconds (int, opzionale):Intervallo di tempo in secondi tra
     due cicli di ottimizzazione. Default: 43200 secondi (12 ore).
     """
-    from optimizer_core import OptimizerCore
     optimizer = OptimizerCore(
         strategy_generator=ai_model_instance.strategy_generator,
         ai_model=ai_model_instance
