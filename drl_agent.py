@@ -9,7 +9,6 @@ from pathlib import Path
 import logging
 import numpy as np
 import polars as pl
-import asyncio
 import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO, DQN, A2C, SAC
@@ -347,48 +346,40 @@ class DRLSuperAgent:
 
 if __name__ == "__main__":
     try:
+        import asyncio
         from ai_model import AIModel, fetch_account_balances
+        from data_handler import get_available_assets, get_normalized_market_data
 
-        # Carica i dati elaborati e i bilanci
         data = asyncio.run(load_data())
         balances = fetch_account_balances()
-
-        # Recupera tutti gli asset e i relativi dati di mercato
         all_assets = get_available_assets()
         market_data = {
             symbol: get_normalized_market_data(symbol)
             for symbol in all_assets
         }
-
-        # Inizializza il modello AI per ottenere gli asset attivi
         ai_model = AIModel(market_data, balances)
 
-    except (FileNotFoundError, ValueError) as e:
-        logging.error(f"Errore durante il caricamento dei dati: {e}")
-        exit(1)
+        for symbol in ai_model.active_assets:
+            try:
+                env_raw = GymTradingEnv(
+                    data=market_data[symbol],
+                    symbol=symbol
+                )
+                from stable_baselines3.common.vec_env import DummyVecEnv
+                env = DummyVecEnv([lambda: env_raw])
 
-    # Addestramento DRL solo sugli asset attivi
-    for symbol in ai_model.active_assets:
-        try:
-            env_raw = GymTradingEnv(
-                data=market_data[symbol],
-                symbol=symbol
-            )
-            env = DummyVecEnv([lambda: env_raw])
+                agent_discrete = DRLSuperAgent(
+                    state_size=512, action_space_type="discrete", env=env
+                )
+                agent_discrete.train(steps=200_000)
 
-            # Addestra un agente con spazio discreto
-            agent_discrete = DRLSuperAgent(
-                state_size=512, action_space_type="discrete", env=env
-            )
-            agent_discrete.train(steps=200_000)
+                agent_continuous = DRLSuperAgent(
+                    state_size=512, action_space_type="continuous", env=env
+                )
+                agent_continuous.train(steps=200_000)
 
-            # Addestra un agente con spazio continuo
-            agent_continuous = DRLSuperAgent(
-                state_size=512, action_space_type="continuous", env=env
-            )
-            agent_continuous.train(steps=200_000)
-
-        except Exception as e:
-            logging.error(f"⚠️ Errore su {symbol}: {e}")
-
-    print("✅ Agenti DRL addestrati e salvati")
+            except Exception as e:
+                logging.error(f"⚠️ Errore su {symbol}: {e}")
+        print("✅ Agenti DRL addestrati e salvati")
+    except Exception as e:
+        logging.error(f"Errore nel main: {e}")
