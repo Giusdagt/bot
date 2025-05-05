@@ -30,7 +30,7 @@ from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
 from market_fingerprint import get_embedding_for_symbol
-from position_manager import PositionManager
+from rl_bridge import DRLAgent, DRLSuperManager, PositionManager
 from pattern_brain import PatternBrain
 
 print("ai_model.py caricato ✅")
@@ -105,8 +105,6 @@ class AIModel:
     strategy_generator (object): Generatore per le strategie di trading.
     """
     def __init__(self, market_data, balances):
-        from drl_agent import DRLAgent  # Reinforcement Learning (mio file)
-        from drl_super_integration import DRLSuperManager
         self.volatility_predictor = VolatilityPredictor()
         self.risk_manager = {acc: RiskManagement() for acc in balances}
         self.memory = self.load_memory()
