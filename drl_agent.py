@@ -346,8 +346,9 @@ class DRLSuperAgent:
 
 
 if __name__ == "__main__":
-    from ai_model import AIModel, fetch_account_balances
     try:
+        from ai_model import AIModel, fetch_account_balances
+
         # Carica i dati elaborati e i bilanci
         data = asyncio.run(load_data())
         balances = fetch_account_balances()
