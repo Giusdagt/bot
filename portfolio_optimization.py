@@ -98,7 +98,7 @@ class PortfolioOptimizer:
             balance_factor = min(0.05, balance / 10000)
             risk_tolerance = max(
                 0.01, min(0.05, balance_factor / (volatility * 10))
-            ) 
+            )
 
             risk_tolerances[account] = risk_tolerance
             logging.info(
@@ -107,7 +107,6 @@ class PortfolioOptimizer:
             )
 
         return risk_tolerances
-
 
     def _optimize_historical(self):
         """Ottimizzazione basata su dati storici con gestione avanzata."""
