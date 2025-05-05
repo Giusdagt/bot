@@ -30,7 +30,8 @@ from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
 from market_fingerprint import get_embedding_for_symbol
-from rl_bridge import DRLAgent, DRLSuperManager, PositionManager
+from rl_bridge import DRLAgent, DRLSuperManager
+from position_manager import PositionManager
 from pattern_brain import PatternBrain
 
 print("ai_model.py caricato ✅")
