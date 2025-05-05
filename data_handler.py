@@ -38,7 +38,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Disabilita l'inizializzazione di MetaTrader5 durante i test o in modalità mock
+# Disabilita l'inizializzazione MetaTrader5 durante i test o in modalità mock
 if "pytest" not in sys.modules and "MOCK_MT5" not in os.environ:
     if not mt5.initialize():
         logging.error("❌ Errore inizializzazione MT5: %s", mt5.last_error())
