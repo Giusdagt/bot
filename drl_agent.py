@@ -100,7 +100,7 @@ class GymTradingEnv(gym.Env):
                 self.current_step - SEQUENCE_LENGTH:self.current_step
             ].astype(np.float32).flatten()
             return obs, 0.0, True, False, {}
- 
+
         price_now = self.data[self.current_step][0]
         price_next = self.data[self.current_step + 1][0]
 
@@ -239,9 +239,10 @@ class DRLSuperAgent:
     """
     def __init__(self, state_size=512, action_space_type="discrete", env=None):
         self.state_size = state_size
-        
+
         self.env = env or DummyVecEnv([lambda: GymTradingEnv(
-            data=pl.DataFrame(np.zeros((SEQUENCE_LENGTH, state_size))),  # Dummy data
+            data=pl.DataFrame(
+                np.zeros((SEQUENCE_LENGTH, state_size))),  # Dummy data
             symbol="DUMMY",  # simbolo fittizio
             state_size=state_size,
             initial_balance=100
