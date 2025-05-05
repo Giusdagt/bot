@@ -110,7 +110,6 @@ class OptimizerCore:
         if not self.ai:
             return
 
-        from ai_model import AIModel 
         if AI_MEMORY_FILE.exists():
             mem = pl.read_parquet(AI_MEMORY_FILE)["memory"].to_numpy()
             if len(mem) > 10:
