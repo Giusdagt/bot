@@ -20,7 +20,6 @@ import threading
 import time
 import numpy as np
 import joblib
-from drl_agent import DRLSuperAgent
 
 print("drl_super_integration.py caricato ✅")
 
@@ -40,6 +39,7 @@ class DRLSuperManager:
     su array compressi senza occupare risorse.
     """
     def __init__(self, state_size=512):
+        from drl_agent import DRLSuperAgent
         self.super_agents = {
             "PPO": DRLSuperAgent(state_size=state_size),
             "DQN": DRLSuperAgent(state_size=state_size),
