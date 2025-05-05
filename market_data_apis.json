@@ -1,0 +1,68 @@
+{
+  "historical_data_source": "auto",
+  "file_path": "market_data.zstd.parquet",
+  "update_interval_days": 7,
+  "data_sources": {
+    "no_api": {
+      "binance_data": "https://data.binance.vision/data/spot/daily/klines",
+      "cryptodatadownload": "https://www.cryptodatadownload.com/cdd",
+      "coingecko": "https://api.coingecko.com/api/v3/coins",
+      "stooq": "https://stooq.com/q/d/l/?s={symbol}&i=d",
+      "yahoo_finance": "https://query1.finance.yahoo.com/v7/finance/download/{symbol}?period1=0&period2=9999999999&interval=1d&events=history",
+      "alphavantage": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey=demo"
+    }
+  },
+  "exchanges": [
+    {
+      "name": "CoinGecko",
+      "link": "https://www.coingecko.com/en/api",
+      "api_url": "https://api.coingecko.com/api/v3/coins/markets?vs_currency={currency}&order=market_cap_desc&per_page=250&page=1&sparkline=false",
+      "limitations": {
+        "requests_per_minute": 30
+      }
+    },
+    {
+      "name": "ForexData",
+      "link": "https://www.exchangeratesapi.io/",
+      "api_url": "https://api.exchangeratesapi.io/latest?base={currency}",
+      "api_key": "required",
+      "limitations": {
+        "requests_per_minute": 60
+      }
+    },
+    {
+      "name": "YahooFinance",
+      "link": "https://finance.yahoo.com",
+      "api_url": "https://query1.finance.yahoo.com/v7/finance/quote?symbols={symbol}",
+      "limitations": {
+        "requests_per_minute": 50
+      }
+    },
+    {
+      "name": "AlphaVantage",
+      "link": "https://www.alphavantage.co",
+      "api_url": "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={symbol}&apikey=demo",
+      "api_key": "required",
+      "limitations": {
+        "requests_per_minute": 5
+      }
+    },
+    {
+      "name": "Stooq",
+      "link": "https://stooq.com",
+      "api_url": "https://stooq.com/q/d/l/?s={symbol}&i=d",
+      "limitations": {
+        "requests_per_minute": "illimitato per il download storico"
+      }
+    },
+    {
+      "name": "Quandl",
+      "link": "https://www.quandl.com/",
+      "api_url": "https://www.quandl.com/api/v3/datasets/WIKI/{symbol}.json?api_key=demo",
+      "api_key": "required",
+      "limitations": {
+        "requests_per_minute": 10
+      }
+    }
+  ]
+}

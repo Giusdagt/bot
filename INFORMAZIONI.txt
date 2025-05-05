@@ -1,0 +1,43 @@
+AVVIARE CONTO REALE O CONTO DEMO
+SU CONFIG.JOSN IMPOSTARE SU REAL (REALE) (FALSE) DEMO
+CODICE AVVIO
+PYTHON test_trading_bot
+
+
+python C:\Bot_Trading\trading_bot.py
+
+.\virtuale\Scripts\activate entrare nella cartella virtuale
+
+✅Comando PowerShell per disattivare MT5:
+$env:MOCK_MT5="1"; python test.py
+
+✅ Oppure da CMD (Prompt dei comandi di Windows):
+set MOCK_MT5=1
+python test.py
+
+indirizzo dashboard 
+http://127.0.0.1:8050
+http://127.0.0.1:5000/
+
+server dash python app.py
+
+installare tutte le dipendenze e librerie automaticamente
+cd C:\Bot_Trading 
+python auto_dependency_installer.py
+
+risolvere errori di dipendenze e librerie
+cd C:\Bot_Trading
+python resolve_dependencies.py
+
+
+python -m pip install --upgrade pip
+
+configurare server su server.josn
+.\virtuale\Scripts\activate entrare nella cartella virtuale
+TRADING_BOT AVVIO
+MAIN GESTISCE LA LOGICA
+Gym si occupa di allenare e recuperare i dati dalle api
+training_environment
+
+python -m pip install --upgrade pip
+
