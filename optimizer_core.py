@@ -68,7 +68,7 @@ class OptimizerCore:
         self.sg.generated_strategies.update(top_strategies)
 
         df = pl.DataFrame({"strategies": [str(self.sg.generated_strategies)]})
-        df.write_parquet(STRATEGY_FILE, compression="zstd", mode="overwrite")
+        df.write_parquet(STRATEGY_FILE, compression="zstd")
         logging.info("✅ Strategie ottimizzate e salvate.")
 
     def optimize_anomalies(self):
@@ -83,7 +83,7 @@ class OptimizerCore:
         self.sg.market_anomalies = limited_anomalies
         df = pl.DataFrame({"anomalies": [limited_anomalies]})
         df.write_parquet(
-            ANOMALY_FILE, compression="zstd", mode="overwrite"
+            ANOMALY_FILE, compression="zstd"
         )
         logging.info("✅ Anomalie salvate e ottimizzate.")
 
@@ -100,7 +100,7 @@ class OptimizerCore:
         self.sg.compressed_knowledge = ck
 
         df = pl.DataFrame({"knowledge": [ck.tobytes()]})
-        df.write_parquet(KNOWLEDGE_FILE, compression="zstd", mode="overwrite")
+        df.write_parquet(KNOWLEDGE_FILE, compression="zstd")
         logging.info("🧠 Conoscenza compressa e salvata.")
 
     def optimize_ai_memory(self):
@@ -117,7 +117,7 @@ class OptimizerCore:
             mean_mem = np.mean(mem)
             df = pl.DataFrame({"memory": [mean_mem]})
             df.write_parquet(
-                AI_MEMORY_FILE, compression="zstd", mode="overwrite"
+                AI_MEMORY_FILE, compression="zstd"
             )
             logging.info("🧠 Memoria AI consolidata.")
 
@@ -129,7 +129,7 @@ class OptimizerCore:
             return
         df = pl.read_parquet(TRADE_FILE)
         df = df.sort("profit", descending=True).head(100)  # top 100 trade
-        df.write_parquet(TRADE_FILE, compression="zstd", mode="overwrite")
+        df.write_parquet(TRADE_FILE, compression="zstd")
         logging.info("📊 Trade compressi e ottimizzati.")
 
     def optimize_performance(self):
@@ -141,7 +141,7 @@ class OptimizerCore:
         df = pl.read_parquet(PERFORMANCE_FILE)
         df = df.tail(100)  # Ultime 100 righe di performance
         df.write_parquet(
-            PERFORMANCE_FILE, compression="zstd", mode="overwrite"
+            PERFORMANCE_FILE, compression="zstd"
         )
         logging.info("📈 Performance ottimizzate.")
 
