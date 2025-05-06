@@ -54,7 +54,7 @@ def auto_train_super_agent():
                 agent.train(steps=50_000)
                 logging.info("✅ Addestramento completato su %s", symbol)
 
-            except Exception as e:
+            except ( KeyError, ValueError )  as e:
                 logging.error("⚠️ Errore su %s: %s", symbol, e)
 
         logging.info("⏳ Pausa 6 ore prima del prossimo ciclo.")
