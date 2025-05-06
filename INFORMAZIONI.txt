@@ -1,11 +1,12 @@
-AVVIARE CONTO REALE O CONTO DEMO
-SU CONFIG.JOSN IMPOSTARE SU REAL (REALE) (FALSE) DEMO
 CODICE AVVIO
-PYTHON test_trading_bot
+python test_trading_bot
 
 python C:\Bot_Trading\trading_bot.py
 
 .\virtuale\Scripts\activate entrare nella cartella virtuale
+
+comando nel terminale per installare tutti i pachetti in una volta:
+pip install -r requirements.txt
 
 ✅Comando PowerShell per disattivare MT5:
 $env:MOCK_MT5="1"; python test.py
