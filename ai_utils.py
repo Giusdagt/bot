@@ -7,6 +7,13 @@ from data_handler import (
 from ai_model import AIModel, fetch_account_balances
 
 def prepare_ai_model():
+    """
+    Prepara il modello AI recuperando i bilanci dell'account, 
+    gli asset disponibili e i relativi dati di mercato normalizzati.
+    Restituisce:
+    tuple: Una tupla contenente l'istanza di AIModel e
+    il dizionario dei dati di mercato.
+    """
     balances = fetch_account_balances()
     all_assets = get_available_assets()
     market_data = {
