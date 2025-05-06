@@ -1,3 +1,6 @@
+# flake8: noqa
+# pylint: skip-file
+# type: ignore
 # -*- coding: utf-8 -*-
 """
 Script di test `test_bot_simulato.py`:
