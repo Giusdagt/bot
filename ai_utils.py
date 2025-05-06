@@ -1,6 +1,6 @@
 """
 ai_utils.py
-""""
+"""
 from data_handler import (
     get_normalized_market_data, get_available_assets
 )
