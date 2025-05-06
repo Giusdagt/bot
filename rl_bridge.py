@@ -10,6 +10,8 @@ from drl_agent import GymTradingEnv, DRLSuperAgent
 from ai_utils import prepare_ai_model
 from data_handler import process_historical_data
 
+print("rl_bridge.py caricato ✅")
+
 logging.basicConfig(level=logging.INFO)
 
 async def load_data():
