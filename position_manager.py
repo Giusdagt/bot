@@ -13,6 +13,7 @@ from smart_features import apply_all_market_structure_signals
 from data_handler import get_normalized_market_data
 from price_prediction import PricePredictionModel
 from volatility_tools import VolatilityPredictor
+from drl_super_integration import DRLSuperManager
 
 print("position_manager.py caricato ✅")
 
@@ -24,7 +25,6 @@ class PositionManager:
     per applicare strategie di chiusura automatizzate.
     """
     def __init__(self):
-        from drl_super_integration import DRLSuperManager
         self.price_predictor = PricePredictionModel()
         self.volatility_predictor = VolatilityPredictor()
         self.drl_super_manager = DRLSuperManager()
