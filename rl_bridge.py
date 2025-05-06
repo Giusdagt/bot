@@ -2,6 +2,10 @@
 Modulo ponte per evitare import ciclici tra ai_model,
 drl_agent, drl_super_integration e position_manager
 """
+from data_handler import (
+    process_historical_data, get_normalized_market_data,
+    get_available_assets
+)
 from ai_model import AIModel, fetch_account_balances
 
 if __name__ == "__main__":
