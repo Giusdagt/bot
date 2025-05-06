@@ -1,6 +1,6 @@
 """
 Modulo ponte per evitare import ciclici tra ai_model,
-drl_agent, drl_super_integration e position_manager.
+drl_agent, drl_super_integration e position_manager
 """
 
 from drl_super_integration import DRLSuperManager
