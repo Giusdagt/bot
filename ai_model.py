@@ -19,6 +19,8 @@ from pathlib import Path
 import polars as pl
 import numpy as np
 import MetaTrader5 as mt5
+from drl_agent import DRLAgent  # Reinforcement Learning (mio file)
+from drl_super_integration import DRLSuperManager
 from demo_module import demo_trade
 from backtest_module import run_backtest
 from strategy_generator import StrategyGenerator
@@ -30,7 +32,6 @@ from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
 from smart_features import apply_all_market_structure_signals
 from market_fingerprint import get_embedding_for_symbol
-from rl_bridge import DRLAgent, DRLSuperManager
 from position_manager import PositionManager
 from pattern_brain import PatternBrain
 
