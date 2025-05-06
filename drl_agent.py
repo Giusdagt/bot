@@ -234,7 +234,7 @@ class DRLSuperAgent:
     """
     Agente DRL avanzato che supporta PPO, DQN, A2C, SAC con ambiente autonomo.
     """
-    def __init__(self, state_size=512, action_space_type="discrete", env=None):
+    def __init__(self, state_size=512, env=None):
         self.state_size = state_size
 
         self.env = env or DummyVecEnv([lambda: GymTradingEnv(
