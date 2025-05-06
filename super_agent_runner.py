@@ -10,7 +10,7 @@ import threading
 import time
 import logging
 from stable_baselines3.common.vec_env import DummyVecEnv
-
+from ai_utils import prepare_ai_model
 from ai_model import AIModel, fetch_account_balances
 from data_handler import (
     get_available_assets,
@@ -34,15 +34,16 @@ def auto_train_super_agent():
     Ripete l'addestramento ogni 6 ore sugli asset attivi.
     """
     asyncio.run(load_data())
-    balances = fetch_account_balances()
+    ai_model, market_data = prepare_ai_model()
+    # balances = fetch_account_balances()
 
-    all_assets = get_available_assets()
-    market_data = {
-        symbol: get_normalized_market_data(symbol)
-        for symbol in all_assets
-    }
+    # all_assets = get_available_assets()
+    # market_data = {
+        # symbol: get_normalized_market_data(symbol)
+       # for symbol in all_assets
+   # }
 
-    ai_model = AIModel(market_data, balances)
+    #ai_model = AIModel(market_data, balances)
 
     while True:
         for symbol in ai_model.active_assets:
