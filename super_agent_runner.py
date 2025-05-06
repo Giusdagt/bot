@@ -32,15 +32,6 @@ def auto_train_super_agent():
     """
     asyncio.run(load_data())
     ai_model, market_data = prepare_ai_model()
-    # balances = fetch_account_balances()
-
-    # all_assets = get_available_assets()
-    # market_data = {
-        # symbol: get_normalized_market_data(symbol)
-       # for symbol in all_assets
-   # }
-
-    #ai_model = AIModel(market_data, balances)
 
     while True:
         for symbol in ai_model.active_assets:
@@ -54,7 +45,7 @@ def auto_train_super_agent():
                 agent.train(steps=50_000)
                 logging.info("✅ Addestramento completato su %s", symbol)
 
-            except ( KeyError, ValueError )  as e:
+            except (KeyError, ValueError) as e:
                 logging.error("⚠️ Errore su %s: %s", symbol, e)
 
         logging.info("⏳ Pausa 6 ore prima del prossimo ciclo.")
