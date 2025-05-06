@@ -1,4 +1,5 @@
 """
+drl_agent.py
 DRL avanzato + PPO/DQN/A2C/SAC con ReplayBuffer,
 DummyVecEnv, Environment autonomo
 DRLSuperAgent - Agente di Decisione Reinforcement Learning
@@ -64,7 +65,7 @@ class GymTradingEnv(gym.Env):
         )
         self.action_space = spaces.Discrete(3)  # 0 = hold, 1 = buy, 2 = sell
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None):
         """
         Reimposta l'ambiente di simulazione di trading.
         Returns:
