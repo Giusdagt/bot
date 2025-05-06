@@ -7,6 +7,7 @@ import logging
 import sys
 from stable_baselines3.common.vec_env import DummyVecEnv
 from drl_agent import GymTradingEnv, DRLSuperAgent
+from ai_utils import prepare_ai_model
 from data_handler import (
     get_normalized_market_data, get_available_assets,
     process_historical_data
@@ -33,15 +34,16 @@ if __name__ == "__main__":
     try:
         # Carica i dati elaborati e i bilanci
         asyncio.run(load_data())
-        balances = fetch_account_balances()
+        ai_model, market_data = prepare_ai_model()
+        # balances = fetch_account_balances()
 
-        all_assets = get_available_assets()
-        market_data = {
-            symbol: get_normalized_market_data(symbol)
-            for symbol in all_assets
-        }
+       # all_assets = get_available_assets()
+        # market_data = {
+           # symbol: get_normalized_market_data(symbol)
+           # for symbol in all_assets
+       # }
 
-        ai_model = AIModel(market_data, balances)
+       # ai_model = AIModel(market_data, balances)
 
         for symbol in ai_model.active_assets:
             try:
