@@ -13,6 +13,7 @@ import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO, DQN, A2C, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
+from data_handler import process_historical_data
 
 print("drl_agent.py caricato ✅")
 
