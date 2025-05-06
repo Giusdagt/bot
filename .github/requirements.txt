@@ -1,14 +1,17 @@
 numpy
 polars
 tensorflow
+sklearn
 scikit-learn
 requests
 MetaTrader5
 gym
+gymnasium
 stable-baselines3
 joblib
 aiohttp
 TA-Lib
+talib
 scipy
 PyPortfolioOpt
 types-requests
