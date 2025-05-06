@@ -8,11 +8,7 @@ import sys
 from stable_baselines3.common.vec_env import DummyVecEnv
 from drl_agent import GymTradingEnv, DRLSuperAgent
 from ai_utils import prepare_ai_model
-from data_handler import (
-    get_normalized_market_data, get_available_assets,
-    process_historical_data
-)
-from ai_model import AIModel, fetch_account_balances
+from data_handler import process_historical_data
 
 logging.basicConfig(level=logging.INFO)
 
