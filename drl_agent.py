@@ -9,7 +9,6 @@ from pathlib import Path
 import logging
 import numpy as np
 import polars as pl
-import asyncio
 import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO, DQN, A2C, SAC
