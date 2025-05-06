@@ -6,7 +6,7 @@ import asyncio
 import logging
 import sys
 from stable_baselines3.common.vec_env import DummyVecEnv
-from drl_agent import GymTradingEnv, DRLAgent, DRLSuperAgent
+from drl_agent import GymTradingEnv, DRLSuperAgent
 from data_handler import (
     get_normalized_market_data, get_available_assets,
     process_historical_data
@@ -16,6 +16,16 @@ from ai_model import AIModel, fetch_account_balances
 logging.basicConfig(level=logging.INFO)
 
 async def load_data():
+    """
+    Elabora i dati storici richiesti per
+    il sistema di trading.
+    Questa funzione è asincrona e utilizza
+    `process_historical_data`
+    per preparare i dati richiesti da altri moduli.
+    Attualmente restituisce un valore placeholder
+    `True` per future espansioni.
+    Returns:bool: Sempre `True`, come placeholder.
+    """
     await process_historical_data()
     return True  # placeholder per future espansioni
 
@@ -39,7 +49,7 @@ if __name__ == "__main__":
                     data=market_data[symbol],
                     symbol=symbol
                 )
-                env = DummyVecEnv([lambda: env_raw])
+                env = DummyVecEnv([lambda env_raw=env_raw: env_raw])
 
                 agent_discrete = DRLSuperAgent(
                     state_size=512, env=env
@@ -51,12 +61,11 @@ if __name__ == "__main__":
                 )
                 agent_continuous.train(steps=200_000)
 
-            except Exception as e:
+            except (ValueError, FileNotFoundError) as e:
                 logging.error("⚠️ Errore su %s: %s", symbol, e)
 
         print("✅ Agenti DRL addestrati e salvati")
 
-    except Exception as e:
+    except (ValueError, FileNotFoundError) as e:
         logging.error("Errore nel main: %s", e)
         sys.exit(1)
-
