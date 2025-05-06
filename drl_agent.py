@@ -272,9 +272,9 @@ class DRLSuperAgent:
                 return "A2C"
             return "PPO"
 
-            raise ValueError(
-                f" spazio azione non supportato: {type(self.env.action_space)}"
-            )
+        raise ValueError(
+            f" spazio azione non supportato: {type(self.env.action_space)}"
+        )
 
     def _init_model(self, algo):
         if algo == "PPO":
