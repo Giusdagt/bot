@@ -6,6 +6,8 @@ from data_handler import (
 )
 from ai_model import AIModel, fetch_account_balances
 
+print("ai_utils.py caricato ✅")
+
 def prepare_ai_model():
     """
     Prepara il modello AI recuperando i bilanci dell'account, 
