@@ -11,12 +11,7 @@ import time
 import logging
 from stable_baselines3.common.vec_env import DummyVecEnv
 from ai_utils import prepare_ai_model
-from ai_model import AIModel, fetch_account_balances
-from data_handler import (
-    get_available_assets,
-    get_normalized_market_data,
-    process_historical_data
-)
+from data_handler import process_historical_data
 from drl_agent import GymTradingEnv, DRLSuperAgent
 
 logging.basicConfig(level=logging.INFO)
