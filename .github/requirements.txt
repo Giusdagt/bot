@@ -14,6 +14,7 @@ TA-Lib
 talib
 scipy
 PyPortfolioOpt
+pypfopt
 types-requests
 types-tensorflow
 shimmy
