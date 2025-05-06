@@ -14,6 +14,7 @@ print("rl_bridge.py caricato ✅")
 
 logging.basicConfig(level=logging.INFO)
 
+
 async def load_data():
     """
     Elabora i dati storici richiesti per
@@ -33,15 +34,6 @@ if __name__ == "__main__":
         # Carica i dati elaborati e i bilanci
         asyncio.run(load_data())
         ai_model, market_data = prepare_ai_model()
-        # balances = fetch_account_balances()
-
-       # all_assets = get_available_assets()
-        # market_data = {
-           # symbol: get_normalized_market_data(symbol)
-           # for symbol in all_assets
-       # }
-
-       # ai_model = AIModel(market_data, balances)
 
         for symbol in ai_model.active_assets:
             try:
