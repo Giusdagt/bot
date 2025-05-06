@@ -280,7 +280,9 @@ class DRLSuperAgent:
         if algo == "PPO":
             return PPO(
                 "MlpPolicy", self.env, verbose=0,
-                policy_kwargs={"net_arch": [{"pi": [128, 64], "vf": [128, 64]}]}
+                policy_kwargs={
+                    "net_arch": [
+                        {"pi": [128, 64], "vf": [128, 64]}]}
             )
         if algo == "DQN":
             return DQN(
@@ -290,7 +292,9 @@ class DRLSuperAgent:
         if algo == "A2C":
             return A2C(
                 "MlpPolicy", self.env, verbose=0,
-                policy_kwargs={"net_arch": [{"pi": [128, 64], "vf": [128, 64]}]}
+                policy_kwargs={
+                    "net_arch": [
+                        {"pi": [128, 64], "vf": [128, 64]}]}
             )
         if algo == "SAC":
             return SAC(
