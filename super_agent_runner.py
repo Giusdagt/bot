@@ -14,6 +14,8 @@ from ai_utils import prepare_ai_model
 from data_handler import process_historical_data
 from drl_agent import GymTradingEnv, DRLSuperAgent
 
+print("super_agent_runner.py caricato ✅")
+
 logging.basicConfig(level=logging.INFO)
 
 
