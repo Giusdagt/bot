@@ -249,7 +249,7 @@ class DRLSuperAgent:
         # Seleziona automaticamente l'algoritmo
         self.algo = self._select_algorithm()
         self.model = self._init_model(self.algo)
-        logging.info(f"Algoritmo selezionato: {self.algo}")
+        logging.info("Algoritmo selezionato: %s", self.algo)
 
     def _select_algorithm(self):
         """
@@ -259,21 +259,19 @@ class DRLSuperAgent:
         str: Nome dell'algoritmo selezionato.
         """
         space = self.env.envs[0].action_space
-        logging.info(f"Tipo di spazio di azione: {type(space)}")
+        logging.info("Tipo di spazio di azione: %s", type(space))
 
         if isinstance(space, spaces.Box):
             if self.state_size > 256:
                 return "SAC"
-            else:
-                return "A2C"
-        elif isinstance(space, spaces.Discrete):
+            return "A2C"
+        if isinstance(space, spaces.Discrete):
             if self.state_size < 256:
                 return "DQN"
-            elif self.state_size <= 512:
+            if self.state_size <= 512:
                 return "A2C"
-            else:
-                return "PPO"
-        else:
+            return "PPO"
+
             raise ValueError(
                 f" spazio azione non supportato: {type(self.env.action_space)}"
             )
@@ -282,7 +280,7 @@ class DRLSuperAgent:
         if algo == "PPO":
             return PPO(
                 "MlpPolicy", self.env, verbose=0,
-                policy_kwargs={"net_arch": [dict(pi=[128, 64], vf=[128, 64])]}
+                policy_kwargs={"net_arch": [{"pi": [128, 64], "vf": [128, 64]}]}
             )
         if algo == "DQN":
             return DQN(
@@ -292,7 +290,7 @@ class DRLSuperAgent:
         if algo == "A2C":
             return A2C(
                 "MlpPolicy", self.env, verbose=0,
-                policy_kwargs={"net_arch": [dict(pi=[128, 64], vf=[128, 64])]}
+                policy_kwargs={"net_arch": [{"pi": [128, 64], "vf": [128, 64]}]}
             )
         if algo == "SAC":
             return SAC(
