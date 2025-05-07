@@ -183,6 +183,29 @@ def fetch_mt5_data(symbol, timeframe="1m"):
         logging.error("❌ Errore nel recupero dati MT5 per %s: %s", symbol, e)
         return None
 
+def get_multi_timeframe_data(symbol, timeframes):
+    """
+    Restituisce un dizionario con i dati di mercato
+    per ciascun timeframe specificato.
+    Sceglie automaticamente se utilizzare dati normalizzati o
+    recuperare dati diretti.
+    """
+    result = {}
+    for tf in timeframes:
+        try:
+            # Prova a recuperare i dati normalizzati
+            normalized_data = get_normalized_market_data(f"{symbol}_{tf}")
+            if normalized_data is not None:
+                result[tf] = normalized_data
+            else:
+                # Se i dati normalizzati non sono disponibili, recupera i dati diretti
+                result[tf] = fetch_mt5_data(symbol, timeframe=tf)
+        except Exception as e:
+            # Log dell'errore per eventuali problemi nel recupero dei dati
+            logging.error(f"Errore nel recupero dei dati per {symbol} con timeframe {tf}: {e}")
+            result[tf] = None
+    return result
+
 
 async def get_realtime_data(symbols):
     """Ottiene dati in tempo reale da MT5 e aggiorna il database."""
@@ -212,13 +235,18 @@ def get_normalized_market_data(symbol):
             pl.col("symbol") == symbol
         ).collect()
 
-        if df.is_empty():
+        if df is None or df.is_empty():
             logging.warning("⚠️ Nessun dato trovato %s, avvio fetch.", symbol)
             fetch_new_data()
             return None
 
-        latest_data = df[-1]  # Prende l'ultimo valore disponibile
-        return latest_data.to_dict()
+        # Verifica il numero di righe e restituisce di conseguenza
+        if df.shape[0] == 1:
+            # Se il DataFrame ha una sola riga, restituiscila come dizionario
+            return df[-1].to_dict()
+
+        # Altrimenti, restituisci il DataFrame completo
+        return df
 
     except (OSError, IOError, ValueError) as e:
         logging.error("❌ Errore durante il recupero dei dati "
