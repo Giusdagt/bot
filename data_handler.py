@@ -116,7 +116,7 @@ def normalize_data(df):
     """Normalizzazione avanzata con selezione dinamica delle feature per IA."""
     if df.is_empty():
         return df
-    numeric_cols = df.select(pl.col(pl.NUMERIC_DTYPES)).columns
+    numeric_cols = [col for col in AI_FEATURES if col in df.columns]
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
     df = df.with_columns(
