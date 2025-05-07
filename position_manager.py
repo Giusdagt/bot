@@ -55,13 +55,16 @@ class PositionManager:
 
             # Recupero dati di mercato e segnali
             market_data = get_normalized_market_data(symbol)
-            if market_data is None or market_data.height == 0:
+            if market_data is None or market_data.is_empty():
+                logging.warning(
+                    "⚠️ Dati mancanti o vuoti per %s. Salto gestione posizione.", symbol
+                )
                 continue
             market_data = apply_all_market_structure_signals(market_data)
 
+            TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
             embedding = np.concatenate([
-                get_embedding_for_symbol(symbol, tf) for tf in
-                ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+                get_embedding_for_symbol(symbol, tf) for tf in TIMEFRAMES
             ])
             last_row = market_data[-1]
             signal_score = int(last_row["weighted_signal_score"])
