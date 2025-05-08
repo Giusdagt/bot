@@ -216,7 +216,7 @@ class AIModel:
         """
         risk_manager = self.risk_manager[account]
         base_lot = risk_manager.calculate_position_size(
-        self.balances[account], symbol
+            self.balances[account], symbol
         )
 
         multiplier = 1.0
@@ -230,9 +230,10 @@ class AIModel:
 
         final_lot = base_lot * multiplier
 
-        max_lot = self.balances[account] * risk_manager.risk_settings["max_exposure"]
+        max_lot = (
+            self.balances[account] * risk_manager.risk_settings["max_exposure"]
+        )
         return max(0.01, min(final_lot, max_lot))
-
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
         """
@@ -340,11 +341,6 @@ class AIModel:
         )
 
         for account in self.balances:
-            # Rimuovi questa riga inutilizzata
-            # last_close = market_data["close"][-1]
-            risk = (
-                self.risk_manager[account].calculate_dynamic_risk(market_data)
-            )
 
             action_rl, confidence_score, algo_used = (
                 self.drl_super_manager.get_best_action_and_confidence(
