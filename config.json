@@ -63,12 +63,12 @@
         }
     },
     "database": {
-        "save_trades": true,
+        "save_trades": false,
         "database_type": "sqlite",
         "database_name": "trades.db"
     },
     "logging": {
-        "enable_dashboard": true,
+        "enable_dashboard": false,
         "log_level": "INFO"
     },
     "security": {
