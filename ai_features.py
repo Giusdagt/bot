@@ -39,6 +39,7 @@ FEATURE_SET_MAP = {
     "macro": AI_FEATURES_MACRO
 }
 
+
 def get_features_by_strategy_type(strategy_type: str):
     """
     Restituisce l'elenco di feature
@@ -50,6 +51,7 @@ def get_features_by_strategy_type(strategy_type: str):
     list[str]: Elenco di colonne da usare per IA/DRL
     """
     return FEATURE_SET_MAP.get(strategy_type.lower(), AI_FEATURES_SWING)
+
 
 def get_ai_features_from_df(df, strategy_type: str):
     """
