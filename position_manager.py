@@ -124,6 +124,10 @@ class PositionManager:
             predicted_price = (
                 self.price_predictor.predict_price(symbol, full_state)
             )
+            gain = (
+                current_price - entry_price if
+                action == "buy" else entry_price - current_price
+            )
             predicted_volatility = (
                 self.volatility_predictor.predict_volatility(
                     full_state.reshape(1, -1)
@@ -150,10 +154,6 @@ class PositionManager:
 
             # Strategia di chiusura intelligente
             trailing_stop_trigger = 0.5 * predicted_volatility * 10000
-            gain = (
-                current_price - entry_price if
-                action == "buy" else entry_price - current_price
-            )
 
             if profit > 0:
                 if gain * 100000 > trailing_stop_trigger and signal_score < 1:
