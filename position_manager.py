@@ -57,7 +57,8 @@ class PositionManager:
             market_data = get_normalized_market_data(symbol)
             if market_data is None or market_data.is_empty():
                 logging.warning(
-                    "⚠️ Dati mancanti o vuoti per %s. Salto gestione posizione.", symbol
+                    "⚠️ Dati mancanti/vuoti per %s. Salto gestione posizione.",
+                    symbol
                 )
                 continue
             market_data = apply_all_market_structure_signals(market_data)
@@ -85,23 +86,30 @@ class PositionManager:
                     full_state.reshape(1, -1)
                 )[0]
             )
-            
+
             # 📉 Engulfing ribassista → chiude BUY
             if last_row.get("engulfing_bearish", 0) == 1 and action == "buy":
                 self.close_position(pos)
-                logging.info("📉 Engulfing ribassista → chiudo BUY su %s", symbol)
+                logging.info(
+                    "📉 Engulfing ribassista → chiudo BUY su %s", symbol
+                )
                 continue
 
             # 📈 Engulfing rialzista → chiude SELL
             if last_row.get("engulfing_bullish", 0) == 1 and action == "sell":
                 self.close_position(pos)
-                logging.info("📈 Engulfing rialzista → chiudo SELL su %s", symbol)
+                logging.info(
+                    "📈 Engulfing rialzista → chiudo SELL su %s", symbol
+                )
                 continue
 
-            # 🔒 Inside Bar → chiude posizione prudenzialmente se già in profitto
+            # 🔒 Inside Bar chiude posizione prudenzialmente se già in profitto
             if last_row.get("inside_bar", 0) == 1 and profit > 0:
                 self.close_position(pos)
-                logging.info("📦 Inside Bar rilevata → chiudo posizione in profitto su %s", symbol)
+                logging.info(
+                    "📦 Inside Bar rilevata → chiudo posizione in profitto su %s",
+                    symbol
+                )
                 continue
 
             # 🔺 Fakeout up → chiude BUY (possibile inversione)
@@ -116,17 +124,23 @@ class PositionManager:
                 logging.info("🧨 Fakeout DOWN → chiudo SELL su %s", symbol)
                 continue
 
-            # 💥 Volatility Squeeze → chiude posizione per evitare breakout contro
+            # 💥 Volatility Squeeze → chiude posizione per evitare breakout
             if last_row.get("volatility_squeeze", 0) == 1:
                 self.close_position(pos)
-                logging.info("💥 Volatility Squeeze → chiudo %s su %s", action.upper(), symbol)
+                logging.info(
+                    "💥 Volatility Squeeze → chiudo %s su %s",
+                    action.upper(), symbol
+                )
                 continue
 
             # 🟩 Break-even intelligente se in forte profitto + segnali deboli
             if profit > 0 and signal_score < 1:
                 if gain * 100000 > 2 * predicted_volatility * 10000:
                     self.close_position(pos)
-                    logging.info("⚖️ Break-even → chiudo %s su %s in profitto", action.upper(), symbol)
+                    logging.info(
+                        "⚖️ Break-even → chiudo %s su %s in profitto",
+                        action.upper(), symbol
+                    )
                     continue
 
             predicted_price = (
