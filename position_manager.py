@@ -107,7 +107,7 @@ class PositionManager:
             if last_row.get("inside_bar", 0) == 1 and profit > 0:
                 self.close_position(pos)
                 logging.info(
-                    "📦 Inside Bar rilevata → chiudo posizione in profitto su %s",
+                    "📦 Inside Bar rilevata chiudo posizione in profitto %s",
                     symbol
                 )
                 continue
