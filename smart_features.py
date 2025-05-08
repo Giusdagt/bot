@@ -37,7 +37,15 @@ def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
         ((body_size / total_range) < 0.2).alias("is_indecision")
     ])
 
-    engulfing = [
+    engulfing_bullish = [
+        df["open"][i] < df["close"][i] and
+        df["close"][i + 1] < df["open"][i + 1] and
+        df["close"][i + 1] < df["open"][i] and
+        df["open"][i + 1] > df["close"][i]
+        for i in range(len(df) - 1)
+    ] + [False]
+
+    engulfing_bearish = [
         df["open"][i] > df["close"][i] and
         df["close"][i + 1] > df["open"][i + 1] and
         df["close"][i + 1] > df["open"][i] and
@@ -51,7 +59,8 @@ def add_candle_features(df: pl.DataFrame) -> pl.DataFrame:
     ]
 
     df = df.with_columns([
-        pl.Series("engulfing", engulfing),
+        pl.Series("engulfing_bullish", engulfing_bullish),
+        pl.Series("engulfing_bearish", engulfing_bearish),
         pl.Series("inside_bar", inside_bar)
     ])
 
