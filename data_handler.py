@@ -28,7 +28,8 @@ from data_loader import (
     load_preset_assets
 )
 from data_api_module import main as fetch_new_data
-from smart_features import apply_all_advanced_features
+from smart_features import apply_all_advanced_features, detect_strategy_type
+from ai_features import get_features_by_strategy_type
 from market_fingerprint import update_embedding_in_processed_file
 
 print("data_handler.py caricato ✅")
@@ -116,7 +117,8 @@ def normalize_data(df):
     """Normalizzazione avanzata con selezione dinamica delle feature per IA."""
     if df.is_empty():
         return df
-    numeric_cols = [col for col in AI_FEATURES if col in df.columns]
+    strategy_type = detect_strategy_type(df)
+    numeric_cols = get_features_by_strategy_type(strategy_type)
     scaler = MinMaxScaler()
     scaled_data = scaler.fit_transform(df.select(numeric_cols).to_numpy())
     df = df.with_columns(
