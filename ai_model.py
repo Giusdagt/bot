@@ -30,7 +30,9 @@ from data_handler import get_normalized_market_data, get_available_assets
 from risk_management import RiskManagement
 from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
-from smart_features import apply_all_market_structure_signals, apply_all_advanced_features
+from smart_features import (
+    apply_all_market_structure_signals, apply_all_advanced_features
+)
 from market_fingerprint import get_embedding_for_symbol
 from position_manager import PositionManager
 from pattern_brain import PatternBrain
@@ -235,7 +237,9 @@ class AIModel:
         )
         return max(0.01, min(final_lot, max_lot))
 
-    def execute_trade(self, account, symbol, action, lot_size, risk, strategy, sl, tp):
+    def execute_trade(
+        self, account, symbol, action, lot_size, risk, strategy, sl, tp
+    ):
         """
         Esegue un'operazione di trading su MetaTrader 5
         in base ai parametri specificati.
@@ -256,6 +260,7 @@ class AIModel:
             "volume": lot_size,
             "type": mt5.ORDER_BUY if action == "buy" else mt5.ORDER_SELL,
             "price": mt5.symbol_info_tick(symbol).ask,
+            "price": current_price,
             "deviation": 10,
             "magic": 0,
             "comment": f"AI Trade ({strategy})",
@@ -430,7 +435,7 @@ class AIModel:
 
             if pattern_confidence < 0.3:
                 return
-            
+
             if success_probability > 0.5:
 
                 self.risk_manager[account].max_trades -= 1
