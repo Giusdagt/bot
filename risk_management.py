@@ -54,6 +54,52 @@ class RiskManagement:
         self.kill_switch_activated = False
         self.volatility_predictor = VolatilityPredictor()
         self.recovery_counter = 0
+        self.adaptive_enabled = config["risk_management"].get("adaptive_risk_management", True)
+        self.take_profit_pct = config["risk_management"].get("take_profit_pct", 0.05)
+        self.max_trades = config["risk_management"].get("max_trades", 5)
+
+
+    def calculate_dynamic_risk(self, market_data):
+        """
+        Calcola il rischio dinamico in base ai dati di mercato.
+        """
+        if not market_data or "volatility" not in market_data:
+            return self.risk_settings["risk_per_trade"]
+
+        volatility = market_data["volatility"]
+        momentum = market_data.get("momentum", 1.0)
+
+        if volatility < 0.3 and momentum > 1:
+            return min(0.03, self.risk_settings["risk_per_trade"] * 1.5)
+        elif volatility > 0.5:
+            return max(0.005, self.risk_settings["risk_per_trade"] * 0.5)
+        else:
+            return self.risk_settings["risk_per_trade"]
+
+
+    def check_drawdown(self, current_balance):
+        """
+        Monitora il drawdown e attiva il kill switch se necessario.
+        """
+        if self.balance_info['max'] == 0:
+            self.balance_info['max'] = current_balance
+            self.balance_info['min'] = current_balance
+
+        if current_balance < self.balance_info['min']:
+            self.balance_info['min'] = current_balance
+
+        if current_balance > self.balance_info['max']:
+            self.balance_info['max'] = current_balance
+
+        drawdown = (
+            (self.balance_info['max'] - current_balance)
+            / self.balance_info['max']
+        ) if self.balance_info['max'] > 0 else 0
+
+        if drawdown > self.risk_settings["max_drawdown"]:
+            self.kill_switch_activated = True
+            logging.error("🛑 KILL SWITCH ATTIVATO: drawdown %.2f%%", drawdown * 100)
+
 
     def adaptive_stop_loss(self, entry_price, symbol):
         """Calcola stop-loss e trailing-stop basati su dati normalizzati."""
@@ -66,7 +112,9 @@ class RiskManagement:
         volatility = market_data["volatility"]
         stop_loss = entry_price * (1 - (volatility * 1.5))
         trailing_stop = entry_price * (1 - (volatility * 0.8))
-        return stop_loss, trailing_stop
+        take_profit = entry_price * (1 + self.take_profit_pct)
+        return stop_loss, trailing_stop, take_profit
+
 
     def adjust_risk(self, symbol):
         """Adatta trailing stop e il capitale usando dati normalizzati."""
@@ -105,6 +153,9 @@ class RiskManagement:
         """Dimensione ottimale della posizione in base al saldo e ai dati"""
         market_data = data_handler.get_normalized_market_data(symbol)
 
+        if self.adaptive_enabled:
+            self.adjust_risk(symbol)
+
         if balance <= 0:
             logging.warning(
                 "⚠️ Saldo non valido (%s) per %s, imposta 0.",
@@ -112,6 +163,12 @@ class RiskManagement:
                 symbol
             )
             return 0
+
+        self.check_drawdown(balance)
+        if self.kill_switch_activated:
+            logging.warning("🛑 Kill switch attivo. Nessuna posizione.")
+            return 0
+
 
         if not market_data or "momentum" not in market_data:
             logging.warning(
@@ -125,4 +182,7 @@ class RiskManagement:
         base_position_size = balance * self.risk_settings["risk_per_trade"]
         adjusted_position_size = base_position_size * momentum_factor
         max_allowed = balance * self.risk_settings["max_exposure"]
+        if market_data and market_data.get("ILQ_Zone") == 1 and market_data.get("volatility", 1) < 0.3:
+            adjusted_position_size *= 1.5
+
         return min(adjusted_position_size, max_allowed)
