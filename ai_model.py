@@ -210,33 +210,28 @@ class AIModel:
         self, account, symbol, success_probability,
         confidence_score, predicted_volatility
     ):
-    """
-    Calcola la dimensione del lotto in modo ultra-intelligente e integrato.
-    Combina risk manager, confidenza AI, ILQ zone, momentum e volatilità.
-    """
-    risk_manager = self.risk_manager[account]
-    base_lot = risk_manager.calculate_position_size(
+        """
+        Calcola la dimensione del lotto in modo ultra-intelligente e integrato.
+        Combina risk manager, confidenza AI, ILQ zone, momentum e volatilità.
+        """
+        risk_manager = self.risk_manager[account]
+        base_lot = risk_manager.calculate_position_size(
         self.balances[account], symbol
-    )
+        )
 
-    # Fattore di aumento se AI è molto sicura e il pattern è forte
-    multiplier = 1.0
-    if success_probability > 0.9 and confidence_score > 0.9:
-        multiplier *= 1.5
+        multiplier = 1.0
+        if success_probability > 0.9 and confidence_score > 0.9:
+            multiplier *= 1.5
 
-    # Riduce il lotto se la volatilità è eccessiva
-    if predicted_volatility:
-        multiplier *= np.clip(1 / (1 + predicted_volatility), 0.5, 1.2)
+        if predicted_volatility:
+            multiplier *= np.clip(1 / (1 + predicted_volatility), 0.5, 1.2)
 
-    # Applica la forza della strategia per aumentare se forte
-    multiplier *= np.clip(self.strategy_strength, 0.5, 3.0)
+        multiplier *= np.clip(self.strategy_strength, 0.5, 3.0)
 
-    # Applica moltiplicatore finale
-    final_lot = base_lot * multiplier
+        final_lot = base_lot * multiplier
 
-    # Garantisce che non superi i limiti definiti dal risk manager
-    max_lot = self.balances[account] * risk_manager.risk_settings["max_exposure"]
-    return max(0.01, min(final_lot, max_lot))
+        max_lot = self.balances[account] * risk_manager.risk_settings["max_exposure"]
+        return max(0.01, min(final_lot, max_lot))
 
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
