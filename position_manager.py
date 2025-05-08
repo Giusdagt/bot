@@ -133,6 +133,29 @@ class PositionManager:
                 )
                 continue
 
+            # 📊 Trailing Stop dinamico se in profitto
+            if profit > 0:
+                highest_price = (
+                    pos.price_current if action == "buy" else pos.price_current
+                )
+                ts_price = (
+                    entry_price + (gain * 0.7)
+                    if action == "buy" else entry_price - (gain * 0.7)
+                )
+                if (
+                    (action == "buy" and current_price < ts_price)
+                    or (action == "sell" and current_price > ts_price)
+                ):
+                    self.close_position(pos)
+                    logging.info(
+                        "📉 Trailing Stop attivato su %s | Profit: %.2f",
+                        symbol,
+                        profit
+                    )
+                if gain is None or entry_price is None:
+                    logging.error("Valori non validi per gain o entry_price.")
+                    continue
+
             # 🟩 Break-even intelligente se in forte profitto + segnali deboli
             if profit > 0 and signal_score < 1:
                 if gain * 100000 > 2 * predicted_volatility * 10000:
@@ -169,35 +192,37 @@ class PositionManager:
             # Strategia di chiusura intelligente
             trailing_stop_trigger = 0.5 * predicted_volatility * 10000
 
+            # 📊 Trailing Stop dinamico fisico su MT5
             if profit > 0:
-                if gain * 100000 > trailing_stop_trigger and signal_score < 1:
-                    self.close_position(pos)
-                    logging.info(
-                        "🚨 EXIT | %s | Profit: %.2f | Segnali in calo",
-                        symbol,
-                        profit
-                    )
-            elif profit < 0:
-                if abs(profit) > 0.02 * volume * 100000:  # stop loss dinamico
-                    self.close_position(pos)
-                    logging.info(
-                        "🚑 STOP | %s | Perd: %.2f | Prot.",
-                        symbol,
-                        profit
-                    )
-            else:
-                # Se il segnale cambia direzione bruscamente
-                if (
-                    action == "buy" and predicted_price < current_price
-                ) or (
-                    action == "sell" and predicted_price > current_price
-                ):
-                    self.close_position(pos)
-                    logging.info(
-                        "📊 EXIT | %s | Profit: %.2f | inversione",
-                        symbol,
-                        profit
-                    )
+                if action == "buy":
+                    trailing_sl = entry_price + (gain * 0.7)
+                    if current_price < trailing_sl:
+                        self.close_position(pos)
+                        logging.info("📉 Trailing Stop attivato su %s | Profit: %.2f", symbol, profit)
+                        continue
+                    if trailing_sl > pos.sl:
+                        self.update_trailing_stop(pos, trailing_sl)
+                else:
+                    trailing_sl = entry_price - (gain * 0.7)
+                    if current_price > trailing_sl:
+                        self.close_position(pos)
+                        logging.info("📉 Trailing Stop attivato su %s | Profit: %.2f", symbol, profit)
+                        continue
+                    if trailing_sl < pos.sl:
+                        self.update_trailing_stop(pos, trailing_sl)
+
+    def update_trailing_stop(self, pos, new_sl):
+        mt5.order_modify(
+            ticket=pos.ticket,
+            price=pos.price_open,
+            stoplimit=0,
+            sl=new_sl,
+            tp=pos.tp,
+            deviation=10,
+            type_time=mt5.ORDER_TIME_GTC,
+            type_filling=mt5.ORDER_FILLING_IOC
+        )
+
 
     def close_position(self, pos):
         """
