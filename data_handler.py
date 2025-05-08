@@ -200,11 +200,14 @@ def get_multi_timeframe_data(symbol, timeframes):
             if normalized_data is not None:
                 result[tf] = normalized_data
             else:
-                # Se i dati normalizzati non sono disponibili, recupera i dati diretti
+                # Se i dati non sono disponibili, recupera i dati diretti
                 result[tf] = fetch_mt5_data(symbol, timeframe=tf)
         except Exception as e:
             # Log dell'errore per eventuali problemi nel recupero dei dati
-            logging.error(f"Errore nel recupero dei dati per {symbol} con timeframe {tf}: {e}")
+            logging.error(
+                "Errore nel recupero dei dati per %s con timeframe %s: %s",
+                symbol, tf, e
+            )
             result[tf] = None
     return result
 
