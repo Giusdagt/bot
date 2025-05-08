@@ -63,9 +63,9 @@ class PositionManager:
                 continue
             market_data = apply_all_market_structure_signals(market_data)
 
-            TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
+            timeframes = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
             embedding = np.concatenate([
-                get_embedding_for_symbol(symbol, tf) for tf in TIMEFRAMES
+                get_embedding_for_symbol(symbol, tf) for tf in timeframes
             ])
             last_row = market_data[-1]
             signal_score = int(last_row["weighted_signal_score"])
