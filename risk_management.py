@@ -54,8 +54,12 @@ class RiskManagement:
         self.kill_switch_activated = False
         self.volatility_predictor = VolatilityPredictor()
         self.recovery_counter = 0
-        self.adaptive_enabled = config["risk_management"].get("adaptive_risk_management", True)
-        self.take_profit_pct = config["risk_management"].get("take_profit_pct", 0.05)
+        self.adaptive_enabled = (
+            config["risk_management"].get("adaptive_risk_management", True)
+        )
+        self.take_profit_pct = (
+            config["risk_management"].get("take_profit_pct", 0.05)
+        )
         self.max_trades = config["risk_management"].get("max_trades", 5)
 
     def calculate_dynamic_risk(self, market_data):
