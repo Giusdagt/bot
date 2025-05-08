@@ -30,7 +30,7 @@ from data_handler import get_normalized_market_data, get_available_assets
 from risk_management import RiskManagement
 from volatility_tools import VolatilityPredictor
 from portfolio_optimization import PortfolioOptimizer
-from smart_features import apply_all_market_structure_signals
+from smart_features import apply_all_market_structure_signals, apply_all_advanced_features
 from market_fingerprint import get_embedding_for_symbol
 from position_manager import PositionManager
 from pattern_brain import PatternBrain
@@ -311,6 +311,7 @@ class AIModel:
             run_backtest(symbol, market_data)
             return False
 
+        market_data = apply_all_advanced_features(market_data)
         market_data = apply_all_market_structure_signals(market_data)
 
         # Calcolo degli embedding e del signal score
@@ -335,6 +336,10 @@ class AIModel:
             [market_data_array, [signal_score], *embeddings]
         )
         full_state = np.clip(full_state, -1, 1)
+
+        if self.risk_manager[account].max_trades <= 0:
+            logging.warning("❌ Max trades raggiunti per %s", account)
+            return
 
         predicted_price = (
             self.price_predictor.predict_price(symbol, full_state)
@@ -372,6 +377,9 @@ class AIModel:
                     full_state.reshape(1, -1)
                 )[0]
             )
+
+            self.risk_manager[account].adjust_risk(symbol)
+            sl, ts, tp = self.risk_manager[account].adaptive_stop_loss(market_data["close"].iloc[-1], symbol)
 
             lot_size = self.adapt_lot_size(
                 account, symbol,
@@ -412,6 +420,7 @@ class AIModel:
                     account, symbol, action, lot_size,
                     success_probability, strategy
                 )
+                self.risk_manager[account].max_trades -= 1
                 self.drl_agent.update(
                     full_state, 1 if trade_profit > 0 else 0
                 )
