@@ -247,6 +247,9 @@ class AIModel:
         risk (float): Livello di rischio calcolato per il trade.
         strategy (str): Nome della strategia utilizzata per il trade.
         """
+        # Calcola Stop Loss e Take Profit
+        current_price = mt5.symbol_info_tick(symbol).ask
+        sl, ts, tp = self.risk_manager[account].adaptive_stop_loss(current_price, symbol)
         order = {
             "symbol": symbol,
             "volume": lot_size,
@@ -257,6 +260,8 @@ class AIModel:
             "comment": f"AI Trade ({strategy})",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC
+            "sl": sl,  # Stop Loss
+            "tp": tp  # Take Profit
         }
         result = mt5.order_send(order)
         status = (
