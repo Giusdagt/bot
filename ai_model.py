@@ -391,6 +391,9 @@ class AIModel:
             sl, ts, tp = self.risk_manager[account].adaptive_stop_loss(
                 market_data["close"].iloc[-1], symbol
             )
+            if ts > sl and (ts - sl) < (0.002 * market_data["close"].iloc[-1]):
+                logging.info("⛔ Trailing Stop troppo stretto. Nessun trade su %s", symbol)
+                return
 
             lot_size = self.adapt_lot_size(
                 account, symbol,
