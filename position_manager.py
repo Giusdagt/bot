@@ -68,7 +68,24 @@ class PositionManager:
             ])
             last_row = market_data[-1]
             signal_score = int(last_row["weighted_signal_score"])
-
+            gain = (
+                current_price - entry_price if
+                action == "buy" else entry_price - current_price
+            )
+            market_data_array = (
+                market_data.select(market_data.columns).to_numpy().flatten()
+            )
+            full_state = (
+                np.clip(np.concatenate(
+                    [market_data_array, [signal_score], embedding]
+                ), -1, 1)
+            )
+            predicted_volatility = (
+                self.volatility_predictor.predict_volatility(
+                    full_state.reshape(1, -1)
+                )[0]
+            )
+            
             # 📉 Engulfing ribassista → chiude BUY
             if last_row.get("engulfing_bearish", 0) == 1 and action == "buy":
                 self.close_position(pos)
@@ -112,27 +129,10 @@ class PositionManager:
                     logging.info("⚖️ Break-even → chiudo %s su %s in profitto", action.upper(), symbol)
                     continue
 
-            market_data_array = (
-                market_data.select(market_data.columns).to_numpy().flatten()
-            )
-            full_state = (
-                np.clip(np.concatenate(
-                    [market_data_array, [signal_score], embedding]
-                ), -1, 1)
-            )
-
             predicted_price = (
                 self.price_predictor.predict_price(symbol, full_state)
             )
-            gain = (
-                current_price - entry_price if
-                action == "buy" else entry_price - current_price
-            )
-            predicted_volatility = (
-                self.volatility_predictor.predict_volatility(
-                    full_state.reshape(1, -1)
-                )[0]
-            )
+
             action_rl, confidence_score, algo_used = (
                 self.drl_super_manager.get_best_action_and_confidence(
                     full_state
