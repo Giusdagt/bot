@@ -244,6 +244,42 @@ def extract_multi_timeframe_vector(
     return np.array(vectors, dtype=np.float32)
 
 
+def detect_strategy_type(df):
+    """
+    Analizza i dati normalizzati e rileva il tipo di strategia più adatta:
+    - 'scalping' se alta volatilità e spread basso
+    - 'swing' se volatilità media e presenza di struttura
+    - 'macro' se bassa volatilità e trend piatto
+
+    Args:
+        df (pl.DataFrame or pd.DataFrame): Dati normalizzati con colonne AI
+
+    Returns:
+        str: 'scalping', 'swing' o 'macro'
+    """
+    try:
+        # Calcolo volatilità grezza (differenza media tra high e low)
+        vol = (df["high"] - df["low"]).mean()
+        
+        # Spread medio (già incluso e normalizzato)
+        spread = df["spread"].mean()
+
+        # Movimento medio del prezzo (swing = variazione significativa tra open e close)
+        swing_strength = (df["close"] - df["open"]).abs().mean()
+
+        # Soglie empiriche (adattabili al tuo sistema)
+        if vol > 0.6 and spread < 0.2:
+            return "scalping"
+        elif 0.3 <= vol <= 0.6 and swing_strength > 0.15:
+            return "swing"
+        else:
+            return "macro"
+
+    except Exception as e:
+        print(f"⚠️ Errore nel rilevare la strategia: {e}")
+        return "swing"  # Default sicuro
+
+
 def compute_weighted_signal_score(
     df: pl.DataFrame, weights: Optional[Dict[str, float]] = None
 ) -> pl.DataFrame:
