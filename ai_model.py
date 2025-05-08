@@ -235,7 +235,7 @@ class AIModel:
         )
         return max(0.01, min(final_lot, max_lot))
 
-    def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
+    def execute_trade(self, account, symbol, action, lot_size, risk, strategy, sl, tp):
         """
         Esegue un'operazione di trading su MetaTrader 5
         in base ai parametri specificati.
@@ -249,7 +249,8 @@ class AIModel:
         """
         # Calcola Stop Loss e Take Profit
         current_price = mt5.symbol_info_tick(symbol).ask
-        sl, ts, tp = self.risk_manager[account].adaptive_stop_loss(current_price, symbol)
+        sl = sl or 0.0
+        tp = tp or 0.0
         order = {
             "symbol": symbol,
             "volume": lot_size,
@@ -259,7 +260,7 @@ class AIModel:
             "magic": 0,
             "comment": f"AI Trade ({strategy})",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC
+            "type_filling": mt5.ORDER_FILLING_IOC,
             "sl": sl,  # Stop Loss
             "tp": tp  # Take Profit
         }
@@ -342,15 +343,14 @@ class AIModel:
         )
         full_state = np.clip(full_state, -1, 1)
 
-        if self.risk_manager[account].max_trades <= 0:
-            logging.warning("❌ Max trades raggiunti per %s", account)
-            return
-
         predicted_price = (
             self.price_predictor.predict_price(symbol, full_state)
         )
 
         for account in self.balances:
+            if self.risk_manager[account].max_trades <= 0:
+                logging.warning("❌ Max trades raggiunti per %s", account)
+                continue
 
             action_rl, confidence_score, algo_used = (
                 self.drl_super_manager.get_best_action_and_confidence(
@@ -383,14 +383,21 @@ class AIModel:
                 )[0]
             )
 
-            self.risk_manager[account].adjust_risk(symbol)
-            sl, ts, tp = self.risk_manager[account].adaptive_stop_loss(market_data["close"].iloc[-1], symbol)
+            sl, ts, tp = self.risk_manager[account].adaptive_stop_loss(
+                market_data["close"].iloc[-1], symbol
+            )
 
             lot_size = self.adapt_lot_size(
                 account, symbol,
                 success_probability, confidence_score,
                 predicted_volatility
             )
+
+            self.risk_manager[account].adjust_risk(symbol)
+
+            if lot_size < 0.01:
+                logging.warning("⛔ Lotto troppo piccolo, annullo trade su %s", symbol)
+                return
 
             logging.info(
                 "🤖 Azione AI: %s | Algo: %s | Confidenza: %.2f | Score: %d",
@@ -401,6 +408,10 @@ class AIModel:
             trade_profit = predicted_price - market_data["close"].iloc[-1]
             strategy, strategy_weight = (
                 self.strategy_generator.select_best_strategy(market_data)
+            )
+            self.execute_trade(
+                account, symbol, action, lot_size,
+                success_probability, strategy, sl, tp
             )
             self.strategy_strength = np.clip(
                 self.strategy_strength * (1 + (strategy_weight - 0.5)),
@@ -419,12 +430,9 @@ class AIModel:
 
             if pattern_confidence < 0.3:
                 return
-
+            
             if success_probability > 0.5:
-                self.execute_trade(
-                    account, symbol, action, lot_size,
-                    success_probability, strategy
-                )
+
                 self.risk_manager[account].max_trades -= 1
                 self.drl_agent.update(
                     full_state, 1 if trade_profit > 0 else 0
