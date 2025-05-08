@@ -69,6 +69,49 @@ class PositionManager:
             last_row = market_data[-1]
             signal_score = int(last_row["weighted_signal_score"])
 
+            # 📉 Engulfing ribassista → chiude BUY
+            if last_row.get("engulfing_bearish", 0) == 1 and action == "buy":
+                self.close_position(pos)
+                logging.info("📉 Engulfing ribassista → chiudo BUY su %s", symbol)
+                continue
+
+            # 📈 Engulfing rialzista → chiude SELL
+            if last_row.get("engulfing_bullish", 0) == 1 and action == "sell":
+                self.close_position(pos)
+                logging.info("📈 Engulfing rialzista → chiudo SELL su %s", symbol)
+                continue
+
+            # 🔒 Inside Bar → chiude posizione prudenzialmente se già in profitto
+            if last_row.get("inside_bar", 0) == 1 and profit > 0:
+                self.close_position(pos)
+                logging.info("📦 Inside Bar rilevata → chiudo posizione in profitto su %s", symbol)
+                continue
+
+            # 🔺 Fakeout up → chiude BUY (possibile inversione)
+            if last_row.get("fakeout_up", 0) == 1 and action == "buy":
+                self.close_position(pos)
+                logging.info("🧨 Fakeout UP → chiudo BUY su %s", symbol)
+                continue
+
+            # 🔻 Fakeout down → chiude SELL (possibile inversione)
+            if last_row.get("fakeout_down", 0) == 1 and action == "sell":
+                self.close_position(pos)
+                logging.info("🧨 Fakeout DOWN → chiudo SELL su %s", symbol)
+                continue
+
+            # 💥 Volatility Squeeze → chiude posizione per evitare breakout contro
+            if last_row.get("volatility_squeeze", 0) == 1:
+                self.close_position(pos)
+                logging.info("💥 Volatility Squeeze → chiudo %s su %s", action.upper(), symbol)
+                continue
+
+            # 🟩 Break-even intelligente se in forte profitto + segnali deboli
+            if profit > 0 and signal_score < 1:
+                if gain * 100000 > 2 * predicted_volatility * 10000:
+                    self.close_position(pos)
+                    logging.info("⚖️ Break-even → chiudo %s su %s in profitto", action.upper(), symbol)
+                    continue
+
             market_data_array = (
                 market_data.select(market_data.columns).to_numpy().flatten()
             )
