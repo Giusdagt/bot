@@ -280,12 +280,11 @@ def detect_strategy_type(df):
         # Soglie empiriche (adattabili al tuo sistema)
         if vol > 0.6 and spread < 0.2:
             return "scalping"
-        elif 0.3 <= vol <= 0.6 and swing_strength > 0.15:
+        if 0.3 <= vol <= 0.6 and swing_strength > 0.15:
             return "swing"
-        else:
-            return "macro"
+        return "macro"
 
-    except Exception as e:
+    except (KeyError, TypeError, ValueError) as e:
         print(f"⚠️ Errore nel rilevare la strategia: {e}")
         return "swing"  # Default sicuro
 
