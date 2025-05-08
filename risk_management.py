@@ -74,10 +74,9 @@ class RiskManagement:
 
         if volatility < 0.3 and momentum > 1:
             return min(0.03, self.risk_settings["risk_per_trade"] * 1.5)
-        elif volatility > 0.5:
+        if volatility > 0.5:
             return max(0.005, self.risk_settings["risk_per_trade"] * 0.5)
-        else:
-            return self.risk_settings["risk_per_trade"]
+        return self.risk_settings["risk_per_trade"]
 
     def check_drawdown(self, current_balance):
         """
