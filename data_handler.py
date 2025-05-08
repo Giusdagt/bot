@@ -185,6 +185,7 @@ def fetch_mt5_data(symbol, timeframe="1m"):
         logging.error("❌ Errore nel recupero dati MT5 per %s: %s", symbol, e)
         return None
 
+
 def get_multi_timeframe_data(symbol, timeframes):
     """
     Restituisce un dizionario con i dati di mercato
