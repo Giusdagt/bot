@@ -269,11 +269,12 @@ def detect_strategy_type(df):
     try:
         # Calcolo volatilità grezza (differenza media tra high e low)
         vol = (df["high"] - df["low"]).mean()
-        
+
         # Spread medio (già incluso e normalizzato)
         spread = df["spread"].mean()
 
-        # Movimento medio del prezzo (swing = variazione significativa tra open e close)
+        # Movimento medio del prezzo
+        # (swing = variazione significativa tra open e close)
         swing_strength = (df["close"] - df["open"]).abs().mean()
 
         # Soglie empiriche (adattabili al tuo sistema)
