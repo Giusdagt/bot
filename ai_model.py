@@ -207,33 +207,37 @@ class AIModel:
         )
 
     def adapt_lot_size(
-        self, balance, success_probability, confidence_score, risk,
-        predicted_volatility=None
+        self, account, symbol, success_probability,
+        confidence_score, predicted_volatility
     ):
-        """
-        Calcola la dimensione del lotto in modo ultra-adattivo.
-        Tiene conto di strategia, confidenza, rischio e volatilità prevista.
-        confidence_score (float): Confidenza del modello (es. DRL).
-        """
-        max_lot_size = balance / 50
-        adjusted_lot_size = balance * (
-            success_probability * self.strategy_strength * confidence_score *
-            risk
-        ) / 100
-        # Se il sistema è molto sicuro, moltiplica dinamicamente la size
-        if (
-            success_probability > 0.9 and
-            confidence_score > 0.9 and
-            self.strategy_strength > 2.0
-        ):
-            adjusted_lot_size *= 10  # autorizza ad aprire lotti grandi
+    """
+    Calcola la dimensione del lotto in modo ultra-intelligente e integrato.
+    Combina risk manager, confidenza AI, ILQ zone, momentum e volatilità.
+    """
+    risk_manager = self.risk_manager[account]
+    base_lot = risk_manager.calculate_position_size(
+        self.balances[account], symbol
+    )
 
-        if predicted_volatility is not None:
-            adjusted_lot_size *= (
-                np.clip(1 / (1 + predicted_volatility), 0.5, 2.0)
-            )
+    # Fattore di aumento se AI è molto sicura e il pattern è forte
+    multiplier = 1.0
+    if success_probability > 0.9 and confidence_score > 0.9:
+        multiplier *= 1.5
 
-        return max(0.01, min(adjusted_lot_size, max_lot_size))
+    # Riduce il lotto se la volatilità è eccessiva
+    if predicted_volatility:
+        multiplier *= np.clip(1 / (1 + predicted_volatility), 0.5, 1.2)
+
+    # Applica la forza della strategia per aumentare se forte
+    multiplier *= np.clip(self.strategy_strength, 0.5, 3.0)
+
+    # Applica moltiplicatore finale
+    final_lot = base_lot * multiplier
+
+    # Garantisce che non superi i limiti definiti dal risk manager
+    max_lot = self.balances[account] * risk_manager.risk_settings["max_exposure"]
+    return max(0.01, min(final_lot, max_lot))
+
 
     def execute_trade(self, account, symbol, action, lot_size, risk, strategy):
         """
@@ -379,10 +383,8 @@ class AIModel:
             )
 
             lot_size = self.adapt_lot_size(
-                self.balances[account],
-                success_probability,
-                confidence_score,
-                risk,
+                account, symbol,
+                success_probability, confidence_score,
                 predicted_volatility
             )
 
