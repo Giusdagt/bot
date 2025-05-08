@@ -259,8 +259,8 @@ class AIModel:
             "symbol": symbol,
             "volume": lot_size,
             "type": mt5.ORDER_BUY if action == "buy" else mt5.ORDER_SELL,
-            "price": mt5.symbol_info_tick(symbol).ask,
             "price": current_price,
+            "reference_price": mt5.symbol_info_tick(symbol).ask,
             "deviation": 10,
             "magic": 0,
             "comment": f"AI Trade ({strategy})",
@@ -401,7 +401,9 @@ class AIModel:
             self.risk_manager[account].adjust_risk(symbol)
 
             if lot_size < 0.01:
-                logging.warning("⛔ Lotto troppo piccolo, annullo trade su %s", symbol)
+                logging.warning(
+                    "⛔ Lotto troppo piccolo, annullo trade su %s", symbol
+                )
                 return
 
             logging.info(
