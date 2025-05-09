@@ -122,32 +122,72 @@ class PositionManager:
             if pos.sl is None or trailing_sl < pos.sl:
                 self.update_trailing_stop(pos, trailing_sl)
         return False
-    
 
-    def should_close_based_on_rl(
-        self, pos, action, action_rl, confidence_score
-    ):
+    def dynamic_stop_management(self, pos, action, current_price, predicted_volatility, profit):
         """
-        Determina se una posizione deve essere
-        chiusa in base al reinforcement learning.
+        Gestione dinamica di stop loss e take profit su MT5.
+        Modifica i parametri in base a condizioni di mercato
+        per massimizzare i profitti e ridurre le perdite.
         """
-        if action_rl == 2 and action == "buy":
-            logging.info(
-                "📉 RL suggerisce chiusura BUY su %s", pos.symbol
-            )
-            return True
-        if action_rl == 1 and action == "sell":
-            logging.info(
-                "📉 RL suggerisce chiusura SELL su %s", pos.symbol
-            )
-            return True
-        if confidence_score < 0.3:
-            logging.info(
-                "📉 RL confidenza bassa → chiudo %s su %s",
-                action.upper(), pos.symbol
-            )
-            return True
-        return False
+        gain = current_price - pos.price_open if action == "buy" else pos.price_open - current_price
+
+        # Calcolo nuovi SL e TP in modo dinamico
+        dynamic_sl = pos.price_open - (predicted_volatility * 0.5) if action == "buy" else pos.price_open + (predicted_volatility * 0.5)
+        dynamic_tp = pos.price_open + (gain * 1.5) if action == "buy" else pos.price_open - (gain * 1.5)
+
+        current_tp = pos.tp if pos.tp else 0
+        if (action == "buy" and dynamic_tp > current_tp) or (action == "sell" and dynamic_tp < current_tp):
+            self.update_take_profit(pos, dynamic_tp)
+
+        # Protezione a Break-Even dopo un certo guadagno
+        if profit > 0 and gain > predicted_volatility * 2:
+            dynamic_sl = pos.price_open  # Break-even
+
+        # Aggiornamento diretto su MT5 solo se migliora la protezione
+        if (pos.sl is None or (action == "buy" and dynamic_sl > pos.sl) or (action == "sell" and dynamic_sl < pos.sl)):
+            self.update_trailing_stop(pos, dynamic_sl)
+
+    def update_take_profit(self, pos, new_tp):
+        result = mt5.order_modify(
+            ticket=pos.ticket,
+            price=pos.price_open,
+            stoplimit=0,
+            sl=pos.sl,
+            tp=new_tp,
+            deviation=10,
+            type_time=mt5.ORDER_TIME_GTC,
+            type_filling=mt5.ORDER_FILLING_IOC
+        )
+        if result.retcode == mt5.TRADE_RETCODE_DONE:
+            logging.info("📈 TP aggiornato per %s: %.5f", pos.symbol, new_tp)
+        else:
+            logging.warning("⚠️ Errore aggiornamento TP su %s | Retcode: %d", pos.symbol, result.retcode)
+
+    def pyramiding_strategy(self, symbol, action, current_price):
+        """
+        Aggiunge posizioni alla posizione vincente in caso di forte trend.
+        """
+        positions = mt5.positions_get(symbol=symbol)
+        positions_open = len([p for p in positions if p.symbol == symbol])
+        total_profit = sum(pos.profit for pos in positions if pos.symbol == symbol)
+        base_volume = 0.01  # Volume minimo
+        volume_increment = base_volume + (total_profit / 1000)  # Scala dinamicamente
+        trend_strength = self.volatility_predictor.predict_volatility(np.array([[current_price]]))[0]
+        if positions_open < 5 and trend_strength > 0.7:
+            if trend_strength > 0.7:
+                request = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "symbol": symbol,
+                    "volume": volume_increment,
+                    "type": mt5.ORDER_BUY if action == "buy" else mt5.ORDER_SELL,
+                    "price": current_price,
+                    "deviation": 10,
+                    "magic": 0,
+                    "comment": "Pyramiding AI",
+                    "type_time": mt5.ORDER_TIME_GTC,
+                    "type_filling": mt5.ORDER_FILLING_IOC,
+                }
+                mt5.order_send(request)
 
     def monitor_open_positions(self):
         """
@@ -219,6 +259,8 @@ class PositionManager:
                     full_state.reshape(1, -1)
                 )[0]
             )
+            if profit > predicted_volatility * 2 and gain > predicted_volatility:
+                self.pyramiding_strategy(symbol, action, current_price)
 
             # Verifica condizioni di chiusura
             if self.should_close_position(
@@ -228,23 +270,30 @@ class PositionManager:
                 self.close_position(pos)
                 continue
 
-            # Trailing stop dinamico
+            if profit > 0:
+                self.dynamic_stop_management(
+                    pos, action, current_price,
+                    predicted_volatility, profit
+                )
+
             if profit > 0 and self.handle_trailing_stop(
                 pos, action, current_price, predicted_volatility, profit
             ):
                 continue
 
-            # Azioni basate su reinforcement learning
+            if profit > predicted_volatility * 2:
+                self.pyramiding_strategy(symbol, action, current_price)
+
             action_rl, confidence_score, algo_used = (
-                self.drl_super_manager.get_best_action_and_confidence(
-                    full_state
-                )
+            self.drl_super_manager.get_best_action_and_confidence(full_state)
             )
-            if self.should_close_based_on_rl(
-                pos, action, action_rl, confidence_score
-            ):
+            if self.should_close_based_on_rl(pos, action, action_rl, confidence_score):
                 self.close_position(pos)
                 continue
+
+        # Valutazione e ribilanciamento del portafoglio
+        self.evaluate_portfolio_risk()
+        self.rebalance_portfolio()
 
     def update_trailing_stop(self, pos, new_sl):
         """
@@ -309,8 +358,39 @@ class PositionManager:
                 "❌ Errore chiusura posizione su %s | Retcode: %d",
                 symbol, result.retcode
             )
+        # Pulisce la memoria dei prezzi
+        self.clear_price_memory(pos)
 
-        # Pulisce la memoria dei prezzi per evitare sprechi
+    def evaluate_portfolio_risk(self):
+        positions = mt5.positions_get()
+        if positions is None or len(positions) == 0:
+            return
+
+        total_profit = sum(pos.profit for pos in positions)
+        total_volume = sum(pos.volume for pos in positions)
+        exposure_limit = 0.05 * total_volume * 100000  # Soglia dinamica
+
+        if abs(total_profit) > exposure_limit:
+            logging.info("🚨 Stop Portafoglio attivato! Profitto: %.2f", total_profit)
+            for pos in positions:
+                self.close_position(pos)
+
+    def rebalance_portfolio(self):
+        positions = mt5.positions_get()
+        if not positions:
+            return
+        
+        profits = [pos.profit for pos in positions]
+        if not profits:
+            return
+        
+        max_profit_pos = max(positions, key=lambda p: p.profit)
+        if max_profit_pos.profit > 2 * abs(sum(p.profit for p in positions if p != max_profit_pos)):
+            self.close_position(max_profit_pos)
+            logging.info("📊 Ribilanciamento: chiusa posizione in forte profitto %s", max_profit_pos.symbol)
+            return
+        
+    def clear_price_memory(self, pos):
         if pos.ticket in self.max_prices:
             del self.max_prices[pos.ticket]
         if pos.ticket in self.min_prices:
