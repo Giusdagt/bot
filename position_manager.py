@@ -175,7 +175,10 @@ class PositionManager:
             # Aggiorna i prezzi massimi/minimi raggiunti
             if action == "buy" and current_price > self.max_prices[pos.ticket]:
                 self.max_prices[pos.ticket] = current_price
-            if action == "sell" and current_price < self.min_prices[pos.ticket]:
+            if (
+                action == "sell" and
+                current_price < self.min_prices[pos.ticket]
+            ):
                 self.min_prices[pos.ticket] = current_price
 
             # Recupero dati di mercato e segnali
@@ -214,7 +217,8 @@ class PositionManager:
 
             # Verifica condizioni di chiusura
             if self.should_close_position(
-                pos, last_row, action, profit, signal_score, predicted_volatility
+                pos, last_row, action, profit,
+                signal_score, predicted_volatility
             ):
                 self.close_position(pos)
                 continue
@@ -227,7 +231,9 @@ class PositionManager:
 
             # Azioni basate su reinforcement learning
             action_rl, confidence_score, algo_used = (
-                self.drl_super_manager.get_best_action_and_confidence(full_state)
+                self.drl_super_manager.get_best_action_and_confidence(
+                    full_state
+                )
             )
             if self.should_close_based_on_rl(
                 pos, action, action_rl, confidence_score
@@ -299,7 +305,7 @@ class PositionManager:
                 symbol, result.retcode
             )
 
-         # Pulisce la memoria dei prezzi per evitare sprechi
+        # Pulisce la memoria dei prezzi per evitare sprechi
         if pos.ticket in self.max_prices:
             del self.max_prices[pos.ticket]
         if pos.ticket in self.min_prices:
