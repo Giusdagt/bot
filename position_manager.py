@@ -91,6 +91,10 @@ class PositionManager:
         """
         Gestisce il trailing stop per una posizione aperta.
         """
+        gain = (
+            current_price - pos.price_open if
+            action == "buy" else pos.price_open - current_price
+        )
         if action == "buy":
             trailing_sl = (
                 self.max_prices[pos.ticket] - (predicted_volatility * 0.5)
@@ -98,8 +102,8 @@ class PositionManager:
             if current_price < trailing_sl:
                 self.close_position(pos)
                 logging.info(
-                    "📉 Trailing Stop BUY attivato su %s | Profit: %.2f",
-                    pos.symbol, profit
+                    "📉 Trailing Stop %s attivato su %s | Profit: %.2f | Gain: %.5f | Volume: %.2f",
+                    action.upper(), pos.symbol, profit, gain, pos.volume
                 )
                 return True
             if pos.sl is None or trailing_sl > pos.sl:
@@ -111,13 +115,14 @@ class PositionManager:
             if current_price > trailing_sl:
                 self.close_position(pos)
                 logging.info(
-                    "📉 Trailing Stop SELL attivato su %s | Profit: %.2f",
-                    pos.symbol, profit
+                    "📉 Trailing Stop %s attivato su %s | Profit: %.2f | Gain: %.5f | Volume: %.2f",
+                    action.upper(), pos.symbol, profit, gain, pos.volume
                 )
                 return True
             if pos.sl is None or trailing_sl < pos.sl:
                 self.update_trailing_stop(pos, trailing_sl)
         return False
+    
 
     def should_close_based_on_rl(
         self, pos, action, action_rl, confidence_score
