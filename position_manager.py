@@ -123,7 +123,7 @@ class PositionManager:
                 self.update_trailing_stop(pos, trailing_sl)
         return False
 
-    def dynamic_stop_management(self, pos, action, current_price, predicted_volatility, profit):
+    def dynamic_stop_management(self, pos, action, current_price, predicted_volatility, profit, predicted_price, success_probability):
         """
         Gestione dinamica di stop loss e take profit su MT5.
         Modifica i parametri in base a condizioni di mercato
@@ -131,20 +131,36 @@ class PositionManager:
         """
         gain = current_price - pos.price_open if action == "buy" else pos.price_open - current_price
 
-        # Calcolo nuovi SL e TP in modo dinamico
-        dynamic_sl = pos.price_open - (predicted_volatility * 0.5) if action == "buy" else pos.price_open + (predicted_volatility * 0.5)
-        dynamic_tp = pos.price_open + (gain * 1.5) if action == "buy" else pos.price_open - (gain * 1.5)
-
-        current_tp = pos.tp if pos.tp else 0
-        if (action == "buy" and dynamic_tp > current_tp) or (action == "sell" and dynamic_tp < current_tp):
+        volatility_factor = np.clip(predicted_volatility / 100, 0.1, 1.0)
+        profit_factor = np.clip(profit / 100, 0.5, 2.0)
+        dynamic_sl = pos.price_open - (predicted_volatility * volatility_factor) if action == "buy" else pos.price_open + (predicted_volatility * volatility_factor)
+        dynamic_tp = pos.price_open + (gain * profit_factor) if action == "buy" else pos.price_open - (gain * profit_factor)
+        if (action == "buy" and (pos.tp is None or dynamic_tp > pos.tp)) or \
+            (action == "sell" and (pos.tp is None or dynamic_tp < pos.tp)):
+            self.update_take_profit(pos, dynamic_tp)
+             # Sposta il TP più lontano per massimizzare il guadagno
+            dynamic_tp = predicted_price
             self.update_take_profit(pos, dynamic_tp)
 
+        current_tp = pos.tp if pos.tp else 0
+        self.update_trailing_take_profit(pos, action, current_price, gain)
+
         # Protezione a Break-Even dopo un certo guadagno
-        if profit > 0 and gain > predicted_volatility * 2:
-            dynamic_sl = pos.price_open  # Break-even
+        breakeven_trigger = np.clip(predicted_volatility * 1.5, 0.01, 0.05) # Varia da 1% a 5% del prezzo
+        if profit > 0 and gain > breakeven_trigger:
+            dynamic_sl = pos.price_open  # Break-even attivato in modo intelligente
 
         # Aggiornamento diretto su MT5 solo se migliora la protezione
         if (pos.sl is None or (action == "buy" and dynamic_sl > pos.sl) or (action == "sell" and dynamic_sl < pos.sl)):
+            self.update_trailing_stop(pos, dynamic_sl)
+
+        # Se la probabilità di successo è alta, permetti un TP più ambizioso
+        if success_probability >= 0.7:
+            dynamic_tp *= 1.2  # Allunga l'obiettivo del TP
+            self.update_take_profit(pos, dynamic_tp)
+
+        if success_probability >= 0.8:
+            dynamic_sl = current_price - predicted_volatility * 0.3 if action == "buy" else current_price + predicted_volatility * 0.3
             self.update_trailing_stop(pos, dynamic_sl)
 
     def update_take_profit(self, pos, new_tp):
@@ -165,29 +181,66 @@ class PositionManager:
 
     def pyramiding_strategy(self, symbol, action, current_price):
         """
-        Aggiunge posizioni alla posizione vincente in caso di forte trend.
+        Aggiunge posizioni alla posizione vincente con
+        controllo del rischio su drawdown e correlazione.
         """
         positions = mt5.positions_get(symbol=symbol)
         positions_open = len([p for p in positions if p.symbol == symbol])
         total_profit = sum(pos.profit for pos in positions if pos.symbol == symbol)
-        base_volume = 0.01  # Volume minimo
-        volume_increment = base_volume + (total_profit / 1000)  # Scala dinamicamente
+        max_positions_allowed = 5
+
+        # Controllo sul Drawdown: evita overexposure
+        account_info = mt5.account_info()
+        if account_info is None or account_info.balance == 0:
+            return
+
+        equity_ratio = account_info.equity / account_info.balance
+        if equity_ratio < 0.85:  # Se Drawdown > 15%, blocca il pyramiding
+            logging.info("🚫 Pyramiding bloccato per Drawdown alto su %s", symbol)
+            return
+
         trend_strength = self.volatility_predictor.predict_volatility(np.array([[current_price]]))[0]
-        if positions_open < 5 and trend_strength > 0.7:
-            if trend_strength > 0.7:
-                request = {
-                    "action": mt5.TRADE_ACTION_DEAL,
-                    "symbol": symbol,
-                    "volume": volume_increment,
-                    "type": mt5.ORDER_BUY if action == "buy" else mt5.ORDER_SELL,
-                    "price": current_price,
-                    "deviation": 10,
-                    "magic": 0,
-                    "comment": "Pyramiding AI",
-                    "type_time": mt5.ORDER_TIME_GTC,
-                    "type_filling": mt5.ORDER_FILLING_IOC,
-                }
-                mt5.order_send(request)
+        if positions_open < max_positions_allowed and trend_strength > 0.7:
+            base_volume = 0.01
+            volume_increment = base_volume + (total_profit / 1000)
+            request = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": symbol,
+                "volume": volume_increment,
+                "type": mt5.ORDER_BUY if action == "buy" else mt5.ORDER_SELL,
+                "price": current_price,
+                "deviation": 10,
+                "magic": 0,
+                "comment": "Pyramiding AI",
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+            mt5.order_send(request)
+
+    def evaluate_swap_and_commissions(self, pos, action):
+        """
+        Valuta i costi di swap e commissioni. Se superano
+        il profitto potenziale, chiude la posizione.
+        """
+        symbol_info = mt5.symbol_info(pos.symbol)
+        if symbol_info is None:
+            return
+        
+        swap_cost = symbol_info.swap_long if action == "buy" else symbol_info.swap_short
+        # Simuliamo la commissione come costo per lotto (dipende dal broker, qui è un esempio)
+        commission_per_lot = 5  # Esempio: 5$ per lotto
+
+        total_swap = swap_cost * pos.volume
+        total_commission = commission_per_lot * pos.volume
+        total_cost = total_swap + total_commission
+
+        # Se i costi superano il profitto o il margine di guadagno è troppo basso, chiude la posizione
+        if pos.profit < total_cost or (pos.profit / total_cost) < 1.2:  # Guadagno minimo 20% sopra i costi
+            logging.info(
+                "💸 Costi swap/commissioni alti → Chiudo %s su %s | Profit: %.2f | Costi: %.2f",
+                action.upper(), pos.symbol, pos.profit, total_cost
+            )
+            self.close_position(pos)
 
     def monitor_open_positions(self):
         """
@@ -254,11 +307,16 @@ class PositionManager:
                     [market_data_array, [signal_score], embedding]
                 ), -1, 1)
             )
-            predicted_volatility = (
+            predicted_volatility =(
                 self.volatility_predictor.predict_volatility(
-                    full_state.reshape(1, -1)
-                )[0]
+                    full_state.reshape(1, -1))
             )
+            # Previsione del prezzo futuro (ad esempio tra 5 minuti)
+            predicted_price = self.price_predictor.predict_price(
+                full_state.reshape(1, -1)
+            )[0]
+            expected_gain = predicted_price - current_price if action == "buy" else current_price - predicted_price
+
             if profit > predicted_volatility * 2 and gain > predicted_volatility:
                 self.pyramiding_strategy(symbol, action, current_price)
 
@@ -270,23 +328,57 @@ class PositionManager:
                 self.close_position(pos)
                 continue
 
-            if profit > 0:
-                self.dynamic_stop_management(
-                    pos, action, current_price,
-                    predicted_volatility, profit
+            if (action == "buy" and expected_gain < -predicted_volatility) or \
+                (action == "sell" and expected_gain < -predicted_volatility):
+                # Verifica se lo SL è già abbastanza protettivo
+                if (action == "buy" and pos.sl and pos.sl >= current_price - predicted_volatility) or \
+                    (action == "sell" and pos.sl and pos.sl <= current_price + predicted_volatility):
+                    logging.info(
+                            "🔒 SL già protettivo → non chiudo %s su %s",
+                            action.upper(), pos.symbol
+                    )
+                    continue
+
+                logging.info(
+                    "📉 Previsione negativa → chiudo %s su %s in anticipo",
+                    action.upper(), pos.symbol
                 )
+                self.close_position(pos)
+                continue
 
             if profit > 0 and self.handle_trailing_stop(
                 pos, action, current_price, predicted_volatility, profit
             ):
                 continue
 
+            self.evaluate_swap_and_commissions(pos, action)
+
             if profit > predicted_volatility * 2:
                 self.pyramiding_strategy(symbol, action, current_price)
 
             action_rl, confidence_score, algo_used = (
-            self.drl_super_manager.get_best_action_and_confidence(full_state)
+                self.drl_super_manager.get_best_action_and_confidence(full_state)
             )
+            # Valuta la probabilità di successo tramite il DRL
+            success_probability = self.calculate_success_probability(confidence_score, signal_score, predicted_volatility, expected_gain)
+
+
+            if success_probability < 0.5:
+                logging.info(
+                    "📉 Bassa probabilità di successo (%.2f) → chiudo %s su %s",
+                    success_probability, action.upper(), pos.symbol
+                )
+                self.close_position(pos)
+                continue
+
+            if profit > 0:
+                self.dynamic_stop_management(
+                    pos, action, current_price,
+                    predicted_volatility, profit,
+                    predicted_price, success_probability
+                )
+
+
             if self.should_close_based_on_rl(pos, action, action_rl, confidence_score):
                 self.close_position(pos)
                 continue
@@ -297,8 +389,8 @@ class PositionManager:
 
     def update_trailing_stop(self, pos, new_sl):
         """
-        Aggiorna lo stop loss direttamente su MT5
-        per proteggere la posizione in corso.
+        Aggiorna il trailing stop direttamente su MT5
+        per garantire protezione anche in caso di crash del bot.
         """
         result = mt5.order_modify(
             ticket=pos.ticket,
@@ -308,17 +400,31 @@ class PositionManager:
             tp=pos.tp,
             deviation=10,
             type_time=mt5.ORDER_TIME_GTC,
-            type_filling=mt5.ORDER_FILLING_IOC
+            type_filling=mt5.ORDER_FILLING_IOC,
         )
         if result.retcode == mt5.TRADE_RETCODE_DONE:
             logging.info(
-                "🔁 SL aggiornato per %s: %.5f", pos.symbol, new_sl
+                "🔁 SL aggiornato nativamente su MT5 per %s: %.5f",
+                pos.symbol, new_sl
             )
         else:
             logging.warning(
-                "⚠️ Errore aggiornamento SL su %s | Retcode: %d",
+                "⚠️ Errore aggiornamento SL su MT5 per %s | Retcode: %d",
                 pos.symbol, result.retcode
             )
+
+    def update_trailing_take_profit(self, pos, action, current_price, gain):
+        """
+        Aggiorna dinamicamente il Take Profit su MT5 in modo intelligente e nativo.
+        """
+        if action == "buy":
+            new_tp = current_price + (gain * 0.5)
+            if pos.tp is None or new_tp > pos.tp:
+                 self.update_take_profit(pos, new_tp)
+        else:
+            new_tp = current_price - (gain * 0.5)
+            if pos.tp is None or new_tp < pos.tp:
+                self.update_take_profit(pos, new_tp)
 
     def close_position(self, pos):
         """
@@ -395,3 +501,38 @@ class PositionManager:
             del self.max_prices[pos.ticket]
         if pos.ticket in self.min_prices:
             del self.min_prices[pos.ticket]
+
+    def calculate_success_probability(self, signal_score, predicted_volatility, expected_gain):
+        """
+        Calcola la probabilità di successo con pesi dinamici che si adattano
+        alle condizioni di mercato (market sentiment, volatilità e guadagno atteso).
+        """
+        # Normalizzazioni
+        confidence_signal = np.clip(signal_score / 10, 0, 1)
+        confidence_volatility = np.clip(1 - predicted_volatility, 0, 1)
+        confidence_gain = np.clip(expected_gain / (predicted_volatility + 1e-5), 0, 1)
+
+        # Pesi dinamici in base alla volatilità
+        if predicted_volatility < 0.3:
+            # Mercato stabile → Dai più peso al gain e ai segnali AI
+            weight_signal = 0.5
+            weight_volatility = 0.2
+            weight_gain = 0.3
+        elif predicted_volatility < 0.7:
+            # Mercato moderatamente volatile → Equilibrio tra i fattori
+            weight_signal = 0.4
+            weight_volatility = 0.3
+            weight_gain = 0.3
+        else:
+        # Mercato molto volatile → Dai più peso alla volatilità per evitare rischi
+            weight_signal = 0.3
+            weight_volatility = 0.5
+            weight_gain = 0.2
+
+        success_probability = (
+            (weight_signal * confidence_signal) +
+            (weight_volatility * confidence_volatility) +
+            (weight_gain * confidence_gain)
+            )
+
+        return np.clip(success_probability, 0, 1)
