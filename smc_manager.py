@@ -34,6 +34,26 @@ class SMCManager:
             "resistance": float(resistance)
         }
 
+    def get_delivery_zone(self, symbol: str, action: str, lookback: int = 200):
+        """
+        Calcola la Delivery Zone in base alle ultime zone liquide (ILQ).
+        """
+        df = get_normalized_market_data(symbol)
+        if df is None or df.height < lookback:
+            return None  # Dati insufficienti
+
+        ilq_df = df.filter(pl.col("ILQ_Zone") == 1)
+        if ilq_df.is_empty():
+            return None  # Nessuna ILQ rilevata
+
+        #  Per Buy: cerca la zona più alta (resistenza), per Sell la più bassa (supporto)
+        if action == "buy":
+            delivery_zone = ilq_df["high"].max()
+        else:  # Sell
+            delivery_zone = ilq_df["low"].min()
+
+            return float(delivery_zone)
+
     def calculate_delivery_zone(self, symbol, extension_factor=1.5):
         ilq_zone = self.get_ilq_zone(symbol)
         if not ilq_zone:
