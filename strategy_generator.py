@@ -90,8 +90,13 @@ class StrategyGenerator:
         """
         if STRATEGY_FILE.exists():
             df = pl.read_parquet(STRATEGY_FILE)
-            logging.info("Loaded compressed knowledge from file")
-            return np.frombuffer(df["knowledge"][0], dtype=np.float32)
+            if "knowledge" in df.columns:
+                logging.info("Loaded compressed knowledge from file")
+                return np.frombuffer(df["knowledge"][0], dtype=np.float32)
+            else:
+                logging.warning("Colonna 'knowledge' non trovata")
+        logging.info("Nessun file di conoscenza esistente trovato")
+        return np.zeros(100, dtype=np.float32)
 
         logging.info("Nessun file di conoscenza esistente trovato")
         return np.zeros(100, dtype=np.float32)
@@ -109,7 +114,7 @@ class StrategyGenerator:
         in `STRATEGY_FILE`.
         """
         df = pl.DataFrame({"knowledge": [self.compressed_knowledge.tobytes()]})
-        df.write_parquet(STRATEGY_FILE, compression="zstd", mode="overwrite")
+        df.write_parquet(STRATEGY_FILE, compression="zstd")
         logging.info("Saved compressed knowledge to file")
 
     def detect_market_anomalies(self, market_data):
@@ -395,6 +400,7 @@ class StrategyGenerator:
 if __name__ == "__main__":
 
     sg = StrategyGenerator()
+    sg.save_compressed_knowledge()
     threading.Thread(
         target=sg.continuous_self_improvement, daemon=True
     ).start()
