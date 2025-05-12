@@ -61,7 +61,9 @@ def load_market_data_apis():
 
 def load_preset_assets():
     """Carica gli asset predefiniti per trading da preset."""
-    return load_json_file(PRESET_ASSETS_FILE)
+    assets = load_json_file(PRESET_ASSETS_FILE)
+    logging.info("✅ Asset caricati da preset_assets.json: %s", assets)
+    return assets
 
 
 def load_auto_symbol_mapping():
@@ -77,9 +79,16 @@ def save_auto_symbol_mapping(mapping):
 def standardize_symbol(symbol, mapping):
     """Normalizza intelligentemente il simbolo."""
     if symbol in mapping:
+        logging.info(
+            "✅ Simbolo trovato nella mappatura: %s -> %s",
+            symbol, mapping[symbol]
+        )
         return mapping[symbol]
 
     normalized_symbol = re.sub(r"[^\w]", "", symbol).upper()
+    logging.info("🔄 Simbolo normalizzato: %s -> %s",
+                 symbol, normalized_symbol
+    )
 
     for currency in SUPPORTED_CURRENCIES:
         if normalized_symbol.endswith(currency):
