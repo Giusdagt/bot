@@ -136,6 +136,13 @@ def save_and_sync(data):
     if not data:
         logging.warning("⚠️ Nessun dato valido da salvare.")
         return
+    else:
+        logging.info("✅ Dati da salvare: %s", data)
+
+    # Controllo dei permessi di scrittura
+    if not os.access(os.path.dirname(STORAGE_PATH), os.W_OK):
+        logging.error("❌ Permessi di scrittura mancanti per %s", STORAGE_PATH)
+        return
 
     df_new = pl.DataFrame(data)
     df_new = ensure_all_columns(df_new)
@@ -180,11 +187,16 @@ async def main():
         if USE_PRESET_ASSETS else
         list(load_auto_symbol_mapping().values())
     )
+    logging.info("✅ Simboli caricati: %s", symbols)
 
     symbols = [standardize_symbol(
         s, load_auto_symbol_mapping()) for s in symbols]
 
     data_no_api = download_no_api_data(tuple(symbols))
+    if not data_no_api:
+        logging.warning("⚠️ Nessun dato senza API disponibile.")
+    else:
+        logging.info("✅ Dati API scaricati: %s", data_api)
 
     if not data_no_api:
         logging.info("⚠️ Nessun dato senza API, passo alle API.")
