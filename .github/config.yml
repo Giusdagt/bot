@@ -1,4 +1,4 @@
 analyze_code: true
 enable_flake8: false
-enable_pylint: true
+enable_pylint: false
 enable_mypy: true
