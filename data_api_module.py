@@ -7,6 +7,7 @@ Performance massimizzata, completamente automatico e intelligente.
 import asyncio
 import logging
 import os
+import stat
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
@@ -24,6 +25,8 @@ from column_definitions import required_columns
 
 print("data_api_module.py caricato ✅")
 
+ENABLE_CLOUD_SYNC = False  # Imposta su True per attivare la sincronizzazione
+
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -32,12 +35,35 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-STORAGE_PATH = "market_data.zstd.parquet"
+# Determina la directory dello script
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+STORAGE_PATH = os.path.join(SCRIPT_DIR, "market_data.zstd.parquet")
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.zstd.parquet"
 DAYS_HISTORY = 60
 
 executor = ThreadPoolExecutor(max_workers=8)
 
+def ensure_permissions(file_path):
+    """Garantisce che il file abbia i permessi di lettura e scrittura."""
+    try:
+        # Controlla se il file esiste
+        if not os.path.exists(file_path):
+            # Crea un file vuoto se non esiste
+            with open(file_path, 'w'):
+                pass
+        else:
+            # Controlla se il file è vuoto
+            if os.path.getsize(file_path) == 0:
+                logging.warning("⚠️ File vuoto rilevato, ricreazione in corso: %s", file_path)
+                with open(file_path, 'w'):
+                    pass
+
+        # Imposta i permessi di lettura e scrittura
+        os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR)
+        logging.info("✅ Permessi garantiti per il file: %s", file_path)
+    except Exception as e:
+        logging.error("❌ Errore nell'impostare i permessi per %s: %s", file_path, e)
 
 def ensure_all_columns(df):
     """Garantisce presenza di tutte le colonne necessarie."""
@@ -73,14 +99,17 @@ async def fetch_market_data(session, url, exchange_name, rpm, retries=3):
 
 async def fetch_from_all_exchanges(symbols, days_history):
     """Scarica dati API con storico dinamico ultra-avanzato."""
+    logging.info(
+        "📡 Inizio download dati per i simboli: %s", symbols
+    )
     market_data_apis = load_market_data_apis()
     tasks = []
     async with aiohttp.ClientSession() as session:
         for exchange in market_data_apis["exchanges"]:
             for symbol in symbols:
-                api_url = exchange["api_url"]
-                api_url = api_url.replace("{symbol}", symbol)
-                api_url = api_url.replace("{days}", str(days_history))
+                api_url = ( exchange["api_url"].replace(
+                    "{symbol}", symbol).replace("{days}", str(days_history))
+                )
                 rpm = exchange["limitations"].get("requests_per_minute", 60)
                 tasks.append(
                     fetch_market_data(session, api_url, exchange["name"], rpm)
@@ -92,6 +121,7 @@ async def fetch_from_all_exchanges(symbols, days_history):
         if isinstance(data, (dict, list)):
             valid_data.extend(data if isinstance(data, list) else [data])
 
+    logging.info("✅ Dati scaricati con successo: %s", valid_data)
     return valid_data
 
 
@@ -139,15 +169,13 @@ def save_and_sync(data):
     else:
         logging.info("✅ Dati da salvare: %s", data)
 
-    # Controllo dei permessi di scrittura
-    if not os.access(os.path.dirname(STORAGE_PATH), os.W_OK):
-        logging.error("❌ Permessi di scrittura mancanti per %s", STORAGE_PATH)
-        return
+    # Garantisce i permessi per il file di salvataggio
+    ensure_permissions(STORAGE_PATH)
 
     df_new = pl.DataFrame(data)
     df_new = ensure_all_columns(df_new)
 
-    if os.path.exists(STORAGE_PATH):
+    if os.path.exists(STORAGE_PATH) and os.path.getsize(STORAGE_PATH) > 0:
         existing_df = pl.read_parquet(STORAGE_PATH)
         df_final = pl.concat([existing_df, df_new]).unique()
     else:
@@ -156,10 +184,12 @@ def save_and_sync(data):
     try:
         df_final.write_parquet(STORAGE_PATH, compression="zstd")
         logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
-        sync_to_cloud()
+
+        # Sincronizzazione con il cloud (solo se abilitata)
+        if ENABLE_CLOUD_SYNC:
+            sync_to_cloud()
     except (OSError, IOError) as e:
         logging.error("❌ Errore salvataggio dati: %s", e)
-        # Aggiungere ulteriori eccezioni specifiche se necessario
 
 
 def sync_to_cloud():
@@ -174,36 +204,51 @@ def sync_to_cloud():
 
 async def main():
     """
-    Funzione principale per  download e la sincronizzazione dei dati di mercato
-
-    - Carica i simboli da utilizzare.
-    - Standardizza i simboli caricati.
-    - Tenta di scaricare i dati senza l'uso di API.
-    - Se i dati senza API non sono disponibili, scarica i dati tramite API.
-    - Salva e sincronizza i dati scaricati.
+    Funzione principale per il download e la sincronizzazione dei dati di mercato.
     """
-    symbols = (
-        sum(load_preset_assets().values(), [])
-        if USE_PRESET_ASSETS else
-        list(load_auto_symbol_mapping().values())
-    )
-    logging.info("✅ Simboli caricati: %s", symbols)
+    data_api = None  # Inizializza la variabile
+    try:
+        symbols = (
+            sum(load_preset_assets().values(), [])
+            if USE_PRESET_ASSETS else
+            list(load_auto_symbol_mapping().values())
+        )
+        logging.info("✅ Simboli caricati: %s", symbols)
 
-    symbols = [standardize_symbol(
-        s, load_auto_symbol_mapping()) for s in symbols]
+        if not symbols:
+            logging.error("❌ Nessun simbolo caricato. Operazione terminata.")
+            return
 
-    data_no_api = download_no_api_data(tuple(symbols))
-    if not data_no_api:
-        logging.warning("⚠️ Nessun dato senza API disponibile.")
-    else:
+        symbols = [standardize_symbol(s, load_auto_symbol_mapping()) for s in symbols]
+
+        # Prova a scaricare i dati senza API
+        data_no_api = download_no_api_data(tuple(symbols))
+        if not data_no_api:
+            logging.warning("⚠️ Nessun dato senza API disponibile.")
+
+        # Se i dati senza API non sono disponibili, usa le API
+        if not data_no_api:
+            logging.info("⚠️ Nessun dato senza API, passo alle API.")
+            data_api = await fetch_from_all_exchanges(symbols, DAYS_HISTORY)
+
+        # Controlla se ci sono dati da salvare
+        if not data_no_api and not data_api:
+            logging.error("❌ Nessun dato disponibile da fonti no-API o API.")
+            return
+
+        # Salva e sincronizza i dati
+        if data_no_api:
+            save_and_sync(data_no_api)
+        elif data_api:
+            save_and_sync(data_api)
+        else:
+            logging.warning("⚠️ Nessun dato valido da salvare.")
+
+        # Log finale per confermare i dati scaricati
         logging.info("✅ Dati API scaricati: %s", data_api)
 
-    if not data_no_api:
-        logging.info("⚠️ Nessun dato senza API, passo alle API.")
-        data_api = await fetch_from_all_exchanges(symbols, DAYS_HISTORY)
-        save_and_sync(data_api)
-    else:
-        save_and_sync(data_no_api)
+    except Exception as e:
+        logging.error("❌ Errore durante l'esecuzione: %s", e)
 
 
 if __name__ == "__main__":
