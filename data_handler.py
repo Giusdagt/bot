@@ -134,17 +134,21 @@ async def process_historical_data():
     try:
         if not os.path.exists(RAW_DATA_PATH):
             logging.warning("⚠️ Grezzi non trovato, avvio fetch.")
+            await fetch_new_data()
         else:
             logging.info("✅ File grezzi trovato: %s", RAW_DATA_PATH)
-        await fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
             logging.warning("⚠️ Dati grezzi vuoto, nessun dato da processare.")
             return
         df = calculate_historical_indicators(df)
+        logging.info("✅ Indicatori calcolati.")
         df = apply_all_advanced_features(df)
+        logging.info("✅ Funzionalità avanzate applicate.")
         df = ensure_all_columns(df)
+        logging.info("✅ Colonne garantite: %s", df.columns)
         df = normalize_data(df)
+        logging.info("✅ Dati normalizzati.")
         save_and_sync(df)
     except (OSError, IOError, ValueError) as e:
         logging.error("❌ Errore elaborazione dati storici: %s", e)
