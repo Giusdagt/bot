@@ -134,6 +134,8 @@ async def process_historical_data():
     try:
         if not os.path.exists(RAW_DATA_PATH):
             logging.warning("⚠️ Grezzi non trovato, avvio fetch.")
+        else:
+            logging.info("✅ File grezzi trovato: %s", RAW_DATA_PATH)
         await fetch_new_data()
         df = pl.read_parquet(RAW_DATA_PATH)
         if df.is_empty():
