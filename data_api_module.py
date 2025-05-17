@@ -1,7 +1,6 @@
 """
 data_api_module.py
-Modulo ultra-avanzato, dinamico e intelligente per download dati di mercato.
-Performance massimizzata, completamente automatico e intelligente.
+Modulo avanzato per il download e la gestione dei dati di mercato.
 """
 
 import asyncio
@@ -9,11 +8,16 @@ import logging
 import os
 import stat
 import sys
+import time
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
 import aiohttp
 import requests
+import pandas as pd
 import polars as pl
+import yfinance as yf
+import MetaTrader5 as mt5
+from polars.exceptions import ComputeError
 from data_loader import (
     load_market_data_apis,
     load_auto_symbol_mapping,
@@ -23,172 +27,182 @@ from data_loader import (
 )
 from column_definitions import required_columns
 
-print("data_api_module.py caricato ✅")
-
-ENABLE_CLOUD_SYNC = False  # Imposta su True per attivare la sincronizzazione
-
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
+# Configurazione globale
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Determina la directory dello script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 STORAGE_PATH = os.path.join(SCRIPT_DIR, "market_data.zstd.parquet")
 CLOUD_SYNC_PATH = "/mnt/google_drive/trading_sync/market_data.zstd.parquet"
+ENABLE_CLOUD_SYNC = False
+USE_MARKET_APIS = False
+ENABLE_YFINANCE = False   # Attiva/disattiva yfinance
+ENABLE_MT5 = True   # Attiva/disattiva MT5
+CHUNK_SIZE = 10000        # Numero massimo di righe per ogni chunk
+start_date = (datetime.today() - timedelta(days=60)).strftime("%Y-%m-%d")
 DAYS_HISTORY = 60
-
 executor = ThreadPoolExecutor(max_workers=8)
 
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+# Utility
 def ensure_permissions(file_path):
     """Garantisce che il file abbia i permessi di lettura e scrittura."""
     try:
-        # Controlla se il file esiste
         if not os.path.exists(file_path):
-            # Crea un file vuoto se non esiste
             with open(file_path, 'w'):
                 pass
-        else:
-            # Controlla se il file è vuoto
-            if os.path.getsize(file_path) == 0:
-                logging.warning("⚠️ File vuoto rilevato, ricreazione in corso: %s", file_path)
-                with open(file_path, 'w'):
-                    pass
-
-        # Imposta i permessi di lettura e scrittura
         os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR)
         logging.info("✅ Permessi garantiti per il file: %s", file_path)
     except Exception as e:
         logging.error("❌ Errore nell'impostare i permessi per %s: %s", file_path, e)
 
+
 def ensure_all_columns(df):
-    """Garantisce presenza di tutte le colonne necessarie."""
-    existing_columns = df.columns
-    missing_columns = [
-        col for col in required_columns if col not in existing_columns]
+    """Garantisce che il DataFrame contenga tutte le colonne richieste."""
+    missing_columns = [col for col in required_columns if col not in df.columns]
     for col in missing_columns:
-        df = df.with_columns(pl.lit(None).alias(col))
-    return df
+        df = df.with_columns(pl.lit(0).alias(col))
+    return df.fill_nan(0).fill_null(0)
 
 
-async def fetch_market_data(session, url, exchange_name, rpm, retries=3):
-    """Scarica dati API con gestione avanzata."""
+def delay_request(seconds=2):
+    """Introduce un ritardo tra le richieste."""
+    logging.info("⏳ Attendo %d secondi prima della prossima richiesta...", seconds)
+    time.sleep(seconds)
+
+
+def retry_request(func, *args, retries=3, delay=2, **kwargs):
+    """Riprova una funzione in caso di errore, con un ritardo esponenziale tra i tentativi."""
     for attempt in range(retries):
         try:
-            async with session.get(url, timeout=15) as response:
-                if response.status == 200:
-                    logging.info(
-                        "✅ Dati ottenuti da %s (tentativo %d)",
-                        exchange_name, attempt + 1
-                    )
-                    return await response.json()
-                if response.status in {400, 429}:
-                    await asyncio.sleep(15)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            logging.error(
-                "❌ Errore API %s (tentativo %d): %s",
-                exchange_name, attempt + 1, e
-            )
-            await asyncio.sleep(max(1, 60 / rpm))
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.warning(f"⚠️ Errore tentativo {attempt + 1}: {e}")
+            time.sleep(delay * (2 ** attempt))
     return None
 
 
-async def fetch_from_all_exchanges(symbols, days_history):
-    """Scarica dati API con storico dinamico ultra-avanzato."""
-    logging.info(
-        "📡 Inizio download dati per i simboli: %s", symbols
-    )
-    market_data_apis = load_market_data_apis()
-    tasks = []
-    async with aiohttp.ClientSession() as session:
-        for exchange in market_data_apis["exchanges"]:
-            for symbol in symbols:
-                api_url = ( exchange["api_url"].replace(
-                    "{symbol}", symbol).replace("{days}", str(days_history))
+def download_data_with_yfinance(symbols, start_date=start_date):
+    """Scarica dati storici da Yahoo Finance usando batch di ticker."""
+    if start_date is None:
+        start_date = (datetime.today() - timedelta(days=60)).strftime("%Y-%m-%d")
+    data = []
+    try:
+        yf_symbols = [standardize_symbol(s, load_auto_symbol_mapping(), provider="yfinance") for s in symbols]
+        combined_data = None
+
+        for attempt in range(3):
+            try:
+                combined_data = yf.download(
+                    yf_symbols,
+                    start=start_date,
+                    end=datetime.today().strftime("%Y-%m-%d"),
+                    progress=False,
+                    group_by=None
                 )
-                rpm = exchange["limitations"].get("requests_per_minute", 60)
-                tasks.append(
-                    fetch_market_data(session, api_url, exchange["name"], rpm)
-                )
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+                if combined_data.empty or combined_data.isna().all().all():
+                    logging.warning("⚠️ Nessun dato valido ricevuto dal batch di yfinance.")
+                    return []
 
-    valid_data = []
-    for data in results:
-        if isinstance(data, (dict, list)):
-            valid_data.extend(data if isinstance(data, list) else [data])
+                combined_data = combined_data.reset_index()
+                if isinstance(combined_data.columns, pd.MultiIndex):
+                    combined_data.columns = [
+                        "_".join([str(i) for i in col if i]) for col in combined_data.columns.values
+                    ]
+                else:
+                    combined_data.columns = [str(col) for col in combined_data.columns]
+                combined_data["symbol"] = yf_symbols[0] if len(yf_symbols) == 1 else "MULTIPLE"
+                data.extend(combined_data.to_dict(orient="records"))
+                logging.info("✅ Dati batch scaricati con successo.")
+                break
+            except Exception as e:
+                if "Rate limited" in str(e):
+                    logging.warning("⚠️ Rate limit raggiunto. Attendo 60 secondi prima di riprovare...")
+                    time.sleep(60)
+                else:
+                    logging.error(f"❌ Errore durante il download batch: {e}")
+                    return []
+    except Exception as e:
+        logging.error(f"❌ Errore durante il download batch: {e}")
+    return data
 
-    logging.info("✅ Dati scaricati con successo: %s", valid_data)
-    return valid_data
 
+def download_data_with_mt5(symbols, days=60, timeframes=None):
+    """Scarica dati storici da MT5 per gli ultimi N giorni e per più timeframe."""
+    if not mt5.initialize():
+        logging.error("❌ Impossibile inizializzare MT5: %s", mt5.last_error())
+        return []
 
-@lru_cache(maxsize=128)
-def download_no_api_data(symbols, interval="1d"):
-    """Download prioritario e intelligente senza API."""
-    market_data_apis = load_market_data_apis()
-    sources = market_data_apis["data_sources"]["no_api"]
+    if timeframes is None:
+        timeframes = [mt5.TIMEFRAME_D1]  # Default solo daily
+
+    tf_map = {
+        "1d": mt5.TIMEFRAME_D1,
+        "h4": mt5.TIMEFRAME_H4,
+        "h1": mt5.TIMEFRAME_H1,
+    }
+
+    utc_to = datetime.now()
+    utc_from = utc_to - timedelta(days=days)
     data = []
 
-    def fetch(symbol, source_name, url):
-        try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            data.append({"symbol": symbol, "source": source_name})
-            logging.info("✅ %s scaricato da %s", symbol, source_name)
-        except requests.RequestException as e:
-            logging.warning("⚠️ Errore fonte no-api '%s': %s", source_name, e)
-
-    with ThreadPoolExecutor(max_workers=8) as local_executor:
-        futures = [
-            local_executor.submit(
-                fetch,
-                symbol,
-                source_name,
-                (
-                    f"{sources[source_name]}/{symbol}/"
-                    f"{interval}/{symbol}-{interval}.zip"
-                )
-            )
-            for source_name in sources
-            for symbol in symbols
-        ]
-        for future in futures:
-            future.result()
-
+    for tf_name in timeframes:
+        tf = tf_map[tf_name]
+        for symbol in symbols:
+            rates = mt5.copy_rates_range(symbol, tf, utc_from, utc_to)
+            if rates is None or len(rates) == 0:
+                logging.warning(f"⚠️ Nessun dato per {symbol} timeframe {tf_name} da MT5.")
+                continue
+            df = pd.DataFrame(rates)
+            df["symbol"] = symbol
+            df["timeframe"] = tf_name  # aggiungi il timeframe per distinguere i dati
+            df.rename(columns={
+                "time": "timestamp",
+                "open": f"{symbol}_Open",
+                "high": f"{symbol}_High",
+                "low": f"{symbol}_Low",
+                "close": f"{symbol}_Close",
+                "tick_volume": f"{symbol}_Volume"
+            }, inplace=True)
+            data.extend(df.to_dict(orient="records"))
+            time.sleep(1)
+    mt5.shutdown()
     return data
 
 
 def save_and_sync(data):
-    """Salvataggio intelligente e sincronizzazione selettiva."""
+    """Salva i dati grezzi e sincronizza se richiesto."""
     if not data:
-        logging.warning("⚠️ Nessun dato valido da salvare.")
+        logging.warning("⚠️ Nessun dato da salvare. Skip del salvataggio.")
         return
-    else:
-        logging.info("✅ Dati da salvare: %s", data)
 
-    # Garantisce i permessi per il file di salvataggio
     ensure_permissions(STORAGE_PATH)
-
-    df_new = pl.DataFrame(data)
-    df_new = ensure_all_columns(df_new)
-
-    if os.path.exists(STORAGE_PATH) and os.path.getsize(STORAGE_PATH) > 0:
-        existing_df = pl.read_parquet(STORAGE_PATH)
-        df_final = pl.concat([existing_df, df_new]).unique()
-    else:
-        df_final = df_new
-
     try:
-        df_final.write_parquet(STORAGE_PATH, compression="zstd")
-        logging.info("✅ Dati salvati ultra-veloce: %s", STORAGE_PATH)
+        df_new = pl.DataFrame(data)
+        df_new = ensure_all_columns(df_new)
+        if df_new.is_empty():
+            logging.warning("⚠️ DataFrame vuoto dopo la pulizia. Skip del salvataggio.")
+            return
 
-        # Sincronizzazione con il cloud (solo se abilitata)
+        if os.path.exists(STORAGE_PATH) and os.path.getsize(STORAGE_PATH) > 0:
+            existing_df = pl.read_parquet(STORAGE_PATH)
+            df_final = pl.concat([existing_df, df_new]).unique(subset=["timestamp", "symbol"])
+        else:
+            df_final = df_new
+
+            df_final = df_final.sort(["timestamp", "symbol"])
+
+        df_final.write_parquet(STORAGE_PATH, compression="zstd")
+        logging.info("✅ Dati grezzi salvati: %s", STORAGE_PATH)
+
         if ENABLE_CLOUD_SYNC:
             sync_to_cloud()
-    except (OSError, IOError) as e:
+    except (OSError, IOError, ComputeError) as e:
         logging.error("❌ Errore salvataggio dati: %s", e)
 
 
@@ -203,50 +217,41 @@ def sync_to_cloud():
 
 
 async def main():
-    """
-    Funzione principale per il download e la sincronizzazione dei dati di mercato.
-    """
-    data_api = None  # Inizializza la variabile
+    """Download e salvataggio dei dati di mercato con fallback automatico."""
     try:
-        symbols = (
-            sum(load_preset_assets().values(), [])
-            if USE_PRESET_ASSETS else
-            list(load_auto_symbol_mapping().values())
-        )
-        logging.info("✅ Simboli caricati: %s", symbols)
-
-        if not symbols:
-            logging.error("❌ Nessun simbolo caricato. Operazione terminata.")
+        assets = load_preset_assets()
+        if not assets:
+            logging.error("❌ Nessun asset trovato. Operazione terminata.")
             return
 
-        symbols = [standardize_symbol(s, load_auto_symbol_mapping()) for s in symbols]
+        mapping = load_auto_symbol_mapping()
+        symbols = [standardize_symbol(symbol, mapping, provider="yfinance") for category, asset_list in assets.items() for symbol in asset_list]
 
-        # Prova a scaricare i dati senza API
-        data_no_api = download_no_api_data(tuple(symbols))
-        if not data_no_api:
-            logging.warning("⚠️ Nessun dato senza API disponibile.")
+        data_all = []
 
-        # Se i dati senza API non sono disponibili, usa le API
-        if not data_no_api:
-            logging.info("⚠️ Nessun dato senza API, passo alle API.")
-            data_api = await fetch_from_all_exchanges(symbols, DAYS_HISTORY)
+        if ENABLE_YFINANCE:
+            data_yf = []
+            for i in range(0, len(symbols), 50):
+                batch = symbols[i:i + 50]
+                data_batch = retry_request(download_data_with_yfinance, batch, start_date=start_date)
+                if data_batch:
+                    data_yf.extend(data_batch)
+                delay_request(10)
+            data_all.extend(data_yf)
 
-        # Controlla se ci sono dati da salvare
-        if not data_no_api and not data_api:
-            logging.error("❌ Nessun dato disponibile da fonti no-API o API.")
-            return
+        if ENABLE_MT5:
+            # Usa i simboli originali da preset_asset per MT5
+            mt5_symbols = [symbol for category, asset_list in assets.items() for symbol in asset_list]
+            data_mt5 = download_data_with_mt5(mt5_symbols, days=DAYS_HISTORY, timeframes=["1d", "h4", "h1"])
+            data_all.extend(data_mt5)
 
-        # Salva e sincronizza i dati
-        if data_no_api:
-            save_and_sync(data_no_api)
-        elif data_api:
-            save_and_sync(data_api)
+        if len(data_all) > CHUNK_SIZE:
+            for chunk in range(0, len(data_all), CHUNK_SIZE):
+                partial_data = data_all[chunk:chunk + CHUNK_SIZE]
+                save_and_sync(partial_data)
         else:
-            logging.warning("⚠️ Nessun dato valido da salvare.")
-
-        # Log finale per confermare i dati scaricati
-        logging.info("✅ Dati API scaricati: %s", data_api)
-
+            save_and_sync(data_all)
+        logging.info("🎉 Processo completato con successo! File generato: %s", STORAGE_PATH)
     except Exception as e:
         logging.error("❌ Errore durante l'esecuzione: %s", e)
 
