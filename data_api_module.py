@@ -11,18 +11,14 @@ import sys
 import time
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
-import aiohttp
-import requests
 import pandas as pd
 import polars as pl
 import yfinance as yf
 import MetaTrader5 as mt5
 from polars.exceptions import ComputeError
 from data_loader import (
-    load_market_data_apis,
     load_auto_symbol_mapping,
     standardize_symbol,
-    USE_PRESET_ASSETS,
     load_preset_assets,
 )
 from column_definitions import required_columns
@@ -59,12 +55,16 @@ def ensure_permissions(file_path):
         os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR)
         logging.info("✅ Permessi garantiti per il file: %s", file_path)
     except Exception as e:
-        logging.error("❌ Errore nell'impostare i permessi per %s: %s", file_path, e)
+        logging.error(
+            "❌ Errore nell'impostare i permessi per %s: %s", file_path, e
+        )
 
 
 def ensure_all_columns(df):
     """Garantisce che il DataFrame contenga tutte le colonne richieste."""
-    missing_columns = [col for col in required_columns if col not in df.columns]
+    missing_columns = [
+        col for col in required_columns if col not in df.columns
+    ]
     for col in missing_columns:
         df = df.with_columns(pl.lit(0).alias(col))
     return df.fill_nan(0).fill_null(0)
@@ -72,12 +72,17 @@ def ensure_all_columns(df):
 
 def delay_request(seconds=2):
     """Introduce un ritardo tra le richieste."""
-    logging.info("⏳ Attendo %d secondi prima della prossima richiesta...", seconds)
+    logging.info(
+        "⏳ Attendo %d secondi prima della prossima richiesta...", seconds
+    )
     time.sleep(seconds)
 
 
 def retry_request(func, *args, retries=3, delay=2, **kwargs):
-    """Riprova una funzione in caso di errore, con un ritardo esponenziale tra i tentativi."""
+    """
+    Riprova una funzione in caso di errore,
+    con un ritardo esponenziale tra i tentativi.
+    """
     for attempt in range(retries):
         try:
             return func(*args, **kwargs)
@@ -90,10 +95,14 @@ def retry_request(func, *args, retries=3, delay=2, **kwargs):
 def download_data_with_yfinance(symbols, start_date=start_date):
     """Scarica dati storici da Yahoo Finance usando batch di ticker."""
     if start_date is None:
-        start_date = (datetime.today() - timedelta(days=60)).strftime("%Y-%m-%d")
+        start_date = (
+            datetime.today() - timedelta(days=60)
+        ).strftime("%Y-%m-%d")
     data = []
     try:
-        yf_symbols = [standardize_symbol(s, load_auto_symbol_mapping(), provider="yfinance") for s in symbols]
+        yf_symbols = [standardize_symbol(
+            s, load_auto_symbol_mapping(),
+            provider="yfinance") for s in symbols]
         combined_data = None
 
         for attempt in range(3):
@@ -106,23 +115,33 @@ def download_data_with_yfinance(symbols, start_date=start_date):
                     group_by=None
                 )
                 if combined_data.empty or combined_data.isna().all().all():
-                    logging.warning("⚠️ Nessun dato valido ricevuto dal batch di yfinance.")
+                    logging.warning(
+                        "⚠️ Nessun dato valido ricevuto dal batch di yfinance."
+                    )
                     return []
 
                 combined_data = combined_data.reset_index()
                 if isinstance(combined_data.columns, pd.MultiIndex):
                     combined_data.columns = [
-                        "_".join([str(i) for i in col if i]) for col in combined_data.columns.values
+                        "_".join(
+                            [str(i) for i in col if i]
+                        ) for col in combined_data.columns.values
                     ]
                 else:
-                    combined_data.columns = [str(col) for col in combined_data.columns]
-                combined_data["symbol"] = yf_symbols[0] if len(yf_symbols) == 1 else "MULTIPLE"
+                    combined_data.columns = [
+                        str(col) for col in combined_data.columns
+                    ]
+                combined_data["symbol"] = (
+                    yf_symbols[0] if len(yf_symbols) == 1 else "MULTIPLE"
+                )
                 data.extend(combined_data.to_dict(orient="records"))
                 logging.info("✅ Dati batch scaricati con successo.")
                 break
             except Exception as e:
                 if "Rate limited" in str(e):
-                    logging.warning("⚠️ Rate limit raggiunto. Attendo 60 secondi prima di riprovare...")
+                    logging.warning(
+                        "⚠️ Rate limit raggiunto. Attendo 60sec prima di riprovare"
+                    )
                     time.sleep(60)
                 else:
                     logging.error(f"❌ Errore durante il download batch: {e}")
@@ -133,7 +152,9 @@ def download_data_with_yfinance(symbols, start_date=start_date):
 
 
 def download_data_with_mt5(symbols, days=60, timeframes=None):
-    """Scarica dati storici da MT5 per gli ultimi N giorni e per più timeframe."""
+    """
+    Scarica dati storici da MT5 per gli ultimi N giorni e per più timeframe.
+    """
     if not mt5.initialize():
         logging.error("❌ Impossibile inizializzare MT5: %s", mt5.last_error())
         return []
@@ -156,11 +177,13 @@ def download_data_with_mt5(symbols, days=60, timeframes=None):
         for symbol in symbols:
             rates = mt5.copy_rates_range(symbol, tf, utc_from, utc_to)
             if rates is None or len(rates) == 0:
-                logging.warning(f"⚠️ Nessun dato per {symbol} timeframe {tf_name} da MT5.")
+                logging.warning(
+                    f"⚠️ Nessun dato per {symbol} timeframe {tf_name} da MT5."
+                )
                 continue
             df = pd.DataFrame(rates)
             df["symbol"] = symbol
-            df["timeframe"] = tf_name  # aggiungi il timeframe per distinguere i dati
+            df["timeframe"] = tf_name
             df.rename(columns={
                 "time": "timestamp",
                 "open": f"{symbol}_Open",
@@ -186,12 +209,16 @@ def save_and_sync(data):
         df_new = pl.DataFrame(data)
         df_new = ensure_all_columns(df_new)
         if df_new.is_empty():
-            logging.warning("⚠️ DataFrame vuoto dopo la pulizia. Skip del salvataggio.")
+            logging.warning(
+                "⚠️ DataFrame vuoto dopo la pulizia. Skip del salvataggio."
+            )
             return
 
-        if os.path.exists(STORAGE_PATH) and os.path.getsize(STORAGE_PATH) > 0:
+        if os.path.exists( STORAGE_PATH ) and os.path.getsize(STORAGE_PATH) > 0:
             existing_df = pl.read_parquet(STORAGE_PATH)
-            df_final = pl.concat([existing_df, df_new]).unique(subset=["timestamp", "symbol"])
+            df_final = pl.concat(
+                [existing_df, df_new]
+            ).unique(subset=["timestamp", "symbol"])
         else:
             df_final = df_new
 
@@ -225,7 +252,12 @@ async def main():
             return
 
         mapping = load_auto_symbol_mapping()
-        symbols = [standardize_symbol(symbol, mapping, provider="yfinance") for category, asset_list in assets.items() for symbol in asset_list]
+        symbols = [
+            standardize_symbol(
+                symbol, mapping, provider="yfinance"
+            )
+            for category, asset_list in assets.items() for symbol in asset_list
+        ]
 
         data_all = []
 
@@ -233,7 +265,10 @@ async def main():
             data_yf = []
             for i in range(0, len(symbols), 50):
                 batch = symbols[i:i + 50]
-                data_batch = retry_request(download_data_with_yfinance, batch, start_date=start_date)
+                data_batch = retry_request(
+                    download_data_with_yfinance, batch,
+                    start_date=start_date
+                )
                 if data_batch:
                     data_yf.extend(data_batch)
                 delay_request(10)
@@ -241,8 +276,14 @@ async def main():
 
         if ENABLE_MT5:
             # Usa i simboli originali da preset_asset per MT5
-            mt5_symbols = [symbol for category, asset_list in assets.items() for symbol in asset_list]
-            data_mt5 = download_data_with_mt5(mt5_symbols, days=DAYS_HISTORY, timeframes=["1d", "h4", "h1"])
+            mt5_symbols = [
+                symbol for category,
+                asset_list in assets.items() for symbol in asset_list
+            ]
+            data_mt5 = download_data_with_mt5(
+                mt5_symbols, days=DAYS_HISTORY,
+                timeframes=["1d", "h4", "h1"]
+            )
             data_all.extend(data_mt5)
 
         if len(data_all) > CHUNK_SIZE:
@@ -251,7 +292,10 @@ async def main():
                 save_and_sync(partial_data)
         else:
             save_and_sync(data_all)
-        logging.info("🎉 Processo completato con successo! File generato: %s", STORAGE_PATH)
+        logging.info(
+            "🎉 Processo completato con successo! File generato: %s",
+            STORAGE_PATH
+        )
     except Exception as e:
         logging.error("❌ Errore durante l'esecuzione: %s", e)
 
