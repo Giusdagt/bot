@@ -9,6 +9,7 @@ import os
 import logging
 import re
 import requests
+from universal_symbol_manager import get_provider_symbol, get_internal_symbol
 
 print("data_loader.py caricato ✅")
 
@@ -23,6 +24,7 @@ PRESET_ASSETS_FILE = "preset_assets.json"
 AUTO_MAPPING_FILE = "auto_symbol_mapping.json"
 
 USE_PRESET_ASSETS = True  # True preset_assets.json, False dinamico illimitato
+ENABLE_AUTO_MAPPING = False  # ✅ False = Usa solo i simboli manuali
 
 TRADABLE_ASSETS = {"crypto": [], "forex": [], "indices": [], "commodities": []}
 
@@ -60,10 +62,14 @@ def load_market_data_apis():
 
 
 def load_preset_assets():
-    """Carica gli asset predefiniti per trading da preset."""
-    assets = load_json_file(PRESET_ASSETS_FILE)
-    logging.info("✅ Asset caricati da preset_assets.json: %s", assets)
-    return assets
+    """Carica gli asset predefiniti per il trading da preset_assets.json."""
+    with open("preset_asset.json", "r") as f:
+        all_assets = json.load(f)
+    enabled_assets = {}
+    for category, info in all_assets.items():
+        if info.get("enabled", False):
+            enabled_assets[category] = info["assets"]
+    return enabled_assets       
 
 
 def load_auto_symbol_mapping():
@@ -76,29 +82,38 @@ def save_auto_symbol_mapping(mapping):
     save_json_file(mapping, AUTO_MAPPING_FILE)
 
 
-def standardize_symbol(symbol, mapping):
-    """Normalizza intelligentemente il simbolo."""
-    if symbol in mapping:
-        logging.info(
-            "✅ Simbolo trovato nella mappatura: %s -> %s",
-            symbol, mapping[symbol]
+def standardize_symbol(symbol, mapping, provider="default"):
+    """Standardizza i simboli in base al mapping e al provider. Rispetta il flag ENABLE_AUTO_MAPPING."""
+    if not ENABLE_AUTO_MAPPING:
+        return mapping.get(symbol, symbol)  # Se la mappatura è disattivata, usa il simbolo così com'è
+
+    standardized = mapping.get(symbol)
+    if not standardized:
+        adapted_symbol = adapt_symbol_for_provider(symbol, provider)
+        logging.warning(
+            "⚠️ Simbolo sconosciuto per il provider %s: %s. Usato come: %s", provider, symbol, adapted_symbol
         )
-        return mapping[symbol]
+        mapping[symbol] = adapted_symbol
+        save_auto_symbol_mapping(mapping)
+        return adapted_symbol
+    return standardized
 
-    normalized_symbol = re.sub(r"[^\w]", "", symbol).upper()
-    logging.info("🔄 Simbolo normalizzato: %s -> %s",
-                 symbol, normalized_symbol
-    )
 
-    for currency in SUPPORTED_CURRENCIES:
-        if normalized_symbol.endswith(currency):
-            base_symbol = normalized_symbol[:-len(currency)]
-            normalized_symbol = f"{base_symbol}{currency}"
-            break
 
-    mapping[symbol] = normalized_symbol
-    save_auto_symbol_mapping(mapping)
-    return normalized_symbol
+def adapt_symbol_for_provider(symbol, provider):
+    """
+    Adatta il simbolo al formato richiesto dal provider.
+    """
+    if provider == "yfinance":
+        # Adatta il simbolo per yfinance (esempio: BTCUSD → BTC-USD)
+        return f"{symbol[:3].upper()}-{symbol[3:].upper()}"
+    # Aggiungi altre logiche per altri provider, se necessario
+    return symbol
+
+
+def adapt_symbol_for_broker(symbol, broker):
+    """Adatta il simbolo al formato richiesto dal broker."""
+    return get_provider_symbol(symbol, broker)
 
 
 def categorize_tradable_assets(assets, mapping):
@@ -106,7 +121,8 @@ def categorize_tradable_assets(assets, mapping):
     try:
         for category, asset_list in assets.items():
             TRADABLE_ASSETS[category] = [
-                standardize_symbol(asset, mapping) for asset in asset_list
+                get_internal_symbol(adapt_symbol_for_broker(standardize_symbol(asset, mapping), "MetaTrader5"), "MetaTrader5")
+                for asset in asset_list
             ]
         logging.info("✅ Asset organizzati e normalizzati con successo.")
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
@@ -126,29 +142,15 @@ def dynamic_assets_loading(mapping):
             response.raise_for_status()
             data = response.json()
             for item in data:
-                symbol = standardize_symbol(item["symbol"], mapping)
-                asset_type = exchange_asset_type(symbol)
+                api_symbol = get_provider_symbol(item["symbol"], source_name)
+                symbol = get_internal_symbol(api_symbol, source_name)
+                standardized_symbol = standardize_symbol(symbol, mapping, provider=source_name)
+                asset_type = exchange_asset_type(standardized_symbol)
                 if asset_type:
-                    assets[asset_type].append(symbol)
+                    assets[asset_type].append(standardized_symbol)
             logging.info("✅ Dati no-api da %s caricati.", source_name)
         except requests.RequestException as e:
             logging.warning("⚠️ Fonte no-api '%s' fallita: %s", source_name, e)
-
-    if not any(assets.values()):
-        for exchange in market_data_apis["exchanges"]:
-            try:
-                api_url = exchange["api_url"].replace("{currency}", "USD")
-                response = requests.get(api_url)
-                response.raise_for_status()
-                data = response.json()
-                for item in data:
-                    symbol = standardize_symbol(item["symbol"], mapping)
-                    asset_type = exchange_asset_type(symbol)
-                    if asset_type:
-                        assets[asset_type].append(symbol)
-                logging.info("✅ Dati API da %s caricati.", exchange["name"])
-            except requests.RequestException as e:
-                logging.error("❌ Errore API '%s': %s", exchange["name"], e)
 
     categorize_tradable_assets(assets, mapping)
 
