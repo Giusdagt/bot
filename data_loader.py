@@ -7,7 +7,6 @@ Supporta preset, caricamento dinamico e trading reale da config.json.
 import json
 import os
 import logging
-import re
 import requests
 from universal_symbol_manager import get_provider_symbol, get_internal_symbol
 
@@ -69,7 +68,7 @@ def load_preset_assets():
     for category, info in all_assets.items():
         if info.get("enabled", False):
             enabled_assets[category] = info["assets"]
-    return enabled_assets       
+    return enabled_assets
 
 
 def load_auto_symbol_mapping():
@@ -83,21 +82,24 @@ def save_auto_symbol_mapping(mapping):
 
 
 def standardize_symbol(symbol, mapping, provider="default"):
-    """Standardizza i simboli in base al mapping e al provider. Rispetta il flag ENABLE_AUTO_MAPPING."""
+    """
+    Standardizza i simboli in base al mapping e al provider.
+    Rispetta il flag ENABLE_AUTO_MAPPING.
+    """
     if not ENABLE_AUTO_MAPPING:
-        return mapping.get(symbol, symbol)  # Se la mappatura è disattivata, usa il simbolo così com'è
+        return mapping.get(symbol, symbol)
 
     standardized = mapping.get(symbol)
     if not standardized:
         adapted_symbol = adapt_symbol_for_provider(symbol, provider)
         logging.warning(
-            "⚠️ Simbolo sconosciuto per il provider %s: %s. Usato come: %s", provider, symbol, adapted_symbol
+            "⚠️ Simbolo sconosciuto per il provider %s: %s. Usato come: %s",
+            provider, symbol, adapted_symbol
         )
         mapping[symbol] = adapted_symbol
         save_auto_symbol_mapping(mapping)
         return adapted_symbol
     return standardized
-
 
 
 def adapt_symbol_for_provider(symbol, provider):
@@ -121,7 +123,12 @@ def categorize_tradable_assets(assets, mapping):
     try:
         for category, asset_list in assets.items():
             TRADABLE_ASSETS[category] = [
-                get_internal_symbol(adapt_symbol_for_broker(standardize_symbol(asset, mapping), "MetaTrader5"), "MetaTrader5")
+                get_internal_symbol(
+                    adapt_symbol_for_broker(
+                        standardize_symbol(asset, mapping), "MetaTrader5"
+                    ),
+                    "MetaTrader5"
+                )
                 for asset in asset_list
             ]
         logging.info("✅ Asset organizzati e normalizzati con successo.")
@@ -144,7 +151,9 @@ def dynamic_assets_loading(mapping):
             for item in data:
                 api_symbol = get_provider_symbol(item["symbol"], source_name)
                 symbol = get_internal_symbol(api_symbol, source_name)
-                standardized_symbol = standardize_symbol(symbol, mapping, provider=source_name)
+                standardized_symbol = standardize_symbol(
+                    symbol, mapping, provider=source_name
+                )
                 asset_type = exchange_asset_type(standardized_symbol)
                 if asset_type:
                     assets[asset_type].append(standardized_symbol)
