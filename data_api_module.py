@@ -140,7 +140,7 @@ def download_data_with_yfinance(symbols, start_date=start_date):
             except Exception as e:
                 if "Rate limited" in str(e):
                     logging.warning(
-                        "⚠️ Rate limit raggiunto. Attendo 60sec prima di riprovare"
+                        "⚠️ Rate limit raggiunto. Attendo 60sec e riprovo"
                     )
                     time.sleep(60)
                 else:
@@ -214,7 +214,7 @@ def save_and_sync(data):
             )
             return
 
-        if os.path.exists( STORAGE_PATH ) and os.path.getsize(STORAGE_PATH) > 0:
+        if os.path.exists(STORAGE_PATH) and os.path.getsize(STORAGE_PATH) > 0:
             existing_df = pl.read_parquet(STORAGE_PATH)
             df_final = pl.concat(
                 [existing_df, df_new]
