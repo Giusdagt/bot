@@ -62,7 +62,7 @@ def load_market_data_apis():
 
 def load_preset_assets():
     """Carica gli asset predefiniti per il trading da preset_assets.json."""
-    with open("preset_asset.json", "r") as f:
+    with open("preset_assets.json", "r") as f:
         all_assets = json.load(f)
     enabled_assets = {}
     for category, info in all_assets.items():
