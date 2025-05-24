@@ -1,0 +1,21 @@
+{
+  "historical_data_source": "auto",
+  "file_path": "market_data.zstd.parquet",
+  "update_interval_days": 7,
+  "data_sources": {
+    "no_api": {
+      "alphavantage": "https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol={base}&market={quote}&apikey=X46XNLZ3XMMFAMH2",
+      "stooq": "https://stooq.com/q/d/l/?s={symbol}&i=d"
+    }
+  },
+  "exchanges": [
+    {
+      "name": "alphavantage",
+      "link": "https://www.alphavantage.co",
+      "api_url": "https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol={base}&market={quote}&apikey=X46XNLZ3XMMFAMH2",
+      "limitations": {
+        "requests_per_minute": "illimitato per il download storico"
+      }
+    }
+  ]
+}

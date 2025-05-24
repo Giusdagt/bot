@@ -1,0 +1,22 @@
+numpy
+polars
+tensorflow
+sklearn
+scikit-learn
+requests
+MetaTrader5
+gym
+gymnasium
+stable-baselines3
+joblib
+aiohttp
+TA-Lib
+talib
+scipy
+PyPortfolioOpt
+pypfopt
+types-requests
+types-tensorflow
+shimmy
+torch torchvision torchaudio
+stable-baselines3[extra]
